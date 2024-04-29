@@ -99,9 +99,13 @@ class Dt24 :
             self._dt += timedelta(hours=1)
         self._adjusted = adjust
 
-    is_leap = lambda y : (not bool(y % 4) and bool(y % 100)) or (not bool(y % 400))
+    @staticmethod
+    def is_leap(y: int) :
+        return (not bool(y % 4) and bool(y % 100)) or (not bool(y % 400))
         
-    last_day = lambda y, m : 31 if m in (1,3,5,7,8,10,12) else 30 if m in (4,6,9,11) else 29 if Dt24.is_leap(y) else 28
+    @staticmethod
+    def last_day(y: int, m: int) :
+        return m if m in (1,3,5,7,8,10,12) else 30 if m in (4,6,9,11) else 29 if Dt24.is_leap(y) else 28
 
     @staticmethod
     def now() :
@@ -116,7 +120,7 @@ class Dt24 :
         y, m, d, h, n, s, z = dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, dt.tzinfo
         return Dt24(y, m, d, h, n, s, tzinfo=z)
         
-    def add_months(months: int, end_of_month: bool = False) :
+    def add_months(self, months: int, end_of_month: bool = False) :
         '''
         Add a number of months this object and return result
         '''
@@ -130,9 +134,9 @@ class Dt24 :
             y -= 1
             m += 12
         if end_of_month :
-            da = ShefParser.last_day(y, m)
+            da = Dt24.last_day(y, m)
         else :
-            da = min(d, ShefParser.last_day(y, mo))
+            da = min(d, Dt24.last_day(y, m))
         return Dt24(y, m, d, h, n, s, tzinfo=z)
 
     def __add__(self, other : Union[timedelta, MonthsDelta]) :
@@ -146,6 +150,8 @@ class Dt24 :
             return self._dt.__sub__(other)
         if isinstance(other, MonthsDelta) :
             return self.add_months(-other.months, other.eom)
+        if isinstance(other, Dt24) :
+            return self._dt - other._dt
 
     def __str__(self) :
         dt = self._dt
@@ -913,7 +919,11 @@ class ShefParser :
                     error(f".B message starting at {self._input_name}:{self._line_number-len(message_lines)} not complete before input exhausted")
                     break
                 for i in range(100) :
-                    line = self._input.readline()
+                    try :
+                        line = self._input.readline()
+                    except Exception as e:
+                        self.error(f"Error reading line {self._input_name}:{self._line_number-len(message_lines)}")
+                        continue
                     if line :
                         if line[-1] == '\n' :
                             self._input_lines.append(line[:-1])
@@ -949,7 +959,7 @@ class ShefParser :
             if length == 4 : 
                 # no year specified, use closeset date
                 prev_year = dateval.add_months(-12)
-                if cur_time - prev < obstime - cur_time :
+                if (cur_time - prev_year) < (dateval - cur_time) :
                     dateval = prev_year
             return dateval
         except :
@@ -1683,7 +1693,7 @@ def main() :
                     for outrec in outrecs : parser.output(outrec)
         except Exception as e :
             parser.error(f"{e} in message at {message_location}: {message}")
-            if str(e).find("add_months") != -1 : raise
+            if str(e).find("supported") != -1 : raise
 
 if __name__ == "__main__" :
     main()
