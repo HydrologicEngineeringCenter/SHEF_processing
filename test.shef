@@ -1,3 +1,14 @@
+:---------------------------------------------------------------------------:
+: NOTE -  Messages that end in double colons (::) are ones that shefParser  :
+: is able to generate viable output from that shefit does not. Each such    :
+: message is preceded by a comment that describes the difference. Lines     :
+: with double colons should be filtered out from the input before comparing :
+: the output of shefit and shefParser with a diff tool on this test input.  :
+:                                                                           :
+: Mike Perryman                                                             :
+: USACE IWR-HEC                                                             :
+: 20 May 2024                                                               :
+:---------------------------------------------------------------------------:
 :                 Test data for SHEF decoder
 :                 This includes files precviously named
 :                 data10, data11 and data12
@@ -67,11 +78,14 @@ BB0017 2.2, BB0018 3.4
 .E EE0003 820110 Z DH12/HF/DIH06/2.1/4.4
 
 .E EE0004 820110 Z DH12/HG/DIH06/13.4/14.5
-.A AA0010 820111 Z DH12/HL 11.3/
-.A1 PP 2.34/PC 5.14/QR 112.3/
-.A2 US 13/UD 123/DH18/
-.A3 TA 44/TD
-.A4 88
+:----------------------------------:::
+: DIFF shefit errors on last value :::
+:----------------------------------:::
+.A AA0010 820111 Z DH12/HL 11.3/    ::
+.A1 PP 2.34/PC 5.14/QR 112.3/       ::
+.A2 US 13/UD 123/DH18/              ::
+.A3 TA 44/TD                        ::
+.A4 88                              ::
 .E EE0005 820111 Z DH12/HT/DIH06/12.2/14.3/15.1/
 .E1 15.3/15.4
 .B MCI 820112 Z DH12/HG
@@ -240,10 +254,13 @@ BB0040.8
 .END
 .E EE0015820303 DH12/HG/DIH6/6.6/7.7/8.8
 .EKCKK1 820303 DH12/HG/DIH6/9.9/8.8/7.7
-.B MCI 820303 DH12/HG
-BB0041 4.2,BB0042 3.1,BB0043.9,
-BB0044 9.9BB0045 8.8,BB0046 4.4,
-.END
+:----------------------------------------------:::
+: DIFF shefit doesn't produce value for BB0046 :::
+:----------------------------------------------:::
+.B MCI 820303 DH12/HG                           ::
+BB0041 4.2,BB0042 3.1,BB0043.9,                 ::
+BB0044 9.9BB0045 8.8,BB0046 4.4,                ::
+.END                                            ::
 .A AA0098 820304 DH12/PP 2.43
 .A AA0099 820304 DH12/PP 12.54  :GULLYWASHER,KANSAS
 .A AA0100 820304 DH12/PP 2.35
@@ -282,9 +299,12 @@ BB0058 3.1
 .B MCI 820408 DH12/QN/DD01/DH12/QN/ DD02 /QN
 BB0059 1.4/1.5/1.3
 .END
-.B MCI 820409 DH12/QL/DD1/DH12/QL/ DD2 /QL
-BB0060 2.3/9.8/6.7
-.END
+:--------------------------------------------------:::
+: DIFF shefit doesn't output first parameter value :::
+:--------------------------------------------------:::
+.B MCI 820409 DH12/QL/DD1/DH12/QL/ DD2 /QL          ::
+BB0060 2.3/9.8/6.7                                  ::
+.END                                                ::
 .B MCI 820410 DH12/QP/DJ099/QP
 BB0061 4.5/3.2
 .END
@@ -294,9 +314,12 @@ BB0062 3.3/9.9
 .B MCI 821201 DC120113/DH12/QVMF/DM01/QVMF
 BB0063 3.41/2.52
 .END
-.B MCI 820413 DH12/QUM/DM3/QUM
-BB0064 4.51/9.99
-.END
+:--------------------------------------------------:::
+: DIFF shefit doesn't output first parameter value :::
+:--------------------------------------------------:::
+.B MCI 820413 DH12/QUM/DM3/QUM                      ::
+BB0064 4.51/9.99                                    ::
+.END                                                ::
 .B MCI 821231 DC123113/DH12/RADF/DM0101/RADF
 BB0065 4.4/4.3
 .END
@@ -309,12 +332,18 @@ BB0067 34.1/42.3
 .B MCI 841230 DC123013/DH12/RIDF/DJ366/RIDF
 BB0068 4.1/4.2
 .END
-.B MCI 831230 DH12/DC123013/RPDF/DJ366/RPDF
-BB0069 4.1/9.9
-.END
-.B MCI 821201 DH12/DC120113/RPMF/DM13/RPMF
-BB0070 3.32/9.99
-.END
+:--------------------------------------------------:::
+: DIFF shefit doesn't output first parameter value :::
+:--------------------------------------------------:::
+.B MCI 831230 DH12/DC123013/RPDF/DJ366/RPDF         ::
+BB0069 4.1/9.9                                      ::
+.END                                                ::
+:--------------------------------------------------:::
+: DIFF shefit doesn't output first parameter value :::
+:--------------------------------------------------:::
+.B MCI 821201 DH12/DC120113/RPMF/DM13/RPMF          ::
+BB0070 3.32/9.99                                    ::
+.END                                                ::
 .B MCI 820420 DH12/HG/DRD+1/HG/DRD+2/HG/DRJ+3/HG/DRD-1/HG/DRD-2/HG
 BB0071 3.4/3.1/2.2/4.1/3.5/5.5
 .END
@@ -330,9 +359,12 @@ BB0074 2.41/3.52/4.25
 .B MCI 820101 DH12/DC010113/RTY/DRY+1/RTYF/DRY-1/RTY
 BB0075 32.1/23.4/41.5
 .END
-.B MCI 820421 DH12/SA/DRD+1/SD/DRH+24/SF/DRN+1440/SL
-BB0076 /2.4/1.43/42.1
-.END
+:-----------------------------------------------------------:::
+: DIFF shefit doesn't output parameter values for SD and SF :::
+:-----------------------------------------------------------:::
+.B MCI 820421 DH12/SA/DRD+1/SD/DRH+24/SF/DRN+1440/SL         ::
+BB0076 /2.4/1.43/42.1                                        ::
+.END                                                         ::
 .A AA0102 820423 DN30/HG 4.2
 .A AA0103 820423 DH1230/HG 4.2
 .A AA0104 820423 DD231230/HG 4.2
@@ -391,30 +423,42 @@ BB0087 9.9
 MKCWRKRSC         E
 WOUS00 KKRF 312000
 :SHEF.07...ALL POSSIBLE PARAMETER CODES
-.B MCI 0701 DH12/EA/EM/EN/EP/ET/EV/FA/FB/FC/FE
-BB0088 1/2/3/4/5/6/7/8/9/10
-.END
+:--------------------------------------------------------------------------------------------:::
+: DIFF shefit doesn't output values for good parameters (EA, EM, EP, ET, EV, FA, FB, FC, FE) :::
+:--------------------------------------------------------------------------------------------:::
+.B MCI 0701 DH12/EA/EM/EN/EP/ET/EV/FA/FB/FC/FE                                                ::
+BB0088 1/2/3/4/5/6/7/8/9/10                                                                   ::
+.END                                                                                          ::
 .B MCI 0701 DH12/FK/FL/FP/FS/FT/FZ/GD/GR/GT/HA
 BB0089 1/2/3/4/5/6/7/8/9/10
 .END
 .B MCI 0701 DH12/HB/HC/HD/HE/HF/HG/HH/HL/HM/HN
 BB0090 1/2/3/4/5/6/7/8/9/10
 .END
-.B MCI 0701 DH12/HP/HR/HS/HT/HW/HX/HY/HZ/IC/IE
-BB0091 1/2/3/4/5/6/7/8/9/10
-.END
+:---------------------------------------------------------------:::
+: DIFF shefit doesn't parse any parameters after problematic HY :::
+:---------------------------------------------------------------:::
+.B MCI 0701 DH12/HP/HR/HS/HT/HW/HX/HY/HZ/IC/IE                   ::
+BB0091 1/2/3/4/5/6/7/8/9/10                                      ::
+.END                                                             ::
 .B MCI 0701 DH12/IO/IR/IT/LA/LC/LS/MM/MI/ML/MS
 BB0092 1/2/3/4/5/6/7/8/9/10
 .END
-.B MCI 0701 CD DH07/MU/NG/NP/PA/PC/PP/PT/PY/QA/QC
-BB0093 1/2/3/4/5/6/7/8/9/10
-.END
+:--------------------------------------------------------------------------------------------:::
+: DIFF shefit doesn't output values for good parameters (MU, NG, PA, PC, PP, PT, PY, QA, QC) :::
+:--------------------------------------------------------------------------------------------:::
+.B MCI 0701 CD DH07/MU/NG/NP/PA/PC/PP/PT/PY/QA/QC                                             ::
+BB0093 1/2/3/4/5/6/7/8/9/10                                                                   ::
+.END                                                                                          ::
 .B MCI 0701 DH12/QD/QG/QI/QL/QM/QN/QP/QR/QS/QT
 BB0094 1/2/3/4/5/6/7/8/9/10
 .END
-.B MCI 0701 CD DH07/QU/QV/QX/QY/RA/RC/RI/RP/RT/SA
-BB0095 1/2/3/4/5/6/7/8/9/10
-.END
+:--------------------------------------------------------------------------------------------:::
+: DIFF shefit doesn't output values for good parameters (QU, QV, QX, QY, RA, RI, RP, RT, SA) :::
+:--------------------------------------------------------------------------------------------:::
+.B MCI 0701 CD DH07/QU/QV/QX/QY/RA/RC/RI/RP/RT/SA                                             ::
+BB0095 1/2/3/4/5/6/7/8/9/10                                                                   ::
+.END                                                                                          ::
 .B MCI 0701 DH12/SD/SF/SL/SR/SS/SW/TA/TD/TF/TH
 BB0096 1/2/3/4/5/6/7/8/9/10
 .END
@@ -427,9 +471,12 @@ BB0098 1/2/3/4/5/6/7/8/9/10
 .B MCI 0701 DH12/VQ/VR/VS/VT/VU/WA/WC/WG/WH/WL
 BB0099 1/2/3/4/5/6/7/8/9/10
 .END
-.B MCI 0701 DH12/WO/WP/WT/WV/XW/XV/AT/AU/YA/YZ
-BB0100 1/2/3/4/5/6/7/8/9/10
-.END
+:--------------------------------------------------------------------------------------------:::
+: DIFF shefit doesn't output values for good parameters (WO, WP, WT, WV, XW, XV, AT, AU, YA) :::
+:--------------------------------------------------------------------------------------------:::
+.B MCI 0701 DH12/WO/WP/WT/WV/XW/XV/AT/AU/YA/YZ                                                ::
+BB0100 1/2/3/4/5/6/7/8/9/10                                                                   ::
+.END                                                                                          ::
 .B MCI 0701 DH12/AF/GS/XP/AW/AD/AM
 BB0101 1/2/3/4/5/6
 .END
@@ -445,9 +492,12 @@ BB0104 1/2/3/4
 .B MCI 0704 DH12/HGIC1/PPUC2/PACC3/PPJC9/HGHCA/PTTCZ/HGIRA/PPURB/PACRC
 BB0105 1/2/3/4/5/6/7/8/9
 .END
-.B MCI 0704 DH12/PPJRD/HGHRK/PTTRM/HGIRN/PPUCP/PACCQ/PPJRU/HGHCV/PTTRW
-BB0106 1/2/3/4/5/6/7/8/9
-.END
+:---------------------------------------------------------------------------------------------------:::
+: DIFF shefit doesn't output values for valid parameters (PPJRD, PTTRM, PPUCP, PACCQ, HGHCV, PTTRW) :::
+:---------------------------------------------------------------------------------------------------:::
+.B MCI 0704 DH12/PPJRD/HGHRK/PTTRM/HGIRN/PPUCP/PACCQ/PPJRU/HGHCV/PTTRW                               ::
+BB0106 1/2/3/4/5/6/7/8/9                                                                             ::
+.END                                                                                                 ::
 .B MCI 0704 DH12/HGICX/PPURZ/PACPA/PPJPB/HGHPC/PTTPD/HGIPE/PPUPY/PACPZ
 BB0107 1/2/3/4/5/6/7/8/9
 .END
@@ -517,9 +567,12 @@ BB0120 1.1/1.1/1.1/1.1/1.1/1.1/1.1/1.1/1.1/1.1/1.1
 .B MCI 820808 DH18/GDI/HFI/HGI/HLI/HWI/HZI/ICI/LSI
 BB0121 2.2/2.2/2.2/2.2/2.2/2.2/2.2/2.2
 .END
-.B MCI 820808 DH18/MHI/PCI/QDI/QII/QPI/QRI/QSI/SDI/SLI
-BB0122 2.2/2.2/2.2/2.2/2.2/2.2/2.2/2.2/2.2
-.END
+:-------------------------------------------------------------------------------------------------:::
+: DIFF shefit doesn't output values for valid parameters (PCI, QDI, QII, QPI, QRI, QSI, SDI, SLI) :::
+:-------------------------------------------------------------------------------------------------:::
+.B MCI 820808 DH18/MHI/PCI/QDI/QII/QPI/QRI/QSI/SDI/SLI                                             ::
+BB0122 2.2/2.2/2.2/2.2/2.2/2.2/2.2/2.2/2.2                                                         ::
+.END                                                                                               ::
 .B MCI 820808 DH18/SFI/SWI/TAI/TDI/TWI
 BB0123 2.2/2.2/2.2/2.2/2.2
 .END
@@ -563,10 +616,13 @@ BB0137 11.1T
 BB0138 22.2F
 .END
 : TEST #8...USING INVALID DATA QUALIFIERS
-.B MCI 820908 DH12/HG
-BB0139 9.9A
-BB0140 9.9 E
-.END
+:-----------------------------------------------:::
+: DIFF shefit doesn't generate value for BB0140 :::
+:-----------------------------------------------:::
+.B MCI 820908 DH12/HG                            ::
+BB0139 9.9A                                      ::
+BB0140 9.9 E                                     ::
+.END                                             ::
 .B MCI 820909 DH12/DQE/HG/PP/DQZ/QR/DQA/PC
 BB0141 14.4/1.21/111/99.9
 BB0142 12.3/1.34/144/9.99
@@ -577,9 +633,12 @@ MKCWRKRSC         EWOUS00 KKRF 311400
 :TEST#1...15 SPACES TO END LINE
 :COMMENT LINE               IGNORRED
 .A AA0135 821001 DH12/HG 2.43/PP               IGNORRED
-.B MCI 821001 DH12/HG/PP               IGNORRED
-BB0143 12.3/1.11/9.99
-.END
+:--------------------------------------------------------------:::
+: DIFF shefit doesn't output value for valid parameter code HG :::
+:--------------------------------------------------------------:::
+.B MCI 821001 DH12/HG/PP               IGNORRED                 ::
+BB0143 12.3/1.11/9.99                                           ::
+.END                                                            ::
 .B MCI 821001 DH12/HG/PP
 BB0144 12.3/               IGNORRED
 .END
@@ -628,8 +687,11 @@ BB0155 10/9/8/7/6/5/4/3/2/1
 .B1 PP 9.99
 .A AA0145 821007 DH12/HG 5.5/
 .AR1 PP 9.99
-.A AA0146 821007 DH12/H 9.99/
-.A1 PP 8.88
+:--------------------------------------------------------------:::
+: DIFF shefit doesn't output value for valid parameter code PP :::
+:--------------------------------------------------------------:::
+.A AA0146 821007 DH12/H 9.99/                                   ::
+.A1 PP 8.88                                                     ::
 :TEST#8...YEAR OUTSIDE DEFAULT TIME ZONE RANGE
 .A AA0147 751008 C DH07/HG 9.99
 .A AA0148 751008 CD DH07/HG 4.44
@@ -644,7 +706,10 @@ BB0155 10/9/8/7/6/5/4/3/2/1
 :TEST#12....E WITHOUT TIME INCREMENT
 .E EE0021 821012 DH12/HG/6.6/7.7/8.8/9.9
 :TEST#13...BAD DATE SOMEHOW
-.A AA0152 840229 DH12/HG 4.4/DRY+1/HG 9.9
+:----------------------------------------------------:::
+: DIFF shefit errors on adding one year to 29Feb1984 :::
+:----------------------------------------------------:::
+.A AA0152 840229 DH12/HG 4.4/DRY+1/HG 9.9             ::
 MKCWRKRSC         EWOUS00 KKRF 271400
 :SHEF.11...DEFAULT OF YEAR
 :TODAY IS JANUARY 10,1982
@@ -730,14 +795,17 @@ BB0173 5.55 : SOUTHWEST
 .A AA0168 821117 DH12/PP 2.20
 .A AA0169 821118 DH12/PPD 2.20
 :TEST #4...DATE RELATIVE CODES USED IN CONJUNCTION W/ "D" OVERRIDES
-.B MCI 820425 C DH01/HG/DRN+90/HG/DRH+2/HG/DRD+1/HG
-BB0174 2.2/3.3/4.4/5.5
-BB0175 DH0130/2.2/3.3/4.4/5.5
-BB0176 DH0200/2.2/3.3/4.4/5.5
-BB0177 DH0201/2.2/3.3/4.4/5.5
-BB0178 2.2/DRH+2/3.3/DRD+1/4.4/DRN+90/5.5
-BB0179 DH0301/2.2/3.3/4.4/5.5
-.END
+:-----------------------------------------------------------------------------------------------:::
+: DIFF shefit doesn't output values at valid times after error on invalid time on station BB0177:::
+:-----------------------------------------------------------------------------------------------:::
+.B MCI 820425 C DH01/HG/DRN+90/HG/DRH+2/HG/DRD+1/HG                                              ::
+BB0174 2.2/3.3/4.4/5.5                                                                           ::
+BB0175 DH0130/2.2/3.3/4.4/5.5                                                                    ::
+BB0176 DH0200/2.2/3.3/4.4/5.5                                                                    ::
+BB0177 DH0201/2.2/3.3/4.4/5.5                                                                    ::
+BB0178 2.2/DRH+2/3.3/DRD+1/4.4/DRN+90/5.5                                                        ::
+BB0179 DH0301/2.2/3.3/4.4/5.5                                                                    ::
+.END                                                                                             ::
 :TEST #5...USE OF PY, QY, AND HY ILLEGALLY
 .A AA0170 1117 DH12/PY 9.9
 .A AA0171 1117 Z DH12/QY 9.9
@@ -790,22 +858,28 @@ BB0185 DRH-6/7.7/DRH-10/8.8/DH09/9.9
 .END
 
 :TEST #2...DATE RELATIVE CODES WHICH REQUIRE A CHANGE OF YEAR
-.B MBRFC 1231 C DH20/HG/PP/HL
-BB0186 2.2/33.3/4.4
-BB0187 3.3/DRN-61/1.1/DH01/DRN-61/65.7
-BB0188 4.4/DRH-1/5.5/DRH-2/6.6
-BB0189 5.5/DRD-1/6.6/DRD-2/7.7
-BB0190 6.6/DRM-1/7.7/DRM-2/8.8
-BB0191 6.6/DRY-1/7.7/DRY-2/8.8
-.END
-.B MBRFC 1231 C DH16/HG/PP/HK
-BB0192 2.2/3.3/4.4
-BB0193 3.3/DRN+61/4.4/DH23/DRN+61/8.9
-BB0194 7.6/DRH+1/4.8/DRH+2/2.9
-BB0195 2.7/DRD+1/5.0/DRD+2/3.8
-BB0196 3.7/DRM+1/2.9/DRM+2/8.3
-BB0197 2.7/DRY+1/8.5/DRY+2/33.7
-.END
+:-----------------------------------------------:::
+: DIFF shefit errors on DRM-1 on station BB0190 :::
+:-----------------------------------------------:::
+.B MBRFC 1231 C DH20/HG/PP/HL                    ::
+BB0186 2.2/33.3/4.4                              ::
+BB0187 3.3/DRN-61/1.1/DH01/DRN-61/65.7           ::
+BB0188 4.4/DRH-1/5.5/DRH-2/6.6                   ::
+BB0189 5.5/DRD-1/6.6/DRD-2/7.7                   ::
+BB0190 6.6/DRM-1/7.7/DRM-2/8.8                   ::
+BB0191 6.6/DRY-1/7.7/DRY-2/8.8                   ::
+.END                                             ::
+:-----------------------------------------------:::
+: DIFF shefit errors on DRM+2 on station BB0196 :::
+:-----------------------------------------------:::
+.B MBRFC 1231 C DH16/HG/PP/HK                    ::
+BB0192 2.2/3.3/4.4                               ::
+BB0193 3.3/DRN+61/4.4/DH23/DRN+61/8.9            ::
+BB0194 7.6/DRH+1/4.8/DRH+2/2.9                   ::
+BB0195 2.7/DRD+1/5.0/DRD+2/3.8                   ::
+BB0196 3.7/DRM+1/2.9/DRM+2/8.3                   ::
+BB0197 2.7/DRY+1/8.5/DRY+2/33.7                  ::
+.END                                             ::
 .B MBRFC 0101 DH02/HG/PP/HK
 BB0198 3.9/5.7/4.2
 BB0199 5.9/DRN-61/4.8/DH01/DRN-61/45.9
@@ -851,11 +925,14 @@ BB0214 4.8/1.25
 BB0215 2.1/
 BB0216 /1.61
 .END
-.B MCI 0810 DH12/HG/PPP
-BB0217      :KANSAS CITY: 7.5/1.20,   BB0218      :ST JOSEPH: 11.4/
-:SMITHVILLE:      BB0219 11.7/9.8 ,:AGENCY:             BB0220 5.0/2.36
-:MARYVILLE:       BB0221  4.1/1.11:,SUMNER:             BB0222 6.1/
-.END
+:-----------------------------------------------:                       ::
+: DIFF shefit doesn't generate value for BB0221 :                       ::
+:-----------------------------------------------:                       ::
+.B MCI 0810 DH12/HG/PPP                                                 ::
+BB0217      :KANSAS CITY: 7.5/1.20,   BB0218      :ST JOSEPH: 11.4/     ::
+:SMITHVILLE:      BB0219 11.7/9.8 ,:AGENCY:             BB0220 5.0/2.36 ::
+:MARYVILLE:       BB0221  4.1/1.11:,SUMNER:             BB0222 6.1/     ::
+.END                                                                    ::
 .B:REVISION:R MCI:KANSAS CITY: 08:AUG:10:TENTH: DH12:1200Z:/HG/PPP
 BB02:KANSAS CITY:23:MISSOURI: 4.8/1:ONE:.06:POINT 06
 .E:EEE:N:NNN:D:DDD
@@ -880,7 +957,10 @@ BB0224 12.3
 .E EE0047 0804 C DH06/DIN+99/HG/1.1/1.2
 .E EE0048 0803 C DH06/DIH+99/HG/1.3/1.4
 .E EE0049 0802 C DH06/DID+99/HGIF/1.5/1.6
-.E EE0050 0801 C DH06/DIM+99/HGIF/1.7/1.8
+:-------------------------------------------------------------------------------------:::
+: DIFF shefit converts 08/01/2024 + 99M (11/01/2032) from C to Z as if it were in DST :::
+:-------------------------------------------------------------------------------------:::
+.E EE0050 0801 C DH06/DIM+99/HGIF/1.7/1.8                                              ::
 .E EE0051 0731 C DH06/DIY+99/HGIF/1.9/2.0
 :TEST D - OMITTING TRAILING SLASHES
 .B MCI 0810 C DH07/HG/HP/PPP
@@ -975,9 +1055,12 @@ BB0253 4.5/4.6/4.7
 .B COU 840429 C DH055959/HP/DRH-3/HP
 BB0254 8.1/8.2
 .END
-.B SGF 840429 C DH02/HG/DS30/HG/DH0300/HG/DS30/HG
-BB0255 1.1/2.2/3.3/4.4
-.END
+:----------------------------------------------------:::
+: DIFF shefit doesn't process 3rd and 4th parameters :::
+:----------------------------------------------------:::
+.B SGF 840429 C DH02/HG/DS30/HG/DH0300/HG/DS30/HG     ::
+BB0255 1.1/2.2/3.3/4.4                                ::
+.END                                                  ::
 .B MCI 840828 C DH07/DVS00/PPV/DVS99/PPV
 BB0256 1.2/2.8
 .END
@@ -1024,8 +1107,11 @@ BB0262   45  /      /  47  /  +   /  44  /  35
 .END
 
 : Do I need slashes?
-.A AA0204  820101 Z DH14/HG
-.A1 1.23
+:----------------------------------:::
+: DIFF shefit doesn't output value :::
+:----------------------------------:::
+.A AA0204  820101 Z DH14/HG         ::
+.A1 1.23                            ::
 .A AA0205 820101 Z DH12/HG 2.3/DH13 PP .05 : shef1
 .A AA0206  820101 Z DH14 HG 2.4
 .A AA0207  820101 Z DH15 HG 2.5/DH16/PP/.08
@@ -1054,7 +1140,10 @@ ZCZC FTWRR2FTW
 
 SRUS22 KFTW 091314
 :Generic2 Shef Data
-.AR AA0213 0508 DH15/TXI 078/TN 056/TA 058
+:-------------------------------------------------------:::
+: DIFF shefit doesn't output valid parameters TN and TA :::
+:-------------------------------------------------------:::
+.AR AA0213 0508 DH15/TXI 078/TN 056/TA 058               ::
 .AR AA0214 0508 DH15/PPP 00.07/TX 078/TN 056/TA 058
 .AR AA0215 0509 DH05/PPP 00.05/TX 067/TN 050/TA 062
 .AR AA0216 0509 DH11/PPP 00.02/HG M
@@ -1409,17 +1498,23 @@ BB0423 5.53//,STA2 /249.35/,STA3 /23.0/
 BB0424 7.78
 .END
 
-.BR SHV  941121 C DH07/PPP
-BB0425   0.28   ,BTNL1   0.08   ,WSKT2     .     ,SCPL1    0.25
-BB0426   0.01   ,CENT2    .     ,HRNT2     ,     ,CRNT2    0.25
-.END
+:--------------------------------------------------:             ::
+: DIFF shefit errors on packed body location CRNT2 :             ::
+:--------------------------------------------------:             ::
+.BR SHV  941121 C DH07/PPP                                       ::
+BB0425   0.28   ,BTNL1   0.08   ,WSKT2     .     ,SCPL1    0.25  ::
+BB0426   0.01   ,CENT2    .     ,HRNT2     ,     ,CRNT2    0.25  ::
+.END                                                             ::
 
-.B GLD 1122 C DH06  /PPP/SD
-:      MMDD     TT                MM=MONTH        DD=DAY     TT=TIME (CDT)
-:STATION ID       PRECIP     SNOW DEPTH          STATION NAME
-BB0427            0.07            1              WOODRUFF 3WSW
-BB0428            0.11            2              DRESDEN
-.END
+:---------------------------------------:                                  ::
+: DIFF shefit doesn't output any values :                                  ::
+:---------------------------------------:                                  ::
+.B GLD 1122 C DH06  /PPP/SD                                                ::
+:      MMDD     TT                MM=MONTH        DD=DAY     TT=TIME (CDT) ::
+:STATION ID       PRECIP     SNOW DEPTH          STATION NAME              ::
+BB0427            0.07            1              WOODRUFF 3WSW             ::
+BB0428            0.11            2              DRESDEN                   ::
+.END                                                                       ::
 
 .B TOP 1121C  DH07 /PPP
 :      MMDD     TT          MM= MONTH   DD=DAY   TT=TIME (LOCAL)
@@ -1661,8 +1756,8 @@ BB0600                                               .74/  .54/  .01/  .00/  .00
 
 : The following has two carriage returns at the end of each line
 
-&dÌ	_
-âÙäâò÷@ÒÃÓÅ 092300
+&dï¿½	_
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½@ï¿½ï¿½ï¿½ï¿½ 092300
 :
 :  NWS CLEVELAND HOURLY STORMS DATA
 :   MON OCT 09 22:50 UTC 1995 
@@ -1689,13 +1784,16 @@ _BB0612 4.4, BB0613 11.2, BB0614__ 12.3,
 :
 :       Test the trace codes ... especially lower case "t"
 :
-.B SMLLET 820104 Z DH12/HG/PP
-BB0615   2.2/T/
-BB0616   3./.4/
-BB0617   2.3/t /
-BB0618   t  /1.05/
-BB0619   T/1.23
-.END
+:-----------------------------------------------------------------------------------------:::
+: DIFF shefit doesn't output valid PP values after invalid HG values on BB0618 and BB0619 :::
+:-----------------------------------------------------------------------------------------:::
+.B SMLLET 820104 Z DH12/HG/PP                                                              ::
+BB0615   2.2/T/                                                                            ::
+BB0616   3./.4/                                                                            ::
+BB0617   2.3/t /                                                                           ::
+BB0618   t  /1.05/                                                                         ::
+BB0619   T/1.23                                                                            ::
+.END                                                                                       ::
 .B TUL 0831 C DH07/PPP/PY/HG
 BB0620   t /T /95.
 BB0621   .5/T/T
@@ -1767,13 +1865,16 @@ YYY 941121 C DH07/PPP 0.5
 .A1 ZZZ 941121 C DH07/PPP 0.5
 
 .A  AA0254 941121 E DH07/PPP 0.5/
-.AR AA0255 941121 E DH08/PPP 0.55/
-.AR0 PC 0.1
-.AR1 PC 0.15
-.AR99 PC 0.2
-.AR101  PC 0.3
-.AR01 HF 45.0
-.AR1 HF 100.0
+:------------------------------------------------:::
+: DIFF shefit doesn't process lines after .AR101 :::
+:------------------------------------------------:::
+.AR AA0255 941121 E DH08/PPP 0.55/                ::
+.AR0 PC 0.1                                       ::
+.AR1 PC 0.15                                      ::
+.AR99 PC 0.2                                      ::
+.AR101  PC 0.3                                    ::
+.AR01 HF 45.0                                     ::
+.AR1 HF 100.0                                     ::
 
 .A AA0256 820101 Z DH12/HG 2.3
 .A1  PC .25
@@ -1833,7 +1934,10 @@ BB0661 //1.0
 .A AA0259 960714
 .A1 DH1430/PCIRG 76.24
 .A AA0260 960714 /PCIRG 76.24
-.A AA0261   960714  PCIRG 76.24
+:----------------------------------:::
+: DIFF shefit doesn't output value :::
+:----------------------------------:::
+.A AA0261   960714  PCIRG 76.24     ::
 .A AA0262 960714
 .A1 Z PCIRG 76.24
 
@@ -1841,8 +1945,11 @@ BB0661 //1.0
 .E1  DH12/HG/DIH06/2.1/2.2
 .E EE0115   820101 Z DH12
 .E2  HG/DIH06/2.1/2.2
-.E EE0116   820101 Z DH12
-.E1 Z DH12/HG/DIH06/2.1/2.2
+:---------------------------------------:::
+: DIFF shefit doesn't output any values :::
+:---------------------------------------:::
+.E EE0116   820101 Z DH12                ::
+.E1 Z DH12/HG/DIH06/2.1/2.2              ::
 
 .B CDIIB1 820101 Z
 .B1  DH12/HG
@@ -1907,9 +2014,12 @@ BB0680 DM030810 / 1.1
 .B MCI 0807 C DH07/DN30/DS30/HG
 BB0681 8.07
 .END
-.B MCI 0809 C DS30/DN30/DH07/HG
-BB0682 9.0
-.END
+:----------------------------------------------------:::
+: DIFF shefit errors if time specified in this order :::
+:----------------------------------------------------:::
+.B MCI 0809 C DS30/DN30/DH07/HG                       ::
+BB0682 9.0                                            ::
+.END                                                  ::
 .A  AA0278 970712 Z DH07/DN30/DS30/HG 2.0
 :
 : Test given duration code for type PC which should have no
@@ -2089,7 +2199,10 @@ BB0712   DT20010812/6.9       /DT200209/6.9       /DT2005/6.9
 .A AA0336 19970205 Z DT2001/HGIRM 2.3           :DTccyr 
 .A AA0337 19960205 Z DT21/HGIRM 2.3             :DTcc
      
-.E AA0340 18970205 Z DT19970201010101/DC200002050101/HGIRG/DIH06/1A/DT23/2A 
+:--------------------------------------------------------------------------------:::
+: DIFF shefit fails on specifying only century in DT23 although manual allows it :::
+:--------------------------------------------------------------------------------:::
+.E AA0340 18970205 Z DT19970201010101/DC200002050101/HGIRG/DIH06/1A/DT23/2A       ::
 .E AA0341 19970205 Z DT200102010101/DC9902050101/HGIRM/DIH06/2M
 .E AA0342 18970205 Z DT1997020101/DC02050101/HGIRR/DIH06/1A 
 .E AA0343 19970206 Z DT20010201/DC020501/HGIRP/DIH06/2M
@@ -2116,7 +2229,10 @@ BB0712   DT20010812/6.9       /DT200209/6.9       /DT2005/6.9
 .A AA0369 0205 Z DT2001/HGIRM 2.3           :DTccyr
 .A AA0370 0205 Z DT21/HGIRM 2.3             :DTcc
      
-.E AA0371 0205 Z DT19970201010101/DC200002050101/HGIRG/DIH06/1A/DT23/2A 
+:--------------------------------------------------------------------------------:::
+: DIFF shefit fails on specifying only century in DT23 although manual allows it :::
+:--------------------------------------------------------------------------------:::
+.E AA0371 0205 Z DT19970201010101/DC200002050101/HGIRG/DIH06/1A/DT23/2A           ::
 .E AA0372 0205 Z DT200102010101/DC9902050101/HGIRM/DIH06/2M
 .E AA0373 0205 Z DT1997020101/DC02050101/HGIRR/DIH06/1A 
 .E AA0374 0206 Z DT20010201/DC020501/HGIRP/DIH06/2M
@@ -2130,12 +2246,15 @@ BB0712   DT20010812/6.9       /DT200209/6.9       /DT2005/6.9
      
 :  B format interrupted by another B format where the first line got omitted.
 :
-.BR PQR 0504 DC05041200
-.B1    /DH12  /HZIFZ/DRH+06/HZIFZ
-ZCZC PDXQPSPDX
-.B1    /DH18  /PPQFZ/DRH+06/PPQFZ
-BB0713   0.03/0.50
-.END
+:-----------------------------------------:::
+: DIFF shefit doesn't generate any values :::
+:-----------------------------------------:::
+.BR PQR 0504 DC05041200                    ::
+.B1    /DH12  /HZIFZ/DRH+06/HZIFZ          ::
+ZCZC PDXQPSPDX                             ::
+.B1    /DH18  /PPQFZ/DRH+06/PPQFZ          ::
+BB0713   0.03/0.50                         ::
+.END                                       ::
 :
 :  B format interrupted by another B format but have the frist line.
 :
@@ -2157,25 +2276,29 @@ ZCZC PDXQPSPDX
 :
 :  B format interrupted by another B format, bigger example.
 :
-.BR PQR 0504 DC05041200
-.B1    /DH12  /HZIFZ/DRH+06/HZIFZ/DRH+12/HZIFZ/DRH+18/HZIFZ
-.B2    /DRH+24/HZIFZ/DRH+30/HZIFZ/DRH+36/HZIFZ/DRH+42/HZIFZ
-.B3    /DRH+48/HZIFZ/DRH+54/HZIFZ/DRH+60/HZIFZ/DRH+66/HZIFZ
-.B4    /DRH+72/HZIFZ
-ZCZC PDXQPSPDX
-TTA00 KPDX 041253R 0504 DC05041200
-.B1    /DH18  /PPQFZ/DRH+06/PPQFZ/DRH+12/PPQFZ/DRH+18/PPQFZ
-.B2    /DRH+24/PPQFZ/DRH+30/PPQFZ/DRH+36/PPQFZ/DRH+42/PPQFZ
-.B3    /DRH+48/PPQFZ/DRH+54/PPQFZ/DRH+60/PPQFZ/DRH+66/PPQFZ
-:
-:     |<------DAY1------>|<-------DAY2------->|<-------DAY3------->|
-:
-:     |<--- MON --->|<------ TUE ------->|<------ WED ------->|<-THU
-:      18Z  00Z  06Z  12Z   18Z  00Z  06Z  12Z   18Z  00Z  06Z  12Z
-:
-BB0715   0.00/0.00/0.02/0.03/ 0.01/0.01/0.00/0.00/ 0.00/0.01/0.05/0.05
-BB0716   0.00/0.00/0.08/0.12/ 0.04/0.03/0.02/0.00/ 0.00/0.04/0.05/0.05
-.END
+:-------------------------------------------------------------------------:::
+: DIFF shefit doesn't generate any values, while shefParser generates bad :::
+: values for obviously broken message                                     :::
+:-------------------------------------------------------------------------:::
+.BR PQR 0504 DC05041200                                                    ::
+.B1    /DH12  /HZIFZ/DRH+06/HZIFZ/DRH+12/HZIFZ/DRH+18/HZIFZ                ::
+.B2    /DRH+24/HZIFZ/DRH+30/HZIFZ/DRH+36/HZIFZ/DRH+42/HZIFZ                ::
+.B3    /DRH+48/HZIFZ/DRH+54/HZIFZ/DRH+60/HZIFZ/DRH+66/HZIFZ                ::
+.B4    /DRH+72/HZIFZ                                                       ::
+ZCZC PDXQPSPDX                                                             ::
+TTA00 KPDX 041253R 0504 DC05041200                                         ::
+.B1    /DH18  /PPQFZ/DRH+06/PPQFZ/DRH+12/PPQFZ/DRH+18/PPQFZ                ::
+.B2    /DRH+24/PPQFZ/DRH+30/PPQFZ/DRH+36/PPQFZ/DRH+42/PPQFZ                ::
+.B3    /DRH+48/PPQFZ/DRH+54/PPQFZ/DRH+60/PPQFZ/DRH+66/PPQFZ                ::
+:                                                                          ::
+:     |<------DAY1------>|<-------DAY2------->|<-------DAY3------->|       ::
+:                                                                          ::
+:     |<--- MON --->|<------ TUE ------->|<------ WED ------->|<-THU       ::
+:      18Z  00Z  06Z  12Z   18Z  00Z  06Z  12Z   18Z  00Z  06Z  12Z        ::
+:                                                                          ::
+BB0715   0.00/0.00/0.02/0.03/ 0.01/0.01/0.00/0.00/ 0.00/0.01/0.05/0.05     ::
+BB0716   0.00/0.00/0.08/0.12/ 0.04/0.03/0.02/0.00/ 0.00/0.04/0.05/0.05     ::
+.END                                                                       ::
 :  Test quality codes
 .E AA0395 970206 Z /HGIRP/DIH06/2M
 .E AA0396 970206 Z /HGIRP/DIH06/2 4 6
@@ -2331,24 +2454,33 @@ BTV
 :      started over?
 :
 :              --------one  ------two  ------------three  ------four  -----five
-.B SIL 0617 Z DH07/    HG/  DRD+1/HG/          DRD+2/HG/  DM0625/HG/  DRD+6/HG/
-  BB0731              1.1/       1.2/               1.3/        1.4/       1.5/
-  BB0732              2.1/       2.2/        DM0708/2.3/        2.4/       2.5/
-  BB0733              3.1/       3.2/  DRD+0/DM0708/3.3/        3.4/       3.5/
-  BB0734              4.1/       4.2/  DM0708/DRD+0/4.3/        4.4/       4.5/
-  BB0735       DM0708/5.1/       5.2/               5.3/        5.4/       5.5/
-  BB0736 DM0708/DRD+0/6.1/       6.2/               6.3/        6.4/       6.5/
-  BB0737              7.1/       7.2/               7.3/  DM801/7.4/       7.5/
-  BB0739              9.1/       9.2/               9.3/        9.4/       9.5/
-.END
+:------------------------------------------------------------------:            ::
+: DIFF shefit doesn't output value 7.5 after bad time on value 7.4 :            ::
+:------------------------------------------------------------------:            ::
+.B SIL 0617 Z DH07/    HG/  DRD+1/HG/          DRD+2/HG/  DM0625/HG/  DRD+6/HG/ ::
+  BB0731              1.1/       1.2/               1.3/        1.4/       1.5/ ::
+  BB0732              2.1/       2.2/        DM0708/2.3/        2.4/       2.5/ ::
+  BB0733              3.1/       3.2/  DRD+0/DM0708/3.3/        3.4/       3.5/ ::
+  BB0734              4.1/       4.2/  DM0708/DRD+0/4.3/        4.4/       4.5/ ::
+  BB0735       DM0708/5.1/       5.2/               5.3/        5.4/       5.5/ ::
+  BB0736 DM0708/DRD+0/6.1/       6.2/               6.3/        6.4/       6.5/ ::
+  BB0737              7.1/       7.2/               7.3/  DM801/7.4/       7.5/ ::
+  BB0739              9.1/       9.2/               9.3/        9.4/       9.5/ ::
+.END                                                                            ::
 
-.B SIL 0617 Z DH07/  HG/  DRD+1/HG/  DM0708/DRD+6/HG  HG/
-  BB0740   10.1/  10.2/  10.3/  10.4/
-.END
+:---------------------------------------------------------:::
+: DIFF shefit doesn't output valid values (10.1 and 10.2) :::
+:---------------------------------------------------------:::
+.B SIL 0617 Z DH07/  HG/  DRD+1/HG/  DM0708/DRD+6/HG  HG/  ::
+  BB0740   10.1/  10.2/  10.3/  10.4/                      ::
+.END                                                       ::
 
-.B SIL 0617 Z DH07/  HG/  DRD+1/HG/  DRD+6/DM0708//HG  HG/
-  BB0741   20.1/  20.2/  20.3/  20.4/
-.END
+:---------------------------------------------------------:::
+: DIFF shefit doesn't output valid values (20.1 and 20.2) :::
+:---------------------------------------------------------:::
+.B SIL 0617 Z DH07/  HG/  DRD+1/HG/  DRD+6/DM0708//HG  HG/ ::
+  BB0741   20.1/  20.2/  20.3/  20.4/                      ::
+.END                                                       ::
 
 .B NEW 0917 Z DH03/  HG/  DRH+06/HG/  DRH+12/HG/  DRH+18/HG/
   BB0742       42.1/  42.2/  42.3/  42.4/
@@ -2384,23 +2516,32 @@ BB0747  .10/ .20/ .30/ .40/ .50/ :comment
 :
 : B format with weird values
 :
-.B MCI 820101 Z DH12/HG
-BB0748  1.02.03,  BB0749  4.0
-BB0750  5,6
-BB0751  1.1,  BB0752  2,77,  B0753 23.0
-.END
-.B MCI2 980101 Z DH12/HG/PP
-BB0754  1.2/0,5, BB0755  2.2/0.2
-BB0756  2.3/0.3, BB0757  5.0/0.0
-BB0758  2..4/0.4,
-BB0759  2.3#/0.5
-.END
+:-------------------------------------------------------:::
+: DIFF shefit doesn't generate value for location B0753 :::
+:-------------------------------------------------------:::
+.B MCI 820101 Z DH12/HG                                  ::
+BB0748  1.02.03,  BB0749  4.0                            ::
+BB0750  5,6                                              ::
+BB0751  1.1,  BB0752  2,77,  B0753 23.0                  ::
+.END                                                     ::
+:-------------------------------------------------------:::
+: DIFF shefit doesn't generate value for location B0755 :::
+:-------------------------------------------------------:::
+.B MCI2 980101 Z DH12/HG/PP                              ::
+BB0754  1.2/0,5, BB0755  2.2/0.2                         ::
+BB0756  2.3/0.3, BB0757  5.0/0.0                         ::
+BB0758  2..4/0.4,                                        ::
+BB0759  2.3#/0.5                                         ::
+.END                                                     ::
 :
 : E format with weird values
 :
 .E EE0117 980101 Z DH12/HG/DIH06/ 2.1/2.0.1/2.3
-.E EE0118 980101 Z DH12/HG/DIH06/ 2,3/4.0
-.E EE0119 980101 Z DH12/HG/DIH06/ 3.1, 3.2 / 3.3
+:-------------------------------------------------------------------------:::
+: DIFF shefit assigns first valid value in series a time series code of 2 :::
+:-------------------------------------------------------------------------:::
+.E EE0118 980101 Z DH12/HG/DIH06/ 2,3/4.0                                  ::
+.E EE0119 980101 Z DH12/HG/DIH06/ 3.1, 3.2 / 3.3                           ::
 :
 : E format with qualifier code in middle of values
 :
@@ -2433,48 +2574,84 @@ BB0759  2.3#/0.5
 :
 .A  AA0430  980101 Z DH12/HG 2.3L/PP 0.1Q
 .A  AA0431  980101 Z DH12/HG 2.4QA/PP 0.2s/TM 10S+
-.A  AA0432  1205   Z DH10 /TX mmm
+:---------------------------------------------:::
+: DIFF shefit errors on "mmm" value/qualifier :::
+:---------------------------------------------:::
+.A  AA0432  1205   Z DH10 /TX mmm              ::
 .A  AA0433  820209 Z DH07 HG 1.2
-.A  AA0434  820209   HG 2.3
+:----------------------------------------------------:::
+: DIFF shefit errors on missing "/" before parameter :::
+:----------------------------------------------------:::
+.A  AA0434  820209   HG 2.3                           ::
 .A  AA0434A 820209   /HG 3.4
 .A  AA0435  1205   Z DH10 /TX  - 11
 .A  AA0436  1205   Z DH10 /TX 10+ / pp 1.0. / pp 1.2/
 
-.B  MCI  820101 Z DH12/HG/TX
-BB0762A  mmmm / 40,   BB0762B  1.1+xq 20,   BB0762C  mmmmmm "comment" / 50
-.END
+:-------------------------------------------------:                        ::
+: DIFF shefit only generates value for BB0762C/TX :                        ::
+:-------------------------------------------------:                        ::
+.B  MCI  820101 Z DH12/HG/TX                                               ::
+BB0762A  mmmm / 40,   BB0762B  1.1+xq 20,   BB0762C  mmmmmm "comment" / 50 ::
+.END                                                                       ::
 
-.E EE0129 980101 Z DH12/HG/DIH06/ 3.1,   3.2 / 3.3
-.E EE0130 980101 Z DH12/HG/DIH06/ 3.1+ / 3.2 / 3.3
+:-------------------------------------------------------------------------:::
+: DIFF shefit assigns first valid value in series a time series code of 2 :::
+:-------------------------------------------------------------------------:::
+.E EE0129 980101 Z DH12/HG/DIH06/ 3.1,   3.2 / 3.3                         ::
+.E EE0130 980101 Z DH12/HG/DIH06/ 3.1+ / 3.2 / 3.3                         ::
 .E EE0131 980101 Z DH12/HG/DIH06/ 3.1A / 3.2 / 3.3
-.E EE0132 980101 Z DH12/HG/DIH06/ 1.0 / 1,1 / 1.2 / 1.3 , /1.4/
+:---------------------------------------------------------------------------:::
+: DIFF shefit doesn't generate value for 1.3, assigns different time to 1.4 :::
+:---------------------------------------------------------------------------:::
+.E EE0132 980101 Z DH12/HG/DIH06/ 1.0 / 1,1 / 1.2 / 1.3 , /1.4/              ::
 
-.B   KRF   1202 Z DH12 /TX/TN/HG
-BB0763    MM   / B22            /2.0
-BB0763A   MBAD / R24 "comment"  /3.0
-BB0763B   MF   / R26            /4.0
-BB0763C   +F   / 22             /5.0
-BB0763D   45   /B15             /6.0
-BB0763E   -9999/-9002           /7.0
-BB0763F   F    /+F              /8.0
-BB0763G   Q    /10              /9.0
-BB0763Q        /                /10.0
-BB0763R  /     /                /11.0
-BB0763S  /Q    /-Q              /12.0
-BB0763T   ---  / ...Q           / --Q
-.END
+:----------------------------------------------------------:::
+: DIFF shefit errors on "..." for missing value on BB0763T :::
+:----------------------------------------------------------:::
+.B   KRF   1202 Z DH12 /TX/TN/HG                            ::
+BB0763    MM   / B22            /2.0                        ::
+BB0763A   MBAD / R24 "comment"  /3.0                        ::
+BB0763B   MF   / R26            /4.0                        ::
+BB0763C   +F   / 22             /5.0                        ::
+BB0763D   45   /B15             /6.0                        ::
+BB0763E   -9999/-9002           /7.0                        ::
+BB0763F   F    /+F              /8.0                        ::
+BB0763G   Q    /10              /9.0                        ::
+BB0763Q        /                /10.0                       ::
+BB0763R  /     /                /11.0                       ::
+BB0763S  /Q    /-Q              /12.0                       ::
+BB0763T   ---  / ...Q           / --Q                       ::
+.END                                                        ::
 :
 : All kinds of missing value tries (and their qualifier codes)
 :
 .A  AA0440A  991216  Z  DH01/ TX +   / TN -   / HG .   / SD M   / PP T   /
-.A  AA0440B  991216  Z  DH02/ TX +Q  / TN -Q  / HG .Q  / SD MQ  / PP TQ  /
-.A  AA0440C  991216  Z  DH03/ TX + Q / TN - Q / HG . Q / SD M Q / PP T Q /
-.A  AA0440D  991216  Z  DH04/ TX +++ / TN --- / HG ... / SD MMM / PP TTT /
-.A  AA0440E  991216  Z  DH05/ TX ++  / TN --  / HG ..  / SD MM  / PP TT  /
-.A  AA0440F  991216  Z  DH06/ TX ++Q / TN --Q / HG ..Q / SD MMQ / PP TTQ /
-.A  AA0440G  991216  Z  DH07/ TX ++ Q/ TN -- Q/ HG .. Q/ SD MM Q/ PP TT Q/
+:----------------------------------------------:                           ::
+: DIFF shefit errors on ".Q" for missing value :                           ::
+:----------------------------------------------:                           ::
+.A  AA0440B  991216  Z  DH02/ TX +Q  / TN -Q  / HG .Q  / SD MQ  / PP TQ  / ::
+:----------------------------------------:                                 ::
+: DIFF shefit generates first value only :                                 ::
+:----------------------------------------:                                 ::
+.A  AA0440C  991216  Z  DH03/ TX + Q / TN - Q / HG . Q / SD M Q / PP T Q / ::
+.A  AA0440D  991216  Z  DH04/ TX +++ / TN --- / HG ... / SD MMM / PP TTT / ::
+:------------------------------------------------------------:             ::
+: DIFF shefit errors on HG and assign data qualifier T to PP :             ::
+:------------------------------------------------------------:             ::
+.A  AA0440E  991216  Z  DH05/ TX ++  / TN --  / HG ..  / SD MM  / PP TT  / ::
+:-----------------------------------------------:                          ::
+: DIFF shefit outputs only parameters TX and TN :                          ::
+:-----------------------------------------------:                          ::
+.A  AA0440F  991216  Z  DH06/ TX ++Q / TN --Q / HG ..Q / SD MMQ / PP TTQ / ::
+:---------------------------------------:                                  ::
+: DIFF shefit outputs only parameter TX :                                  ::
+:---------------------------------------:                                  ::
+.A  AA0440G  991216  Z  DH07/ TX ++ Q/ TN -- Q/ HG .. Q/ SD MM Q/ PP TT Q/ ::
 .A  AA0440H  991216  Z  DH08/ TX +.  / TN -.  /
-.A  AA0440I  991216  Z  DH09/ TX 10QX/ TN 8 Q "coMM" / HG 1.2 /
+:-----------------------------------------:                     ::
+: DIFF shefit doesn't output parameter HG :                     ::
+:-----------------------------------------:                     ::
+.A  AA0440I  991216  Z  DH09/ TX 10QX/ TN 8 Q "coMM" / HG 1.2 / ::
 .A  AA0440J  991216  Z  DH01/ HG 2,3 / PP 0.1 /
 :
 : Tabs in messages should be treated like blanks
@@ -2555,7 +2732,10 @@ BB0764B		50/40/2.0		,	BB0764C		60/55/3.0
 .E1  1.0 / 2..0 / 3.0 / 4.0   5.0
 :  Missing value
 .A AA0443 0717 DH1300/PPH PZ 0.1
-.A AA0444 0717 DH1300/PPH /PZ 0.1
+:-----------------------------------------:::
+: DIFF shefit doesn't output parameter PZ :::
+:-----------------------------------------:::
+.A AA0444 0717 DH1300/PPH /PZ 0.1          ::
 .A AA0445 0717 DH1300/PPH
 .A AA0446 0717 DH1300/PPH P/HG 0.2
 :
