@@ -1267,8 +1267,7 @@ class ShefParser :
             time_zone = m.group(6)
             hdr_len   = m.end()
         else :
-            self.error(f"Mal-formed message header: {message}")
-            return
+            raise ShefParserException(f"Mal-formed message header: {message}")
         #-------------------------#
         # process the header info #
         #-------------------------#
@@ -1276,8 +1275,7 @@ class ShefParser :
         try :
             zi = ZoneInfo(self._tz_names[time_zone])
         except :
-            self.error(f"Cannot instantiate time zone {self._tz_names[time_zone]} for SHEF time zone {time_zone}")
-            return
+            raise ShefParserException(f"Cannot instantiate time zone {self._tz_names[time_zone]} for SHEF time zone {time_zone}")
         dateval = Dt24(dateval.year, dateval.month, dateval.day, tzinfo=zi)
         datastr = message[hdr_len:].strip()
         tokens = self.crack_a_e_data_string(datastr, 'A', revised)
@@ -1403,8 +1401,7 @@ class ShefParser :
             time_zone = m.group(6)
             hdr_len   = m.end()
         else :
-            self.error(f"Mal-formed message header: {message}")
-            return
+            raise ShefParserException(f"Mal-formed message header: {message}")
         #-------------------------#
         # process the header info #
         #-------------------------#
@@ -1697,7 +1694,6 @@ def main() :
                     for outrec in outrecs : parser.output(outrec)
         except Exception as e :
             parser.error(f"{e} in message at {message_location}: {message}")
-            if str(e).find("supported") != -1 : raise
 
 if __name__ == "__main__" :
     main()
