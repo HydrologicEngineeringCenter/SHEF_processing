@@ -485,6 +485,11 @@ class ShefParser :
         "TH" : 'S', "UC" : 'D', "UL" : 'D', "XG" : 'J', "XP" : 'Q'}
 
     DURATION_VARIABLE_CODES = {
+        #
+        # May not be modified by SHEFPARM file
+        #
+        # Base numeric duration values for durtions specified with DVnxx
+        #
         'S' : 7000, 'N' :    0, 'H' : 1000, 'D' : 2000, 'M' : 3000, 'Y' : 4000}
 
     TZ_NAMES = {
@@ -535,7 +540,6 @@ class ShefParser :
         self._extremum_codes           = copy.deepcopy(ShefParser.EXTREMUM_CODES)
         self._probability_codes        = copy.deepcopy(ShefParser.PROBABILITY_CODES)
         self._qualifier_codes          = copy.deepcopy(ShefParser.QUALIFIER_CODES)
-        self._default_duration_codes   = copy.deepcopy(ShefParser.DEFAULT_DURATION_CODES)
         self._tz_names                 = copy.deepcopy(ShefParser.TZ_NAMES)
         self._max_error_count          = 500 # May be modified by SHEFPARM file
         self._error_count              = 0
@@ -766,7 +770,7 @@ class ShefParser :
         length = len(code)
         if length == 2 :
             try :
-                code += self._default_duration_codes[code]
+                code += ShefParser.DEFAULT_DURATION_CODES[code]
             except KeyError :
                 code += self._default_duration_code
             code += self._default_type_code + self._default_source_code + self._default_extremum_code + self._default_probability_code
