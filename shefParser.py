@@ -533,57 +533,58 @@ class ShefParser :
         #-----------------------------#
         # initialize program defaults #
         #-----------------------------#
-        self._pe_codes                 = copy.deepcopy(ShefParser.PE_CODES)
-        self._send_codes               = copy.deepcopy(ShefParser.SEND_CODES)
-        self._duration_codes           = copy.deepcopy(ShefParser.DURATION_CODES)
-        self._ts_codes                 = copy.deepcopy(ShefParser.TS_CODES)
-        self._extremum_codes           = copy.deepcopy(ShefParser.EXTREMUM_CODES)
-        self._probability_codes        = copy.deepcopy(ShefParser.PROBABILITY_CODES)
-        self._qualifier_codes          = copy.deepcopy(ShefParser.QUALIFIER_CODES)
-        self._tz_names                 = copy.deepcopy(ShefParser.TZ_NAMES)
-        self._max_error_count          = 500 # May be modified by SHEFPARM file
-        self._error_count              = 0
-        self._default_duration_code    = 'I' # May not be modified by SHEFPARM file
-        self._default_type_code        = 'R' # May not be modified by SHEFPARM file
-        self._default_source_code      = 'Z' # May not be modified by SHEFPARM file
-        self._default_extremum_code    = 'Z' # May not be modified by SHEFPARM file
-        self._default_probability_code = 'Z' # May not be modified by SHEFPARM file
-        self._input                    = None
-        self._output                   = None
-        self._input_lines              = None
-        self._msg_start_pattern        = re.compile(r"^\.[ABE]R?\s")
-        self._msg_continue_patterns    = {'A' : (re.compile(r"^\.A\d"), re.compile(r"^\.AR?\d")),
-                                          'E' : (re.compile(r"^\.E\d"), re.compile(r"^\.ER?\d")),
-                                          'B' : (re.compile(r"^\.B\d"), re.compile(r"^\.BR?\d"))}
-        self._input_name               = None
-        self._line_number              = 0
-        self._dot_a_e_header_pattern   = re.compile(
-                                         # 1 = location id
-                                         # 2 = date-time
-                                         # 6 = time zone
-                                         #               1           23       4
-                                           r"^\.[AE]R?\s+(\w{3,8})\s+((\d{2})?(\d{2})?\d{4})\s+" \
-                                         #    56
-                                           r"(([NH]S?|[AECMPYLB][DS]?|[JZ])\s{1,15})?", re.M)
-        self._obs_time_pattern         = re.compile(
-                                         #    12                            3     45      6                          7
-                                            r"((D[SNHDMYJ]|DR[SNHDMYE][+-]?)(\d+))((\s+|/)(D[SNHDMYJ]|DR[SNHDMYE][+-])(\d+))?")
-        self._obs_time_pattern2        = re.compile(r"((D[SNHDMYJ]|DR[SNHDMYE][+-]?)(\d+))(@(D[SNHDMYJ]|DR[SNHDMYE][+-])(\d+))?")
-        self._create_time_pattern      = re.compile(r"DC\d+")
-        self._unit_system_pattern      = re.compile(r"DU[ES]")
-        self._data_qualifier_pattern   = re.compile(r"DQ.")
-        self._duration_code_pattern    = re.compile(r"(DV[SNHDMY]\d{2}|DVZ)")
-        self._parameter_code_pattern   = re.compile(r"^[A-Z]{2}([A-Z]([A-Z0-9]{2}[A-Z]{,2})?)?$")
-        self._interval_pattern         = re.compile(r"DI[SNHDMEY][+-]?\d{1,2}")
-        self._value_pattern            = re.compile(
-                                        # 1 = sign
-                                        # 2 = numeric value
-                                        # 4 = trace value
-                                        # 5 = missing valule
-                                        # 6 = value qualifier
-                                         #    1      2   3               4      5            6
-                                            r"([+-]?)(\d+(\.\d*)?|\.\d+)|([Tt])|([Mm]{1,2})(\D?)")
-        self._UTC                      = ZoneInfo("UTC")
+        self._pe_codes                   = copy.deepcopy(ShefParser.PE_CODES)
+        self._send_codes                 = copy.deepcopy(ShefParser.SEND_CODES)
+        self._duration_codes             = copy.deepcopy(ShefParser.DURATION_CODES)
+        self._ts_codes                   = copy.deepcopy(ShefParser.TS_CODES)
+        self._extremum_codes             = copy.deepcopy(ShefParser.EXTREMUM_CODES)
+        self._probability_codes          = copy.deepcopy(ShefParser.PROBABILITY_CODES)
+        self._qualifier_codes            = copy.deepcopy(ShefParser.QUALIFIER_CODES)
+        self._tz_names                   = copy.deepcopy(ShefParser.TZ_NAMES)
+        self._max_error_count            = 500 # May be modified by SHEFPARM file
+        self._error_count                = 0
+        self._default_duration_code      = 'I' # May not be modified by SHEFPARM file
+        self._default_type_code          = 'R' # May not be modified by SHEFPARM file
+        self._default_source_code        = 'Z' # May not be modified by SHEFPARM file
+        self._default_extremum_code      = 'Z' # May not be modified by SHEFPARM file
+        self._default_probability_code   = 'Z' # May not be modified by SHEFPARM file
+        self._input                      = None
+        self._output                     = None
+        self._input_lines                = None
+        self._msg_start_pattern          = re.compile(r"^\.[ABE]R?\s")
+        self._msg_continue_patterns      = {'A' : (re.compile(r"^\.A\d"), re.compile(r"^\.AR?\d")),
+                                            'E' : (re.compile(r"^\.E\d"), re.compile(r"^\.ER?\d")),
+                                            'B' : (re.compile(r"^\.B\d"), re.compile(r"^\.BR?\d"))}
+        self._input_name                 = None
+        self._line_number                = 0
+        self._dot_a_e_header_pattern     = re.compile(
+                                           # 1 = location id
+                                           # 2 = date-time
+                                           # 6 = time zone
+                                           #               1           23       4
+                                             r"^\.[AE]R?\s+(\w{3,8})\s+((\d{2})?(\d{2})?\d{4})\s+" \
+                                           #    56
+                                             r"(([NH]S?|[AECMPYLB][DS]?|[JZ])\s{1,15})?", re.M)
+        self._dot_b_header_lines_pattern = re.compile(r"^.B(R?)\s.+?$(\n^.B\1?\d\s.+?$)*", re.M)
+        self._obs_time_pattern           = re.compile(
+                                           #    12                            3     45      6                          7
+                                              r"((D[SNHDMYJ]|DR[SNHDMYE][+-]?)(\d+))((\s+|/)(D[SNHDMYJ]|DR[SNHDMYE][+-])(\d+))?")
+        self._obs_time_pattern2          = re.compile(r"((D[SNHDMYJ]|DR[SNHDMYE][+-]?)(\d+))(@(D[SNHDMYJ]|DR[SNHDMYE][+-])(\d+))?")
+        self._create_time_pattern        = re.compile(r"DC\d+")
+        self._unit_system_pattern        = re.compile(r"DU[ES]")
+        self._data_qualifier_pattern     = re.compile(r"DQ.")
+        self._duration_code_pattern      = re.compile(r"(DV[SNHDMY]\d{2}|DVZ)")
+        self._parameter_code_pattern     = re.compile(r"^[A-Z]{2}([A-Z]([A-Z0-9]{2}[A-Z]{,2})?)?$")
+        self._interval_pattern           = re.compile(r"DI[SNHDMEY][+-]?\d{1,2}")
+        self._value_pattern              = re.compile(
+                                          # 1 = sign
+                                          # 2 = numeric value
+                                          # 4 = trace value
+                                          # 5 = missing valule
+                                          # 6 = value qualifier
+                                           #    1      2   3               4      5            6
+                                              r"([+-]?)(\d+(\.\d*)?|\.\d+)|([Tt])|([Mm]{1,2})(\D?)")
+        self._UTC                        = ZoneInfo("UTC")
 
         if self._shefparm_pathname :
             self.read_shefparm(self._shefparm_pathname)
@@ -1381,7 +1382,7 @@ class ShefParser :
                     comment = comment)
                 return [outrec]
 
-    def parse_dot_e_message(self, message) :
+    def parse_dot_e_message(self, message: str) :
         '''
         Parses a .E or .ER message
         '''
@@ -1567,6 +1568,22 @@ class ShefParser :
                 obstime += interval
         return outrecs
 
+    def parse_dot_b_message(self, message: str) :
+        m = self._dot_b_header_lines_pattern.search(message)
+        if not m :
+            raise ShefParserException(f"Invalid .B message: {message}")
+        lines = m.group(0).strip().split("\n")
+        lines[0] = lines[0].strip()
+        for i in range(1, len(lines)) :
+            lines[i] = lines[i][len(lines[i].split()[0]):].strip()
+            if lines[0][-1] != '/' and lines[i][0] != '/' : lines[0] += '/'
+            lines[0] += lines[i]
+        header = lines[0]
+        lines = message[len(m.group(0)):].strip().split("\n")
+        datastr = "\n".join(lines[:-1]).strip()
+        print(f"\nmessage = {message}")
+        print(f"header = {header}")
+        print(f"datastr = {datastr}")
 def main() :
     '''
     Driver routine
@@ -1683,17 +1700,19 @@ def main() :
     while True :
         message_location, message = parser.get_next_message()
         if not message : break
+        outrecs = None
         try :
-            if message.startswith(".A") :
-                outrecs = parser.parse_dot_a_message(message)
-                if outrecs : 
-                    for outrec in outrecs : parser.output(outrec)
-            elif message.startswith(".E") :
-                outrecs = parser.parse_dot_e_message(message)
-                if outrecs : 
-                    for outrec in outrecs : parser.output(outrec)
+            if message.startswith(".B") :
+                outrecs = parser.parse_dot_b_message(message)
+            # elif message.startswith(".A") :
+            #     outrecs = parser.parse_dot_a_message(message)
+            # elif message.startswith(".E") :
+            #     outrecs = parser.parse_dot_e_message(message)
+            if outrecs : 
+                for outrec in outrecs : parser.output(outrec)
         except Exception as e :
             parser.error(f"{e} in message at {message_location}: {message}")
+            if str(e).find("parser") != -1 : raise
 
 if __name__ == "__main__" :
     main()
