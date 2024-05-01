@@ -199,6 +199,9 @@ class Dt24 :
         else :
             return super().__getattribute__("_dt").__getattribute__(name)
 
+    def __repr__(self) :
+        return f"{self.year:04d}/{self.month:02d}/{self.day:02d}T{self.hour:02d}:{self.minute:02d}:{self.second:02d}{self.tzinfo}"
+
 class OutputRecord :
     '''
     Parsed value
@@ -213,9 +216,9 @@ class OutputRecord :
             self,
             location:         str,
             parameter_code:   str,
-            obstime:          Dt24,
-            create_time:      Dt24 = None,
-            value:            float = -9999.,
+            utc_obstime:      Dt24,
+            utc_create_time:  Dt24 = None,
+            en_value:         float = -9999.,
             qualifier:        str = 'Z',
             revised:          bool = False,
             duration_unit:    str  = 'Z',
@@ -238,10 +241,10 @@ class OutputRecord :
             raise ShefParserException("Observed time must not be empty")
             
         self._location             = location
-        self._observation_time     = obstime
-        self._creation_time        = create_time
+        self._observation_time     = utc_obstime
+        self._creation_time        = utc_create_time
         self._parameter_code       = parameter_code
-        self._value                = value
+        self._value                = en_value
         self._qualifier            = qualifier
         self._revised              = revised
         self._duration_unit        = duration_unit,
@@ -349,6 +352,7 @@ class OutputRecord :
     @property
     def comment(self) :
         return self._comment
+
 
 class ShefParser :
     '''
@@ -524,6 +528,89 @@ class ShefParser :
         "BS" : "Pacific/Midway",      # Bering standard
         "Z"  : "UTC"}                 # Zulu
 
+    UTC = ZoneInfo("UTC")
+
+    class ParameterControl :
+        '''
+        Holds .B parameter control info
+        '''
+        def __init__(
+                self,
+                obstime:        Dt24,
+                createtime:     Dt24,
+                units:          str,
+                qualifier:      str,
+                duration_unit:  str,
+                duration_value: int,
+                parameter:      str) :
+            self._obstime        = obstime
+            self._createtime     = createtime.clone if createtime else None
+            self._units          = units
+            self._qualifier      = qualifier
+            self._duration_unit  = duration_unit
+            self._duration_value = duration_value
+            self._parameter_code = parameter
+            self._location       = None
+            self._value          = None
+            self._comment        = None
+
+
+        @property
+        def location(self) :
+            return self._location
+
+        @location.setter
+        def set_location(self, val) :
+            self._location = val
+
+        @property
+        def value(self) :
+            return self._value
+
+        @value.setter
+        def value(self, val) :
+            self._value = val
+
+        @property
+        def qualifier(self) :
+            return self._qualifier
+
+        @qualifier.setter
+        def value(self, val) :
+            self._qualifier = val
+
+        @property
+        def comment(self) :
+            return self._comment
+
+        @comment.setter
+        def comment(self, val) :
+            self._comment = val
+
+        def get_output_record(
+                self:       'ParameterControl',
+                shefParser: 'ShefParser',
+                revised:    bool,
+                msg_source: str,
+                location:   str) -> 'OutputRecord' :
+            return OutputRecord(
+                location,
+                self._parameter_code,
+                self._obstime.astimezone(ShefParser.UTC),
+                self._createtime.astimezone(ShefParser.UTC) if self._createtime else None,
+                self._value if self._units == "EN" else self._value * shefParser._pe_codes[self._parameter_code[:2]],
+                self._qualifier,
+                revised,
+                self._duration_unit,
+                self._duration_value,
+                msg_source,
+                0,
+                self._comment)
+
+        def __repr__(self) :
+            return f"{self._parameter_code} @ {self._obstime.astimezone(ShefParser.UTC)}"
+
+
     def __init__(self, output_format, shefparm_pathname=None) :
         '''
         Constructor
@@ -557,14 +644,14 @@ class ShefParser :
                                             'B' : (re.compile(r"^\.B\d"), re.compile(r"^\.BR?\d"))}
         self._input_name                 = None
         self._line_number                = 0
-        self._dot_a_e_header_pattern     = re.compile(
+        self._positional_fields_pattern   = re.compile(
                                            # 1 = location id
                                            # 2 = date-time
                                            # 6 = time zone
-                                           #               1           23       4
-                                             r"^\.[AE]R?\s+(\w{3,8})\s+((\d{2})?(\d{2})?\d{4})\s+" \
-                                           #    56
-                                             r"(([NH]S?|[AECMPYLB][DS]?|[JZ])\s{1,15})?", re.M)
+                                           #                 1           23       4
+                                              r"^\.[AEB]R?\s+(\w{3,8})\s+((\d{2})?(\d{2})?\d{4})" \
+                                           #    5   6
+                                              r"(\s+([NH]S?|[AECMPYLB][DS]?|[JZ])\s{1,15})?", re.M)
         self._dot_b_header_lines_pattern = re.compile(r"^.B(R?)\s.+?$(\n^.B\1?\d\s.+?$)*", re.M)
         self._obs_time_pattern           = re.compile(
                                            #    12                            3     45      6                          7
@@ -584,7 +671,6 @@ class ShefParser :
                                           # 6 = value qualifier
                                            #    1      2   3               4      5            6
                                               r"([+-]?)(\d+(\.\d*)?|\.\d+)|([Tt])|([Mm]{1,2})(\D?)")
-        self._UTC                        = ZoneInfo("UTC")
 
         if self._shefparm_pathname :
             self.read_shefparm(self._shefparm_pathname)
@@ -1041,60 +1127,60 @@ class ShefParser :
             tokens[i] = tokens[i].strip(chr(0)).split(chr(0))
         return tokens
 
-    def get_observation_time(self, current_observation_time: Dt24, zi : ZoneInfo, token: str) :
+    def get_observation_time(self, base_time: Dt24, zi : ZoneInfo, token: str) :
         '''
         Update the observation time based on the token
         '''
-        obstime = current_observation_time.clone()
-        for subtoken in token.split("@") :
+        bt = base_time
+        for subtoken in token.strip("@").split("@") :
             try :
                 cur_time = Dt24.now()
                 v = subtoken[2:]
                 length = len(v)
                 if subtoken[1] == 'S' :
                     if length == 2 : # DSss
-                        obstime = Dt24(obstime.year, obstime.month, obstime.day, obstime.hour, obstime.minute, int(v[0:2]), tzinfo=zi)
+                        obstime = Dt24(bt.year, bt.month, bt.day, bt.hour, bt.minute, int(v[0:2]), tzinfo=zi)
                     else :
                         raise ShefParserException(f"Bad observation time: {subtoken}")
                 elif subtoken[1] == 'N' :
                     if length == 4 : # DNnnss
-                        obstime = Dt24(obstime.year, obstime.month, obstime.day, obstime.hour, int(v[0:2]), int(v[2:4]), tzinfo=zi)
+                        obstime = Dt24(bt.year, bt.month, bt.day, bt.hour, int(v[0:2]), int(v[2:4]), tzinfo=zi)
                     elif length == 2 : # DNnn
-                        obstime = Dt24(obstime.year, obstime.month, obstime.day, obstime.hour, int(v[0:2]), obstime.second, tzinfo=zi)
+                        obstime = Dt24(bt.year, bt.month, bt.day, bt.hour, int(v[0:2]), bt.second, tzinfo=zi)
                     else :
                         raise ShefParserException(f"Bad observation time: {subtoken}")
                         return None
                 elif subtoken[1] == 'H' :
                     if length == 6 : # DHhhnnss
-                        obstime = Dt24(obstime.year, obstime.month, obstime.day, int(v[0:2]), int(v[2:4]), int(v[4:6]), tzinfo=zi)
+                        obstime = Dt24(bt.year, bt.month, bt.day, int(v[0:2]), int(v[2:4]), int(v[4:6]), tzinfo=zi)
                     elif length == 4 : # DHhhnn
-                        obstime = Dt24(obstime.year, obstime.month, obstime.day, int(v[0:2]), int(v[2:4]), obstime.second, tzinfo=zi)
+                        obstime = Dt24(bt.year, bt.month, bt.day, int(v[0:2]), int(v[2:4]), bt.second, tzinfo=zi)
                     elif length == 2 : # DHhh
-                        obstime = Dt24(obstime.year, obstime.month, obstime.day, int(v[0:2]), obstime.minute, obstime.second, tzinfo=zi)
+                        obstime = Dt24(bt.year, bt.month, bt.day, int(v[0:2]), bt.minute, bt.second, tzinfo=zi)
                     else :
                         raise ShefParserException(f"Bad observation time: {subtoken}")
                 elif subtoken[1] == 'D' :
                     if length == 8 : # DDddhhnnss
-                        obstime = Dt24(obstime.year, obstime.month, int(v[0:2]), int(v[2:4]), int(v[4:6]), int(v[6:8]), tzinfo=zi)
+                        obstime = Dt24(bt.year, bt.month, int(v[0:2]), int(v[2:4]), int(v[4:6]), int(v[6:8]), tzinfo=zi)
                     elif length == 6 : # DDddhhnn
-                        obstime = Dt24(obstime.year, obstime.month, int(v[0:2]), int(v[2:4]), int(v[4:6]), obstime.second, tzinfo=zi)
+                        obstime = Dt24(bt.year, bt.month, int(v[0:2]), int(v[2:4]), int(v[4:6]), bt.second, tzinfo=zi)
                     elif length == 4 : # DDddhh
-                        obstime = Dt24(obstime.year, obstime.month, int(v[0:2]), int(v[2:4]), obstime.hour, obstime.second, tzinfo=zi)
+                        obstime = Dt24(bt.year, bt.month, int(v[0:2]), int(v[2:4]), bt.hour, bt.second, tzinfo=zi)
                     elif length == 2 : # DDdd
-                        obstime = Dt24(obstime.year, obstime.month, int(v[0:2]), obstime.hour, obstime.minute, obstime.second, tzinfo=zi)
+                        obstime = Dt24(bt.year, bt.month, int(v[0:2]), bt.hour, bt.minute, bt.second, tzinfo=zi)
                     else :
                         raise ShefParserException(f"Bad observation time: {subtoken}")
                 elif subtoken[1] == 'M' :
                     if length == 10 : # DMmmddhhnnss
-                        obstime = Dt24(obstime.year, int(v[0:2]), int(v[2:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), tzinfo=zi)
+                        obstime = Dt24(bt.year, int(v[0:2]), int(v[2:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), tzinfo=zi)
                     elif length == 8 : # DMmmddhhnn
-                        obstime = Dt24(obstime.year, int(v[0:2]), int(v[2:4]), int(v[4:6]), int(v[6:8]), obstime.second, tzinfo=zi)
+                        obstime = Dt24(bt.year, int(v[0:2]), int(v[2:4]), int(v[4:6]), int(v[6:8]), bt.second, tzinfo=zi)
                     elif length == 6 : # DMmmddhh
-                        obstime = Dt24(obstime.year, int(v[0:2]), int(v[2:4]), int(v[4:6]), obstime.minute, obstime.second, tzinfo=zi)
+                        obstime = Dt24(bt.year, int(v[0:2]), int(v[2:4]), int(v[4:6]), bt.minute, bt.second, tzinfo=zi)
                     elif length == 4 : # DMmmdd
-                        obstime = Dt24(obstime.year, int(v[0:2]), int(v[2:4]), obstime.hour, obstime.minute, obstime.second, tzinfo=zi)
+                        obstime = Dt24(bt.year, int(v[0:2]), int(v[2:4]), bt.hour, bt.minute, bt.second, tzinfo=zi)
                     elif length == 2 : # DMmm
-                        obstime = Dt24(obstime.year, int(v[0:2]), obstime.day, obstime.hour, obstime.minute, obstime.second, tzinfo=zi)
+                        obstime = Dt24(bt.year, int(v[0:2]), bt.day, bt.hour, bt.minute, bt.second, tzinfo=zi)
                     else :
                         raise ShefParserException(f"Bad observation time: {subtoken}")
                 elif subtoken[1] == 'Y' :
@@ -1107,43 +1193,43 @@ class ShefParser :
                     if length == 12 : # DYyymmddhhnnss
                         obstime = Dt24(y, int(v[2:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), int(v[10:12]), tzinfo=zi)
                     elif length == 10 : # DYyymmddhhnn - set date and time
-                        obstime = Dt24(y, int(v[2:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), obstime.second, tzinfo=zi)
+                        obstime = Dt24(y, int(v[2:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), bt.second, tzinfo=zi)
                     elif length == 8 : # DYyymmddhh
-                        obstime = Dt24(y, int(v[2:4]), int(v[4:6]), int(v[6:8]), obstime.minute, obstime.second, tzinfo=zi)
+                        obstime = Dt24(y, int(v[2:4]), int(v[4:6]), int(v[6:8]), bt.minute, bt.second, tzinfo=zi)
                     elif length == 6 : # DYyymmdd
-                        obstime = Dt24(y, int(v[2:4]), int(v[4:6]), obstime.hour, obstime.minute, obstime.second, tzinfo=zi)
+                        obstime = Dt24(y, int(v[2:4]), int(v[4:6]), bt.hour, bt.minute, bt.second, tzinfo=zi)
                     elif length == 4 : # DYyymm
-                        obstime = Dt24(y, int(v[2:4]), obstime.day, obstime.hour, obstime.minute, obstime.second, tzinfo=zi)
+                        obstime = Dt24(y, int(v[2:4]), bt.day, bt.hour, bt.minute, bt.second, tzinfo=zi)
                     elif length == 2 : # DYyy
-                        obstime = Dt24(y, obstime.month, obstime.day, obstime.hour, obstime.minute, obstime.second, tzinfo=zi)
+                        obstime = Dt24(y, bt.month, bt.day, bt.hour, bt.minute, bt.second, tzinfo=zi)
                     else :
                         raise ShefParserException(f"Bad observation time: {subtoken}")
                 elif subtoken[1] == 'T' :
                     if length == 14 : #DTccyymmddhhnnss
                         obstime = Dt24(int(v[0:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), int(v[10:12]), int(v[12:14]), tzinfo=zi)
                     elif length == 12 : #DTccyymmddhhnn
-                        obstime = Dt24(int(v[0:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), int(v[10:12]), obstime.second, tzinfo=zi)
+                        obstime = Dt24(int(v[0:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), int(v[10:12]), bt.second, tzinfo=zi)
                     elif length == 10 : #DTccyymmddhh
-                        obstime = Dt24(int(v[0:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), obstime.minute, obstime.second, tzinfo=zi)
+                        obstime = Dt24(int(v[0:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), bt.minute, bt.second, tzinfo=zi)
                     elif length == 8 : #DTccyymmdd
-                        obstime = Dt24(int(v[0:4]), int(v[4:6]), int(v[6:8]), obstime.hour, obstime.minute, obstime.second, tzinfo=zi)
+                        obstime = Dt24(int(v[0:4]), int(v[4:6]), int(v[6:8]), bt.hour, bt.minute, bt.second, tzinfo=zi)
                     elif length == 6 : #DTccyymm
-                        obstime = Dt24(int(v[0:4]), int(v[4:6]), obstime.day, obstime.hour, obstime.minute, obstime.second, tzinfo=zi)
+                        obstime = Dt24(int(v[0:4]), int(v[4:6]), bt.day, bt.hour, bt.minute, bt.second, tzinfo=zi)
                     elif length == 4 : #DTccyy
-                        obstime = Dt24(int(v[0:4]), obstime.month, obstime.day, obstime.hour, obstime.minute, obstime.second, tzinfo=zi)
+                        obstime = Dt24(int(v[0:4]), bt.month, bt.day, bt.hour, bt.minute, bt.second, tzinfo=zi)
                     elif length == 2 : #DTcc
-                        obstime = Dt24(100*int(v[0:2])+obstime.year%100, obstime.month, obstime.day, obstime.hour, obstime.minute, obstime.second, tzinfo=zi)
+                        obstime = Dt24(100*int(v[0:2])+bt.year%100, bt.month, bt.day, bt.hour, bt.minute, bt.second, tzinfo=zi)
                     else :
                         raise ShefParserException(f"Bad observation time: {subtoken}")
                 elif subtoken[1] == 'J' : 
                     if length == 7 : # DJccyyddd
-                        obstime = Dt24(int(obstime[0:4]), 1, 1, obstime.hour, obstime.minute, obstime.second, tzinfo=zi) + timedelta(days=int(v[4:7]))
+                        obstime = Dt24(int(bt[0:4]), 1, 1, bt.hour, bt.minute, bt.second, tzinfo=zi) + timedelta(days=int(v[4:7]))
                     elif length == 5 : # DJyyddd
                         y = cur_time.year - cur_time.year % 100 + int(v[0:2])
                         if y - cur_time.year > 10 : y -= 100
-                        obstime = Dt24(y, 1, 1, obstime.hour, obstime.minute, obstime.second, tzinfo=zi) + timedelta(days=int(v[2:5]))
+                        obstime = Dt24(y, 1, 1, bt.hour, bt.minute, bt.second, tzinfo=zi) + timedelta(days=int(v[2:5]))
                     elif length == 3 : # DJddd
-                        obstime = Dt24(obstime.year, 1, 1, obstime.hour, obstime.minute, obstime.second, tzinfo=zi) + timedelta(days=int(v[0:3]))
+                        obstime = Dt24(bt.year, 1, 1, bt.hour, bt.minute, bt.second, tzinfo=zi) + timedelta(days=int(v[0:3]))
                     else :
                         raise ShefParserException(f"Bad observation time: {subtoken}")
                 elif subtoken[1] == 'R' :
@@ -1161,14 +1247,14 @@ class ShefParser :
                     elif subtoken[2] == 'D' :
                         objtime += timedelta(days=int(v))
                     elif subtoken[2] == 'M' :
-                        obstime = obstime.add_months(int(v))
+                        obstime = bt.add_months(int(v))
                     elif subtoken[2] == 'E' :
-                        obstime = obstime.add_months(int(v), end_of_month = True)
+                        obstime = bt.add_months(int(v), end_of_month = True)
                     elif subtoken[2] == 'Y' :
-                        obstime = obstime.add_months(12*int(v))
+                        obstime = bt.add_months(12*int(v))
                     else :
                         raise ShefParserException(f"Bad observation time: {subtoken}")
-                return obstime
+                return bt
             except :
                 raise ShefParserException(f"Bad observation time: {subtoken}")
 
@@ -1252,33 +1338,32 @@ class ShefParser :
         '''
         Parses a .A or .AR message
         '''
-        #------------------#
-        # parse the header #
-        #------------------#
+        #-----------------------------#
+        # parse the positional fields #
+        #-----------------------------#
         revised   = None
         location  = None
         date_time = None
         time_zone = None
-        hdr_len   = None
-        m = self._dot_a_e_header_pattern.search(message)
-        if m :
-            revised   = message[2] == 'R'
-            location  = m.group(1)
-            dateval   = self.parse_header_date(m.group(2))
-            time_zone = m.group(6)
-            hdr_len   = m.end()
-        else :
-            raise ShefParserException(f"Mal-formed message header: {message}")
-        #-------------------------#
-        # process the header info #
-        #-------------------------#
+        length    = None
+        m = self._positional_fields_pattern.search(message)
+        if not m :
+            raise ShefParserException(f"Mal-formed positional fields: {message}")
+        #------------------------------#
+        # process the positionl fields #
+        #------------------------------#
+        revised   = message[2] == 'R'
+        location  = m.group(1)
+        dateval   = self.parse_header_date(m.group(2))
+        time_zone = m.group(6) if m.group(6) else 'Z'
+        length    = m.end()
         if not time_zone : time_zone = 'Z'
         try :
             zi = ZoneInfo(self._tz_names[time_zone])
         except :
             raise ShefParserException(f"Cannot instantiate time zone {self._tz_names[time_zone]} for SHEF time zone {time_zone}")
         dateval = Dt24(dateval.year, dateval.month, dateval.day, tzinfo=zi)
-        datastr = message[hdr_len:].strip()
+        datastr = message[length:].strip()
         tokens = self.crack_a_e_data_string(datastr, 'A', revised)
         #-----------------------------#
         # set the default data values #
@@ -1372,8 +1457,8 @@ class ShefParser :
                 outrec = OutputRecord(
                     location,
                     parameter_code,
-                    obstime.astimezone(self._UTC),
-                    createtime.astimezone(self._UTC) if createtime else None,
+                    obstime.astimezone(ShefParser.UTC),
+                    createtime.astimezone(ShefParser.UTC) if createtime else None,
                     value,
                     qualifier,
                     revised,
@@ -1386,33 +1471,32 @@ class ShefParser :
         '''
         Parses a .E or .ER message
         '''
-        #------------------#
-        # parse the header #
-        #------------------#
+        #-----------------------------#
+        # parse the positional fields #
+        #-----------------------------#
         revised   = None
         location  = None
         date_time = None
         time_zone = None
-        hdr_len   = None
-        m = self._dot_a_e_header_pattern.search(message)
-        if m :
-            revised   = message[2] == 'R'
-            location  = m.group(1)
-            dateval   = self.parse_header_date(m.group(2))
-            time_zone = m.group(6)
-            hdr_len   = m.end()
-        else :
-            raise ShefParserException(f"Mal-formed message header: {message}")
-        #-------------------------#
-        # process the header info #
-        #-------------------------#
+        length    = None
+        m = self._positional_fields_pattern.search(message)
+        if not m :
+            raise ShefParserException(f"Mal-formed positional fields: {message}")
+        #-------------------------------#
+        # process the positional fields #
+        #-------------------------------#
+        revised   = message[2] == 'R'
+        location  = m.group(1)
+        dateval   = self.parse_header_date(m.group(2))
+        time_zone = m.group(6) if m.group(6) else 'Z'
+        length    = m.end()
         if not time_zone : time_zone = 'Z'
         try :
             zi = ZoneInfo(self._tz_names[time_zone])
         except :
             raise ShefParserException(f"Cannot instantiate time zone {self._tz_names[time_zone]} for SHEF time zone {time_zone}")
         dateval = Dt24(dateval.year, dateval.month, dateval.day, tzinfo=zi)
-        datastr = message[hdr_len:].strip()
+        datastr = message[length:].strip()
         tokens = self.crack_a_e_data_string(datastr, 'E', revised)
         #-----------------------------#
         # set the default data values #
@@ -1554,8 +1638,8 @@ class ShefParser :
                 outrec = OutputRecord(
                     location,
                     parameter_code,
-                    obstime.astimezone(self._UTC),
-                    createtime.astimezone(self._UTC) if createtime else None,
+                    obstime.astimezone(ShefParser.UTC),
+                    createtime.astimezone(ShefParser.UTC) if createtime else None,
                     value,
                     qualifier,
                     revised,
@@ -1569,6 +1653,12 @@ class ShefParser :
         return outrecs
 
     def parse_dot_b_message(self, message: str) :
+        '''
+        Parses a .B or .BR message
+        '''
+        #------------------------------------------------------------------------------------#
+        # separate the header (positional fields and parameter control) from the data string #
+        #------------------------------------------------------------------------------------#
         m = self._dot_b_header_lines_pattern.search(message)
         if not m :
             raise ShefParserException(f"Invalid .B message: {message}")
@@ -1579,11 +1669,132 @@ class ShefParser :
             if lines[0][-1] != '/' and lines[i][0] != '/' : lines[0] += '/'
             lines[0] += lines[i]
         header = lines[0]
-        lines = message[len(m.group(0)):].strip().split("\n")
-        datastr = "\n".join(lines[:-1]).strip()
-        print(f"\nmessage = {message}")
+        datastr = "\n".join(message[m.end():].strip().split("\n")[:-1]).strip()
+        #------------------------------------#
+        # parse the header positional fields #
+        #------------------------------------#
+        revised    = None
+        msg_source = None
+        date_time  = None
+        time_zone  = None
+        length     = None
+        m = self._positional_fields_pattern.search(message)
+        if not m :
+            raise ShefParserException(f"Mal-formed positional fields: {message}")
+        #--------------------------------------#
+        # process the header positional fields #
+        #--------------------------------------#
+        revised    = message[2] == 'R'
+        msg_source = m.group(1)
+        dateval    = self.parse_header_date(m.group(2))
+        time_zone  = m.group(6) if m.group(6) else 'Z'
+        length     = m.end()
+        if not time_zone : time_zone = 'Z'
+        try :
+            zi = ZoneInfo(self._tz_names[time_zone])
+        except :
+            raise ShefParserException(f"Cannot instantiate time zone {self._tz_names[time_zone]} for SHEF time zone {time_zone}")
+        dateval = Dt24(dateval.year, dateval.month, dateval.day, tzinfo=zi)
+        datastr = message[length:].strip()
+        #-----------------------------#
+        # set the default data values #
+        #-----------------------------#
+        if time_zone == 'Z' :
+            default_obstime = Dt24(dateval.year, dateval.month, dateval.day, 12, 0, 0, tzinfo=zi)
+        else :
+            default_obstime = Dt24(dateval.year, dateval.month, dateval.day, 0, 0, 0, tzinfo=zi) - timedelta(days=1)
+        dateval = Dt24(dateval.year, dateval.month, dateval.day, tzinfo=zi)
+        parameter_code    = None
+        obstime_defined   = False
+        createtime        = None
+        interval          = None
+        time_series_code  = 0
+        qualifier         = 'Z'
+        units             = "EN"
+        duration_unit     = 'Z'
+        duration_value    = None
+        use_prev_7am      = False
+        param_control     = []
+        #--------------------------------------#
+        # process the parameter control fields #
+        #--------------------------------------#
+        param_str = header[m.end():].strip()
+        param_str = self._obs_time_pattern.sub(r"\1@\6", param_str).strip('@')
+        param_tokens = list(map(lambda s : s.strip(), param_str.split('/')))
+        for token in param_tokens :
+            if self._obs_time_pattern2.match(token) :
+                #----------------------------------------------------#
+                # set the observation time for subsequent parameters #
+                #----------------------------------------------------#
+                if not obstime_defined :
+                    default_obstime = Dt24(dateval.year, dateval.month, dateval.day, 0, 0, 0, tzinfo=zi)
+                obstime = self.get_observation_time(default_obstime, zi, token)
+                time_series_code = 1
+            elif self._create_time_pattern.match(token) :
+                #-------------------------------------------------#
+                # set the creation time for subsequent parameters #
+                #-------------------------------------------------#
+                createtime = self.get_creation_time(zi, token)
+            elif self._unit_system_pattern.match(token) :
+                #-----------------------------------------------#
+                # set the unit system for subsequent parameters #
+                #-----------------------------------------------#
+                units = "EN" if token[2] == 'E' else "SI"
+            elif self._data_qualifier_pattern.match(token) :
+                #---------------------------------------------#
+                # set the qualifier for subsequent parameters #
+                #---------------------------------------------#
+                qualifier = token[2]
+                if qualifier not in self._qualifier_codes :
+                    error(f"Bad data qualifier: {qualifier}")
+                    return
+            elif self._duration_code_pattern.match(token) :
+                #--------------------------------------------------------------------#
+                # set the duration for subequent parameters with duration code = 'V' #
+                #--------------------------------------------------------------------#
+                duration_unit = token[2]
+                if duration_unit == 'Z' :
+                    duration_value = None
+                else :
+                    duration_value = int(token[3:])
+                time_series_code = 1
+            elif self._parameter_code_pattern.match(token) :
+                #----------------------------------------------------------#
+                # create a new parameter control object for this parameter #
+                #----------------------------------------------------------#
+                code = token
+                if len(code) < 2 or (code[:2] not in self._send_codes and code[:2] not in self._pe_codes) :
+                    raise ShefParserException(f"Invalid PE code: {code[:min(2, len(code))]}")
+                parameter_code, use_prev_7am = self.get_parameter_code(code)
+                t = obstime if obstime else default_obstime
+                if use_prev_7am :
+                    t = t.clone()
+                    if t.hour < 7 :
+                        t -= timedelta(days=1)
+                    t = Dt24(t.year, t.month, t.day, 7, 0, 0, tzinfo=t.tzinfo)
+                print(t, type(t))
+                param_control.append(ShefParser.ParameterControl(
+                    t,
+                    createtime,
+                    units,
+                    qualifier,
+                    duration_unit,
+                    duration_value,
+                    parameter_code))
+            elif not token :
+                #------------------------------------#
+                # missing value if in list of values #
+                #------------------------------------#
+                raise ShefParserException("Null field in parameter control string")
+            else :
+                raise ShefParserException(f"Unexpected data string item: {token}")
+        
+        # print(f"\nmessage = {message}")
         print(f"header = {header}")
-        print(f"datastr = {datastr}")
+        for i in range(len(param_control)) :
+            print(f"\t{i} = {param_control[i]}")
+        # print(f"datastr = {datastr}")
+
 def main() :
     '''
     Driver routine
