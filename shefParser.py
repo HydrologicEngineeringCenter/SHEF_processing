@@ -60,6 +60,8 @@ versions = '''
 +-------+-----------+-----+-------------------------------------------------------------------------+
 | 0.6.0 | 29Apr2024 | MDP | Parses .A and .E messages and generates "shefit -2" style output        |
 +-------+-----------+-----+-------------------------------------------------------------------------+
+| 0.8.0 | 29Apr2024 | MDP | Parses .A, .E, and .B messages and generates "shefit -2" style output   |
++-------+-----------+-----+-------------------------------------------------------------------------+
 
 Authors:
     MDP  Mike Perryman, USACE IWR-HEC
@@ -78,7 +80,18 @@ class MonthsDelta :
     def __init__(self, months: int, eom: bool = False) :
         self._months = months
         self._eom    = eom
-    
+
+    @property
+    def months(self) :
+        return self._months
+
+    @property
+    def eom(self) :
+        return self._eom
+
+    def __repr__(self) :
+        return f"months={self._months}, eom={self._eom}"
+
 class Dt24 :
     '''
     Datetime class that accepts and generates 2400 instead of 0000
@@ -102,7 +115,7 @@ class Dt24 :
     @staticmethod
     def is_leap(y: int) :
         return (not bool(y % 4) and bool(y % 100)) or (not bool(y % 400))
-        
+
     @staticmethod
     def last_day(y: int, m: int) :
         return m if m in (1,3,5,7,8,10,12) else 30 if m in (4,6,9,11) else 29 if Dt24.is_leap(y) else 28
@@ -119,7 +132,7 @@ class Dt24 :
         dt = self._dt
         y, m, d, h, n, s, z = dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, dt.tzinfo
         return Dt24(y, m, d, h, n, s, tzinfo=z)
-        
+
     def add_months(self, months: int, end_of_month: bool = False) :
         '''
         Add a number of months this object and return result
@@ -209,7 +222,7 @@ class OutputRecord :
     SHEFIT_TEXT_V1 = "SHEFIT-TEXT1"
     SHEFIT_TEXT_V2 = "SHEFIT-TEXT2"
     SHEFIT_BINARY  = "SHEFIT-BINARY"
-    
+
     OUTPUT_FORMATS = [SHEFIT_TEXT_V1, SHEFIT_TEXT_V2, SHEFIT_BINARY]
 
     def __init__(
@@ -237,9 +250,9 @@ class OutputRecord :
             raise ShefParserException("Parameter code must not be empty")
         if len(parameter_code) != 7 :
             raise ShefParserException(f"Parameter code {parameter_code} must be 7 characters in length")
-        if not obstime :
+        if not utc_obstime :
             raise ShefParserException("Observed time must not be empty")
-            
+
         self._location             = location
         self._observation_time     = utc_obstime
         self._creation_time        = utc_create_time
@@ -358,7 +371,256 @@ class ShefParser :
     '''
     The parser
     '''
-    PE_CODES = {
+    PE_DESCRIPTIONS = {
+        #
+        # From SHEF Manual (shef_2.2.pdf)
+        #
+        "AF" : {"description" :"Surface frost intensity", "units" : "(coded, see Table 20)"},
+        "AG" : {"description" :"Percent of green vegetation", "units" : "(%)"},
+        "AM" : {"description" :"Surface dew intensity", "units" : "(coded, see Table 21)"},
+        "AT" : {"description" :"Time below critical temperature, 25 DF or -3.9 DC", "units" : "(HRS and MIN)"},
+        "AU" : {"description" :"Time below critical temperature, 32 DF or 0 DC", "units" : "(HRS and MIN)"},
+        "AW" : {"description" :"Leaf wetness", "units" : "(HRS and MIN)"},
+        "BA" : {"description" :"Solid portion of water equivalent", "units" : "(in, mm)"},
+        "BB" : {"description" :"Heat deficit", "units" : "(in, mm)"},
+        "BC" : {"description" :"Liquid water storage", "units" : "(in, mm)"},
+        "BD" : {"description" :"Temperature index", "units" : "(DF, DC)"},
+        "BE" : {"description" :"Maximum water equivalent since snow began to accumulate", "units" : "(in, mm)"},
+        "BF" : {"description" :"Areal water equivalent just prior to the new snowfall", "units" : "(in, mm)"},
+        "BG" : {"description" :"Areal extent of snow cover from the areal depletion curve just prior to the new snowfall", "units" : "(%)"},
+        "BH" : {"description" :"Amount of water equivalent above which 100 % areal snow cover temporarily exists", "units" : "(in, mm)"},
+        "BI" : {"description" :"Excess liquid water in storage", "units" : "(in, mm)"},
+        "BJ" : {"description" :"Areal extent of snow cover adjustment", "units" : "(in, mm)"},
+        "BK" : {"description" :"Lagged excess liquid water for interval 1", "units" : "(in, mm)"},
+        "BL" : {"description" :"Lagged excess liquid water for interval 2", "units" : "(in, mm)"},
+        "BM" : {"description" :"Lagged excess liquid water for interval 3", "units" : "(in, mm)"},
+        "BN" : {"description" :"Lagged excess liquid water for interval 4", "units" : "(in, mm)"},
+        "BO" : {"description" :"Lagged excess liquid water for interval 5", "units" : "(in, mm)"},
+        "BP" : {"description" :"Lagged excess liquid water for interval 6", "units" : "(in, mm)"},
+        "BQ" : {"description" :"Lagged excess liquid water for interval 7", "units" : "(in, mm)"},
+        "CA" : {"description" :"Upper zone tension water contents", "units" : "(in, mm)"},
+        "CB" : {"description" :"Upper zone free water contents", "units" : "(in, mm)"},
+        "CC" : {"description" :"Lower zone tension water contents", "units" : "(in, mm)"},
+        "CD" : {"description" :"Lower zone free water supplementary storage contents", "units" : "(in, mm)"},
+        "CE" : {"description" :"Lower zone free water primary storage contents", "units" : "(in, mm)"},
+        "CF" : {"description" :"Additional impervious area contents", "units" : "(in, mm)"},
+        "CG" : {"description" :"Antecedent precipitation index", "units" : "(in, mm)"},
+        "CH" : {"description" :"Soil moisture index deficit", "units" : "(in, mm)"},
+        "CI" : {"description" :"Base flow storage contents", "units" : "(in, mm)"},
+        "CJ" : {"description" :"Base flow index", "units" : "(in, mm)"},
+        "CK" : {"description" :"First quadrant index Antecedent Evaporation Index (AEI)", "units" : "(in, mm)"},
+        "CL" : {"description" :"First quadrant index Antecedent Temperature Index (ATI)", "units" : "(DF, DC)"},
+        "CM" : {"description" :"Frost index", "units" : "(DF, DC)"},
+        "CN" : {"description" :"Frost efficiency index", "units" : "(%)"},
+        "CO" : {"description" :"Indicator of first quadrant index", "units" : "(AEI or ATI)"},
+        "CP" : {"description" :"Storm total rainfall", "units" : "(in, mm)"},
+        "CQ" : {"description" :"Storm total runoff", "units" : "(in, mm)"},
+        "CR" : {"description" :"Storm antecedent index", "units" : "(in, mm)"},
+        "CS" : {"description" :"Current antecedent index", "units" : "(in, mm)"},
+        "CT" : {"description" :"Storm period counter", "units" : "(integer)"},
+        "CU" : {"description" :"Average air temperature", "units" : "(DF, DC)"},
+        "CV" : {"description" :"Current corrected synthetic temperature", "units" : "(DF, DC)"},
+        "CW" : {"description" :"Storm antecedent evaporation index, AEI", "units" : "(in, mm)"},
+        "CX" : {"description" :"Current AEI", "units" : "(in, mm)"},
+        "CY" : {"description" :"Current API", "units" : "(in, mm)"},
+        "CZ" : {"description" :"Climate Index", "units" : ""},
+        "EA" : {"description" :"Evapotranspiration potential amount", "units" : "(IN, MM)"},
+        "ED" : {"description" :"Evaporation, pan depth", "units" : "(IN, MM)"},
+        "EM" : {"description" :"Evapotranspiration amount", "units" : "(IN, MM)"},
+        "EP" : {"description" :"Evaporation, pan increment", "units" : "(IN, MM)"},
+        "ER" : {"description" :"Evaporation rate", "units" : "(IN/day, MM/day)"},
+        "ET" : {"description" :"Evapotranspiration total", "units" : "(IN, MM)"},
+        "EV" : {"description" :"Evaporation, lake computed", "units" : "(IN, MM)"},
+        "FA" : {"description" :"Fish - shad", "units" : ""},
+        "FB" : {"description" :"Fish - sockeye", "units" : ""},
+        "FC" : {"description" :"Fish - chinook", "units" : ""},
+        "FE" : {"description" :"Fish - chum", "units" : ""},
+        "FK" : {"description" :"Fish - coho", "units" : ""},
+        "FL" : {"description" :"Fish - ladder", "units" : "(1=left, 2=right, 3=total)"},
+        "FP" : {"description" :"Fish - pink", "units" : ""},
+        "FS" : {"description" :"Fish – steelhead", "units" : ""},
+        "FT" : {"description" :"Fish type - type", "units" : "(1=adult, 2=jacks, 3=fingerlings)"},
+        "FZ" : {"description" :"Fish - count of all types combined", "units" : ""},
+        "GC" : {"description" :"Condition, road surface", "units" : "(coded, see Table 1)"},
+        "GD" : {"description" :"Frost depth, depth of frost penetration, non permafrost", "units" : "(IN, CM)"},
+        "GL" : {"description" :"Salt content on a surface (e.g., road)", "units" : "(%)"},
+        "GP" : {"description" :"Frost, depth of pavement surface", "units" : "(IN, CM)"},
+        "GR" : {"description" :"Frost report, structure", "units" : "(coded, see Table 16)"},
+        "GS" : {"description" :"Ground state", "units" : "(coded, see Table 18)"},
+        "GT" : {"description" :"Frost, depth of surface frost thawed", "units" : "(IN, CM)"},
+        "GW" : {"description" :"Frost, depth of pavement surface frost thawed", "units" : "(IN, CM)"},
+        "HA" : {"description" :"Height of reading, altitude above surface", "units" : "(FT, M)"},
+        "HB" : {"description" :"Depth of reading below surface, or to water table or groundwater", "units" : "(FT, M)"},
+        "HC" : {"description" :"Height, ceiling", "units" : "(FT, M)"},
+        "HD" : {"description" :"Height, head", "units" : "(FT, M)"},
+        "HE" : {"description" :"Height, regulating gate", "units" : "(FT, M)"},
+        "HF" : {"description" :"Elevation, project powerhouse forebay", "units" : "(FT, M)"},
+        "HG" : {"description" :"Height, river stage", "units" : "(FT, M)"},
+        "HH" : {"description" :"Height of reading, elevation in MSL", "units" : "(FT, M)"},
+        "HI" : {"description" :"Stage trend indicator", "units" : "(coded, see Table 19)"},
+        "HJ" : {"description" :"Height, spillway gate", "units" : "(FT, M)"},
+        "HK" : {"description" :"Height, lake above a specified datum", "units" : "(FT, M)"},
+        "HL" : {"description" :"Elevation, natural lake", "units" : "(FT, M)"},
+        "HM" : {"description" :"Height of tide, MLLW", "units" : "(FT, M)"},
+        "HO" : {"description" :"Height, flood stage", "units" : "(FT, M)"},
+        "HP" : {"description" :"Elevation, pool", "units" : "(FT, M)"},
+        "HQ" : {"description" :"Distance from a ground reference point to the river's edge used to estimate stage", "units" : "(coded, see Chapter 7.4.6)"},
+        "HR" : {"description" :"Elevation, lake or reservoir rule curve", "units" : "(FT, M)"},
+        "HS" : {"description" :"Elevation, spillway forebay", "units" : "(FT, M)"},
+        "HT" : {"description" :"Elevation, project tail water stage", "units" : "(FT, M)"},
+        "HU" : {"description" :"Height, cautionary stage", "units" : "(FT, M)"},
+        "HV" : {"description" :"Depth of water on a surface (e.g., road)", "units" : "(IN, MM)"},
+        "HW" : {"description" :"Height, spillway tail water", "units" : "(FT, M)"},
+        "HZ" : {"description" :"Elevation, freezing level", "units" : "(KFT, KM)"},
+        "IC" : {"description" :"Ice cover, river", "units" : "(%)"},
+        "IE" : {"description" :"Extent of ice from reporting area, upstream \"+\", downstream \"-\"", "units" : "(MI, KM)"},
+        "IO" : {"description" :"Extent of open water from reporting area, downstream \"+\", upstream \"-\"", "units" : "(FT, M)"},
+        "IR" : {"description" :"Ice report type, structure, and cover", "units" : "(coded, see Table 14)"},
+        "IT" : {"description" :"Ice thickness", "units" : "(IN, CM)"},
+        "LA" : {"description" :"Lake surface area", "units" : "(KAC,KM2)"},
+        "LC" : {"description" :"Lake storage volume change", "units" : "(KAF,MCM)"},
+        "LS" : {"description" :"Lake storage volume", "units" : "(KAF,MCM)"},
+        "MD" : {"description" :"Dielectric Constant at depth, paired value vector", "units" : "(coded, see Chapter 7.4.6 for format)"},
+        "MI" : {"description" :"Moisture, soil index or API", "units" : "(IN, CM)"},
+        "ML" : {"description" :"Moisture, lower zone storage", "units" : "(IN, CM)"},
+        "MM" : {"description" :"Fuel moisture, wood", "units" : "(%)"},
+        "MN" : {"description" :"Soil Salinity at depth, paired value vector", "units" : "(coded, see Chapter 7.4.6 for format)"},
+        "MS" : {"description" :"Soil Moisture amount at depth", "units" : "(coded, see Chapter 7.4.6)"},
+        "MT" : {"description" :"Fuel temperature, wood probe", "units" : "(DF, DC)"},
+        "MU" : {"description" :"Moisture, upper zone storage", "units" : "(IN, CM)"},
+        "MV" : {"description" :"Water Volume at Depth, paired value vector", "units" : "(coded, see Chapter 7.4.6 for format)"},
+        "MW" : {"description" :"Moisture, soil, percent by weight", "units" : "(%)"},
+        "NC" : {"description" :"River control switch", "units" : "(0=manual river control, 1=open river uncontrolled)"},
+        "NG" : {"description" :"Total of gate openings", "units" : "(FT, M)"},
+        "NL" : {"description" :"Number of large flash boards down", "units" : "(whole number)"},
+        "NN" : {"description" :"Number of the spillway gate reported", "units" : "(used with HP, QS)"},
+        "NO" : {"description" :"Gate opening for a specific gate", "units" : "(coded, see Chapter 7.4.6)"},
+        "NS" : {"description" :"Number of small flash boards down", "units" : "(whole number)"},
+        "PA" : {"description" :"Pressure, atmospheric", "units" : "(IN-HG, KPA)"},
+        "PC" : {"description" :"Precipitation, accumulator", "units" : "(IN, MM)"},
+        "PD" : {"description" :"Pressure, atmospheric net change during past 3 hours", "units" : "(IN-HG, KPA)"},
+        "PE" : {"description" :"Pressure, characteristic, NWS Handbook #7, table 10.7", "units" : ""},
+        "PJ" : {"description" :"Precipitation, departure from normal", "units" : "(IN, MM)"},
+        "PL" : {"description" :"Pressure, sea level", "units" : "(IN-HG, KPA)"},
+        "PM" : {"description" :"Probability of measurable precipitation (dimensionless)", "units" : "(coded, see Table 22)"},
+        "PN" : {"description" :"Precipitation normal", "units" : "(IN, MM)"},
+        "PP" : {"description" :"Precipitation (includes liquid amount of new snowfall), actual increment", "units" : "(IN, MM)"},
+        "PR" : {"description" :"Precipitation rate", "units" : "(IN/day, MM/day)"},
+        "PT" : {"description" :"Precipitation, type", "units" : "(coded, see Table 17)"},
+        "QA" : {"description" :"Discharge, adjusted for storage at project only", "units" : "(KCFS, CMS)"},
+        "QB" : {"description" :"Runoff depth", "units" : "(IN, MM)"},
+        "QC" : {"description" :"Runoff volume", "units" : "(KAF, MCM)"},
+        "QD" : {"description" :"Discharge, canal diversion", "units" : "(KCFS, CMS)"},
+        "QE" : {"description" :"Discharge, percent of flow diverted from channel", "units" : "(%)"},
+        "QF" : {"description" :"Discharge velocity", "units" : "(MPH, KPH)"},
+        "QG" : {"description" :"Discharge from power generation", "units" : "(KCFS, CMS)"},
+        "QI" : {"description" :"Discharge, inflow", "units" : "(KCFS, CMS)"},
+        "QL" : {"description" :"Discharge, rule curve", "units" : "(KCFS, CMS)"},
+        "QM" : {"description" :"Discharge, preproject conditions in basin", "units" : "(KCFS, CMS)"},
+        "QP" : {"description" :"Discharge, pumping", "units" : "(KCFS, CMS)"},
+        "QR" : {"description" :"Discharge, river", "units" : "(KCFS, CMS)"},
+        "QS" : {"description" :"Discharge, spillway", "units" : "(KCFS, CMS)"},
+        "QT" : {"description" :"Discharge, computed total project outflow", "units" : "(KCFS, CMS)"},
+        "QU" : {"description" :"Discharge, controlled by regulating outlet", "units" : "(KCFS, CMS)"},
+        "QV" : {"description" :"Cumulative volume increment", "units" : "(KAF, MCM)"},
+        "RA" : {"description" :"Radiation, albedo", "units" : "(%)"},
+        "RI" : {"description" :"Radiation, accumulated incoming solar over specified duration in langleys", "units" : "(LY)"},
+        "RN" : {"description" :"Radiation, net radiometers", "units" : "(watts/meter squared)"},
+        "RP" : {"description" :"Radiation, sunshine percent of possible", "units" : "(%)"},
+        "RT" : {"description" :"Radiation, sunshine hours", "units" : "(HRS)"},
+        "RW" : {"description" :"Radiation, total incoming solar radiation", "units" : "(watts/meter squared)"},
+        "SA" : {"description" :"Snow, areal extent of basin snow cover", "units" : "(%)"},
+        "SB" : {"description" :"Snow, Blowing Snow Sublimation", "units" : "(IN)"},
+        "SD" : {"description" :"Snow, depth", "units" : "(IN, CM)"},
+        "SE" : {"description" :"Snow, Average Snowpack Temperature", "units" : "(DF)"},
+        "SF" : {"description" :"Snow, depth, new snowfall", "units" : "(IN, CM)"},
+        "SI" : {"description" :"Snow, depth on top of river or lake ice", "units" : "(IN, CM)"},
+        "SL" : {"description" :"Snow, elevation of snow line", "units" : "(KFT, M)"},
+        "SM" : {"description" :"Snow, Melt", "units" : "(IN)"},
+        "SP" : {"description" :"Snowmelt plus rain", "units" : "(IN)"},
+        "SR" : {"description" :"Snow report, structure, type, surface, and bottom", "units" : "(coded, see Table 15)"},
+        "SS" : {"description" :"Snow density", "units" : "(IN SWE/IN snow, CM SWE/CM snow)"},
+        "ST" : {"description" :"Snow temperature at depth measured from ground", "units" : "(See Chapter 7.4.6 for format)"},
+        "SU" : {"description" :"Snow, Surface Sublimation", "units" : "(IN)"},
+        "SW" : {"description" :"Snow, water equivalent", "units" : "(IN, MM)"},
+        "TA" : {"description" :"Temperature, air, dry bulb", "units" : "(DF,DC)"},
+        "TB" : {"description" :"Temperature in bare soil at depth", "units" : "(coded, see Chapter 7.4.6 for format)"},
+        "TC" : {"description" :"Temperature, degree days of cooling, above 65 DF or 18.3 DC", "units" : "(DF,DC)"},
+        "TD" : {"description" :"Temperature, dew point", "units" : "(DF,DC)"},
+        "TE" : {"description" :"Temperature, air temperature at elevation above MSL", "units" : "(See Chapter 7.4.6 for format)"},
+        "TF" : {"description" :"Temperature, degree days of freezing, below 32 DF or 0 DC", "units" : "(DF,DC)"},
+        "TH" : {"description" :"Temperature, degree days of heating, below 65 DF or 18.3 DC", "units" : "(DF,DC)"},
+        "TJ" : {"description" :"Temperature, departure from normal", "units" : "(DF, DC)"},
+        "TM" : {"description" :"Temperature, air, wet bulb", "units" : "(DF,DC)"},
+        "TP" : {"description" :"Temperature, pan water", "units" : "(DF,DC)"},
+        "TR" : {"description" :"Temperature, road surface", "units" : "(DF,DC)"},
+        "TS" : {"description" :"Temperature, bare soil at the surface", "units" : "(DF,DC)"},
+        "TV" : {"description" :"Temperature in vegetated soil at depth", "units" : "(coded, see Chapter 7.4.6 for format)"},
+        "TW" : {"description" :"Temperature, water", "units" : "(DF,DC)"},
+        "TZ" : {"description" :"Temperature, Freezing, road surface", "units" : "(DF,DC)"},
+        "UC" : {"description" :"Wind, accumulated wind travel", "units" : "(MI,KM)"},
+        "UD" : {"description" :"Wind, direction", "units" : "(whole degrees)"},
+        "UE" : {"description" :"Wind, standard deviation", "units" : "(Degrees)"},
+        "UG" : {"description" :"Wind, gust at observation time", "units" : "(MI/HR,M/SEC)"},
+        "UH" : {"description" :"Wind gust direction associated with the wind gust", "units" : "(in tens of degrees)"},
+        "UL" : {"description" :"Wind, travel length accumulated over specified", "units" : "(MI,KM)"},
+        "UP" : {"description" :"Peak wind speed", "units" : "(MPH)"},
+        "UQ" : {"description" :"Wind direction and speed combined (SSS.SDDD), a value of 23.0275 would indicate a wind of 23.0 mi/hr from 275 degrees", "units" : ""},
+        "UR" : {"description" :"Peak wind direction associated with peak wind speed", "units" : "(in tens of degrees)"},
+        "US" : {"description" :"Wind, speed", "units" : "(MI/HR,M/SEC)"},
+        "UT" : {"description" :"Minute of the peak wind speed", "units" : "(in minutes past the hour, 0-59)"},
+        "VB" : {"description" :"Voltage - battery", "units" : "(volt)"},
+        "VC" : {"description" :"Generation, surplus capacity of units on line", "units" : "(megawatts)"},
+        "VE" : {"description" :"Generation, energy total", "units" : "(megawatt hours)"},
+        "VG" : {"description" :"Generation, pumped water, power produced", "units" : "(megawatts)"},
+        "VH" : {"description" :"Generation, time", "units" : "(HRS)"},
+        "VJ" : {"description" :"Generation, energy produced from pumped water", "units" : "(megawatt hours)"},
+        "VK" : {"description" :"Generation, energy stored in reservoir only", "units" : "(megawatt * \"duration\")"},
+        "VL" : {"description" :"Generation, storage due to natural flow only", "units" : "(megawatt * \"duration\")"},
+        "VM" : {"description" :"Generation, losses due to spill and other water losses", "units" : "(megawatt * \"duration\")"},
+        "VP" : {"description" :"Generation, pumping use, power used", "units" : "(megawatts)"},
+        "VQ" : {"description" :"Generation, pumping use, total energy used", "units" : "(megawatt hours)"},
+        "VR" : {"description" :"Generation, stored in reservoir plus natural flow, energy potential", "units" : "(megawatt * \"duration\")"},
+        "VS" : {"description" :"Generation, station load, energy used", "units" : "(megawatt hours)"},
+        "VT" : {"description" :"Generation, power total", "units" : "(megawatts)"},
+        "VU" : {"description" :"Generator, status", "units" : "(encoded)"},
+        "VW" : {"description" :"Generation station load, power used", "units" : "(megawatts)"},
+        "WA" : {"description" :"Water, dissolved nitrogen & argon", "units" : "(PPM, MG/L)"},
+        "WC" : {"description" :"Water, conductance", "units" : "(uMHOS/CM)"},
+        "WD" : {"description" :"Water, piezometer water depth", "units" : "(IN, CM)"},
+        "WG" : {"description" :"Water, dissolved total gases, pressure", "units" : "(IN-HG, MM-HG)"},
+        "WH" : {"description" :"Water, dissolved hydrogen sulfide", "units" : "(PPM, MG/L)"},
+        "WL" : {"description" :"Water, suspended sediment", "units" : "(PPM, MG/L)"},
+        "WO" : {"description" :"Water, dissolved oxygen", "units" : "(PPM, MG/L)"},
+        "WP" : {"description" :"Water, ph", "units" : "(PH value)"},
+        "WS" : {"description" :"Water, salinity", "units" : "(parts per thousand, PPT)"},
+        "WT" : {"description" :"Water, turbidity", "units" : "(JTU)"},
+        "WV" : {"description" :"Water, velocity", "units" : "(FT/SEC, M/SEC)"},
+        "WX" : {"description" :"Water, Oxygen Saturation", "units" : "(%)"},
+        "WY" : {"description" :"Water, Chlorophyll", "units" : "(ppb, ug/L)"},
+        "XC" : {"description" :"Total sky cover", "units" : "(tenths)"},
+        "XG" : {"description" :"Lightning, number of strikes per grid box", "units" : "(whole number)"},
+        "XL" : {"description" :"Lightning, point strike, assumed one strike at transmitted latitude and longitude", "units" : "(whole number)"},
+        "XP" : {"description" :"Weather, past NWS synoptic code", "units" : "(see Appendix D)"},
+        "XR" : {"description" :"Humidity, relative", "units" : "(%)"},
+        "XU" : {"description" :"Humidity, absolute", "units" : "(grams/FT3,grams/M3)"},
+        "XV" : {"description" :"Weather, visibility", "units" : "(MI, KM)"},
+        "XW" : {"description" :"Weather, present NWS synoptic code", "units" : "(see Appendix C)"},
+        "YA" : {"description" :"Number of 15-minute periods a river has been above a specified critical level", "units" : "(whole number)"},
+        "YC" : {"description" :"Random report sequence number", "units" : "(whole number)"},
+        "YF" : {"description" :"Forward power, a measurement of the DCP, antenna, and coaxial cable", "units" : "(watts)"},
+        "YI" : {"description" :"SERFC unique", "units" : ""},
+        "YP" : {"description" :"Reserved Code", "units" : ""},
+        "YR" : {"description" :"Reflected power, a measurement of the DCP, antenna, and coaxial cable", "units" : "(watts)"},
+        "YS" : {"description" :"Sequence number of the number of times the DCP has transmitted", "units" : "(whole number)"},
+        "YT" : {"description" :"Number of 15-minute periods since a random report was generated due to an increase of 0.4 inch of precipitation", "units" : "(whole number)"},
+        "YU" : {"description" :"GENOR raingage status level 1 - NERON observing sites", "units" : "(YUIRG)"},
+        "YV" : {"description" :"A Second Battery Voltage (NERON sites ONLY), voltage 0", "units" : "(YVIRG)"},
+        "YW" : {"description" :"GENOR raingage status level 2 - NERON observing sites", "units" : "(YWIRG)"},
+        "YY" : {"description" :"GENOR raingage status level 3 - NERON observing sites", "units" : "(YYIRG)"},
+        "YZ" : {"description" :"Time of Observation – Minutes of the calendar day, minutes 0 - NERON observing sites", "units" : "(YZIRG)"}}
+
+    PE_CONVERSIONS = {
         #
         # May be modified by SHEFPARM file
         #
@@ -536,79 +798,90 @@ class ShefParser :
         '''
         def __init__(
                 self,
+                parameter_code: str,
                 obstime:        Dt24,
+                relativetime:   Union[timedelta, MonthsDelta],
                 createtime:     Dt24,
                 units:          str,
                 qualifier:      str,
                 duration_unit:  str,
-                duration_value: int,
-                parameter:      str) :
-            self._obstime        = obstime
-            self._createtime     = createtime.clone if createtime else None
+                duration_value: int) :
+
+            if not parameter_code or len(parameter_code) != 7 :
+                raise ShefParserException(f"Invalid parameter code: {parameter_code}")
+
+            if not obstime :
+                raise ShefParserException("Missing observation time")
+
+            self._parameter_code = parameter_code
+            self._obstime        = obstime.clone()
+            self._relativetime   = relativetime.clone() if relativetime else None
+            self._createtime     = createtime.clone() if createtime else None
             self._units          = units
             self._qualifier      = qualifier
             self._duration_unit  = duration_unit
             self._duration_value = duration_value
-            self._parameter_code = parameter
-            self._location       = None
-            self._value          = None
-            self._comment        = None
-
-
-        @property
-        def location(self) :
-            return self._location
-
-        @location.setter
-        def set_location(self, val) :
-            self._location = val
-
-        @property
-        def value(self) :
-            return self._value
-
-        @value.setter
-        def value(self, val) :
-            self._value = val
 
         @property
         def qualifier(self) :
             return self._qualifier
 
-        @qualifier.setter
-        def value(self, val) :
-            self._qualifier = val
+        @property
+        def pe_code(self) :
+            return self._parameter_code[:2]
+        @property
+
+        def obstime(self) :
+            return self._obstime
 
         @property
-        def comment(self) :
-            return self._comment
+        def units(self) :
+            return self._units
 
-        @comment.setter
-        def comment(self, val) :
-            self._comment = val
+        @property
+        def obstime(self) :
+            return self._obstime
+
+        @property
+        def obstime(self) :
+            return self._obstime
+
+        @property
+        def relativetime(self) :
+            return self._relativetime
 
         def get_output_record(
-                self:       'ParameterControl',
-                shefParser: 'ShefParser',
-                revised:    bool,
-                msg_source: str,
-                location:   str) -> 'OutputRecord' :
+                self:           'ParameterControl',
+                shefParser:     'ShefParser',
+                revised:        bool,
+                msg_source:     str,
+                location:       str,
+                time_override:  Dt24,
+                value:          float,
+                qualifier:      str,
+                comment:        str) -> 'OutputRecord' :
+
+            t = time_override if time_override else self.obstime
+            if self.relativetime : t.clone() + self.relativetime
             return OutputRecord(
                 location,
                 self._parameter_code,
-                self._obstime.astimezone(ShefParser.UTC),
+                t.astimezone(ShefParser.UTC),
                 self._createtime.astimezone(ShefParser.UTC) if self._createtime else None,
-                self._value if self._units == "EN" else self._value * shefParser._pe_codes[self._parameter_code[:2]],
-                self._qualifier,
+                value if self._units == "EN" else value * shefParser._pe_conversions[self._parameter_code[:2]],
+                qulifier if qualifier else self.qualifier,
                 revised,
                 self._duration_unit,
                 self._duration_value,
                 msg_source,
                 0,
-                self._comment)
+                comment)
 
         def __repr__(self) :
-            return f"{self._parameter_code} @ {self._obstime.astimezone(ShefParser.UTC)}"
+            if self._relativetime :
+                return f"{self._parameter_code} @ {self._obstime.astimezone(ShefParser.UTC)} ({self._relativetime})"
+            else :
+                return f"{self._parameter_code} @ {self._obstime.astimezone(ShefParser.UTC)}"
 
 
     def __init__(self, output_format, shefparm_pathname=None) :
@@ -620,7 +893,7 @@ class ShefParser :
         #-----------------------------#
         # initialize program defaults #
         #-----------------------------#
-        self._pe_codes                   = copy.deepcopy(ShefParser.PE_CODES)
+        self._pe_conversions             = copy.deepcopy(ShefParser.PE_CONVERSIONS)
         self._send_codes                 = copy.deepcopy(ShefParser.SEND_CODES)
         self._duration_codes             = copy.deepcopy(ShefParser.DURATION_CODES)
         self._ts_codes                   = copy.deepcopy(ShefParser.TS_CODES)
@@ -638,10 +911,10 @@ class ShefParser :
         self._input                      = None
         self._output                     = None
         self._input_lines                = None
-        self._msg_start_pattern          = re.compile(r"^\.[ABE]R?\s")
-        self._msg_continue_patterns      = {'A' : (re.compile(r"^\.A\d"), re.compile(r"^\.AR?\d")),
-                                            'E' : (re.compile(r"^\.E\d"), re.compile(r"^\.ER?\d")),
-                                            'B' : (re.compile(r"^\.B\d"), re.compile(r"^\.BR?\d"))}
+        self._msg_start_pattern          = re.compile(r"^\.[ABE]R?\s", re.I)
+        self._msg_continue_patterns      = {'A' : (re.compile(r"^\.A\d", re.I), re.compile(r"^\.AR?\d", re.I)),
+                                            'E' : (re.compile(r"^\.E\d", re.I), re.compile(r"^\.ER?\d", re.I)),
+                                            'B' : (re.compile(r"^\.B\d", re.I), re.compile(r"^\.BR?\d", re.I))}
         self._input_name                 = None
         self._line_number                = 0
         self._positional_fields_pattern   = re.compile(
@@ -651,26 +924,48 @@ class ShefParser :
                                            #                 1           23       4
                                               r"^\.[AEB]R?\s+(\w{3,8})\s+((\d{2})?(\d{2})?\d{4})" \
                                            #    5   6
-                                              r"(\s+([NH]S?|[AECMPYLB][DS]?|[JZ])\s{1,15})?", re.M)
-        self._dot_b_header_lines_pattern = re.compile(r"^.B(R?)\s.+?$(\n^.B\1?\d\s.+?$)*", re.M)
+                                              r"(\s+([NH]S?|[AECMPYLB][DS]?|[JZ])\s{1,15})?", re.I|re.M)
+        self._dot_b_header_lines_pattern = re.compile(r"^.B(R?)\s.+?$(\n^.B\1?\d\s.+?$)*", re.I|re.M)
+        self._dot_b_body_line_pattern    = re.compile(r"^(\w{3,8})\s+\S+.*$")
         self._obs_time_pattern           = re.compile(
-                                           #    12                            3     45      6                          7
-                                              r"((D[SNHDMYJ]|DR[SNHDMYE][+-]?)(\d+))((\s+|/)(D[SNHDMYJ]|DR[SNHDMYE][+-])(\d+))?")
-        self._obs_time_pattern2          = re.compile(r"((D[SNHDMYJ]|DR[SNHDMYE][+-]?)(\d+))(@(D[SNHDMYJ]|DR[SNHDMYE][+-])(\d+))?")
-        self._create_time_pattern        = re.compile(r"DC\d+")
-        self._unit_system_pattern        = re.compile(r"DU[ES]")
-        self._data_qualifier_pattern     = re.compile(r"DQ.")
-        self._duration_code_pattern      = re.compile(r"(DV[SNHDMY]\d{2}|DVZ)")
-        self._parameter_code_pattern     = re.compile(r"^[A-Z]{2}([A-Z]([A-Z0-9]{2}[A-Z]{,2})?)?$")
-        self._interval_pattern           = re.compile(r"DI[SNHDMEY][+-]?\d{1,2}")
+                                           # 1 = date/time
+                                           # 2 = date/time code
+                                           # 3 = date/time value
+                                           #    12                           3
+                                              r"(D[SNHDMYJ]|DR[SNHDMYE][+-]?)(\d+)", re.I)
+        self._multiple_obs_time_pattern  = re.compile(
+                                           # 1 = first date/time
+                                           # 2 = first date/time code
+                                           # 3 = first date/time value
+                                           # 4 = next data
+                                           # 5 = separator
+                                           # 6 = next date/time code
+                                           # 7 = next date/time value
+                                           #    12                            3     45      6                           7
+                                              r"((D[SNHDMYJ]|DR[SNHDMYE][+-]?)(\d+))((\s+|/)(D[SNHDMYJ]|DR[SNHDMYE][+-])(\d+))+", re.I)
+        self._obs_time_pattern2          = re.compile(
+                                           # 1 = first date/time
+                                           # 2 = first date/time code
+                                           # 3 = first date/time value
+                                           # 4 = next data
+                                           # 5 = next date/time code
+                                           # 6 = next date/time value
+                                           #    12                            3     4 5                           6
+                                              r"((D[SNHDMYJ]|DR[SNHDMYE][+-]?)(\d+))(@(D[SNHDMYJ]|DR[SNHDMYE][+-])(\d+))*", re.I)
+        self._create_time_pattern        = re.compile(r"DC\d+", re.I)
+        self._unit_system_pattern        = re.compile(r"DU[ES]", re.I)
+        self._data_qualifier_pattern     = re.compile(r"DQ.", re.I)
+        self._duration_code_pattern      = re.compile(r"(DV[SNHDMY]\d{2}|DVZ)", re.I)
+        self._parameter_code_pattern     = re.compile(r"^[A-Z]{2}([A-Z]([A-Z0-9]{2}[A-Z]{,2})?)?$", re.I)
+        self._interval_pattern           = re.compile(r"DI[SNHDMEY][+-]?\d{1,2}", re.I)
         self._value_pattern              = re.compile(
                                           # 1 = sign
                                           # 2 = numeric value
                                           # 4 = trace value
                                           # 5 = missing valule
                                           # 6 = value qualifier
-                                           #    1      2   3               4      5            6
-                                              r"([+-]?)(\d+(\.\d*)?|\.\d+)|([Tt])|([Mm]{1,2})(\D?)")
+                                          #     1      2   3               4   5   6
+                                              r"([+-]?)(\d+(\.\d*)?|\.\d+)|(T)|(M+)([A-Z]?)", re.I)
 
         if self._shefparm_pathname :
             self.read_shefparm(self._shefparm_pathname)
@@ -740,15 +1035,15 @@ class ShefParser :
         Update PE codes from SHEFPARM line
         '''
         key, value = line[0:2], float(line[3:23].strip())
-        if key not in self._pe_codes :
+        if key not in self._pe_conversions :
             if key  not in self._send_codes :
                 logger.info(f"{self._shefparm_pathname}: Adding non-standard physical element code {key} with conversion factor {value}")
         else:
-            if 0.9999 <= value / self._pe_codes[key] <= 1.001 :
+            if 0.9999 <= value / self._pe_conversions[key] <= 1.001 :
                 pass
             else :
-                logger.warning(f"{self._shefparm_pathname}: Updating standard physical element code {key} conversion factor from {self._pe_codes[key]} to {value}")
-        self._pe_codes[key] = value
+                logger.warning(f"{self._shefparm_pathname}: Updating standard physical element code {key} conversion factor from {self._pe_conversions[key]} to {value}")
+        self._pe_conversions[key] = value
 
     def set_duration_code(self, line) :
         '''
@@ -1047,16 +1342,16 @@ class ShefParser :
             raise ShefParserException(f"Bad date string: {datestr}")
         try :
             dateval = Dt24(int(datestr[:4]), int(datestr[4:6]), int(datestr[6:]))
-            if length == 4 : 
+            if length == 4 :
                 # no year specified, use closeset date
-                prev_year = dateval.add_months(-12)
+                prev_year = dateval - MonthsDelta(12)
                 if (cur_time - prev_year) < (dateval - cur_time) :
                     dateval = prev_year
             return dateval
         except :
             raise
             raise ShefParserException(f"Bad date string: {datestr}")
-            
+
     def crack_a_e_data_string(self, datastr: str, message_type: str, is_revised: bool) :
         '''
         Convert a .A(R) or .E(R) data string into tokens
@@ -1071,7 +1366,8 @@ class ShefParser :
         #------------------------------------------------------------------------------------------#
         # change any '/' characters in observation time(s) to '@' to prevent tokenization problems #
         #------------------------------------------------------------------------------------------#
-        datastr = self._obs_time_pattern.sub(r"\1@\6", datastr).strip('@')
+        while self._multiple_obs_time_pattern.search(datastr) :
+            datastr = self._multiple_obs_time_pattern.sub(r"\1@\6\7", datastr)
         #------------------------#
         # parse individual lines #
         #------------------------#
@@ -1097,7 +1393,7 @@ class ShefParser :
             for c in lines[i] :
                 if c in "'\"" :
                     quote = "" if c == quote else c
-                    if quote and not space: buf.write(chr(0)) # ensure quotes are separated from other text 
+                    if quote and not space: buf.write(chr(0)) # ensure quotes are separated from other text
                     buf.write(c)
                     space = False
                 else :
@@ -1127,60 +1423,64 @@ class ShefParser :
             tokens[i] = tokens[i].strip(chr(0)).split(chr(0))
         return tokens
 
-    def get_observation_time(self, base_time: Dt24, zi : ZoneInfo, token: str) :
+    def get_observation_time(self, base_time: Dt24, token: str, dot_b: bool=False) :
         '''
-        Update the observation time based on the token
+        Return the observation time as updated by the token
         '''
-        bt = base_time
-        for subtoken in token.strip("@").split("@") :
+        bt = obstime = base_time
+        relativetime = None
+        subtokens = token.strip("@").split("@")
+        if len(subtokens) > 1 and subtokens[0][1] == 'J' :
+            raise ShefParserException(f"Bad observation time: {subtokens[0]}/{subtokens[1]}")
+        for subtoken in subtokens :
             try :
                 cur_time = Dt24.now()
                 v = subtoken[2:]
                 length = len(v)
                 if subtoken[1] == 'S' :
                     if length == 2 : # DSss
-                        obstime = Dt24(bt.year, bt.month, bt.day, bt.hour, bt.minute, int(v[0:2]), tzinfo=zi)
+                        obstime = Dt24(bt.year, bt.month, bt.day, bt.hour, bt.minute, int(v[0:2]), tzinfo=bt.tzinfo)
                     else :
                         raise ShefParserException(f"Bad observation time: {subtoken}")
                 elif subtoken[1] == 'N' :
                     if length == 4 : # DNnnss
-                        obstime = Dt24(bt.year, bt.month, bt.day, bt.hour, int(v[0:2]), int(v[2:4]), tzinfo=zi)
+                        obstime = Dt24(bt.year, bt.month, bt.day, bt.hour, int(v[0:2]), int(v[2:4]), tzinfo=bt.tzinfo)
                     elif length == 2 : # DNnn
-                        obstime = Dt24(bt.year, bt.month, bt.day, bt.hour, int(v[0:2]), bt.second, tzinfo=zi)
+                        obstime = Dt24(bt.year, bt.month, bt.day, bt.hour, int(v[0:2]), bt.second, tzinfo=bt.tzinfo)
                     else :
                         raise ShefParserException(f"Bad observation time: {subtoken}")
                         return None
                 elif subtoken[1] == 'H' :
                     if length == 6 : # DHhhnnss
-                        obstime = Dt24(bt.year, bt.month, bt.day, int(v[0:2]), int(v[2:4]), int(v[4:6]), tzinfo=zi)
+                        obstime = Dt24(bt.year, bt.month, bt.day, int(v[0:2]), int(v[2:4]), int(v[4:6]), tzinfo=bt.tzinfo)
                     elif length == 4 : # DHhhnn
-                        obstime = Dt24(bt.year, bt.month, bt.day, int(v[0:2]), int(v[2:4]), bt.second, tzinfo=zi)
+                        obstime = Dt24(bt.year, bt.month, bt.day, int(v[0:2]), int(v[2:4]), bt.second, tzinfo=bt.tzinfo)
                     elif length == 2 : # DHhh
-                        obstime = Dt24(bt.year, bt.month, bt.day, int(v[0:2]), bt.minute, bt.second, tzinfo=zi)
+                        obstime = Dt24(bt.year, bt.month, bt.day, int(v[0:2]), bt.minute, bt.second, tzinfo=bt.tzinfo)
                     else :
                         raise ShefParserException(f"Bad observation time: {subtoken}")
                 elif subtoken[1] == 'D' :
                     if length == 8 : # DDddhhnnss
-                        obstime = Dt24(bt.year, bt.month, int(v[0:2]), int(v[2:4]), int(v[4:6]), int(v[6:8]), tzinfo=zi)
+                        obstime = Dt24(bt.year, bt.month, int(v[0:2]), int(v[2:4]), int(v[4:6]), int(v[6:8]), tzinfo=bt.tzinfo)
                     elif length == 6 : # DDddhhnn
-                        obstime = Dt24(bt.year, bt.month, int(v[0:2]), int(v[2:4]), int(v[4:6]), bt.second, tzinfo=zi)
+                        obstime = Dt24(bt.year, bt.month, int(v[0:2]), int(v[2:4]), int(v[4:6]), bt.second, tzinfo=bt.tzinfo)
                     elif length == 4 : # DDddhh
-                        obstime = Dt24(bt.year, bt.month, int(v[0:2]), int(v[2:4]), bt.hour, bt.second, tzinfo=zi)
+                        obstime = Dt24(bt.year, bt.month, int(v[0:2]), int(v[2:4]), bt.hour, bt.second, tzinfo=bt.tzinfo)
                     elif length == 2 : # DDdd
-                        obstime = Dt24(bt.year, bt.month, int(v[0:2]), bt.hour, bt.minute, bt.second, tzinfo=zi)
+                        obstime = Dt24(bt.year, bt.month, int(v[0:2]), bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo)
                     else :
                         raise ShefParserException(f"Bad observation time: {subtoken}")
                 elif subtoken[1] == 'M' :
                     if length == 10 : # DMmmddhhnnss
-                        obstime = Dt24(bt.year, int(v[0:2]), int(v[2:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), tzinfo=zi)
+                        obstime = Dt24(bt.year, int(v[0:2]), int(v[2:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), tzinfo=bt.tzinfo)
                     elif length == 8 : # DMmmddhhnn
-                        obstime = Dt24(bt.year, int(v[0:2]), int(v[2:4]), int(v[4:6]), int(v[6:8]), bt.second, tzinfo=zi)
+                        obstime = Dt24(bt.year, int(v[0:2]), int(v[2:4]), int(v[4:6]), int(v[6:8]), bt.second, tzinfo=bt.tzinfo)
                     elif length == 6 : # DMmmddhh
-                        obstime = Dt24(bt.year, int(v[0:2]), int(v[2:4]), int(v[4:6]), bt.minute, bt.second, tzinfo=zi)
+                        obstime = Dt24(bt.year, int(v[0:2]), int(v[2:4]), int(v[4:6]), bt.minute, bt.second, tzinfo=bt.tzinfo)
                     elif length == 4 : # DMmmdd
-                        obstime = Dt24(bt.year, int(v[0:2]), int(v[2:4]), bt.hour, bt.minute, bt.second, tzinfo=zi)
+                        obstime = Dt24(bt.year, int(v[0:2]), int(v[2:4]), bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo)
                     elif length == 2 : # DMmm
-                        obstime = Dt24(bt.year, int(v[0:2]), bt.day, bt.hour, bt.minute, bt.second, tzinfo=zi)
+                        obstime = Dt24(bt.year, int(v[0:2]), bt.day, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo)
                     else :
                         raise ShefParserException(f"Bad observation time: {subtoken}")
                 elif subtoken[1] == 'Y' :
@@ -1191,70 +1491,88 @@ class ShefParser :
                         raise ShefParserException(f"Bad observation time: {subtoken}")
                         return
                     if length == 12 : # DYyymmddhhnnss
-                        obstime = Dt24(y, int(v[2:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), int(v[10:12]), tzinfo=zi)
+                        obstime = Dt24(y, int(v[2:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), int(v[10:12]), tzinfo=bt.tzinfo)
                     elif length == 10 : # DYyymmddhhnn - set date and time
-                        obstime = Dt24(y, int(v[2:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), bt.second, tzinfo=zi)
+                        obstime = Dt24(y, int(v[2:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), bt.second, tzinfo=bt.tzinfo)
                     elif length == 8 : # DYyymmddhh
-                        obstime = Dt24(y, int(v[2:4]), int(v[4:6]), int(v[6:8]), bt.minute, bt.second, tzinfo=zi)
+                        obstime = Dt24(y, int(v[2:4]), int(v[4:6]), int(v[6:8]), bt.minute, bt.second, tzinfo=bt.tzinfo)
                     elif length == 6 : # DYyymmdd
-                        obstime = Dt24(y, int(v[2:4]), int(v[4:6]), bt.hour, bt.minute, bt.second, tzinfo=zi)
+                        obstime = Dt24(y, int(v[2:4]), int(v[4:6]), bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo)
                     elif length == 4 : # DYyymm
-                        obstime = Dt24(y, int(v[2:4]), bt.day, bt.hour, bt.minute, bt.second, tzinfo=zi)
+                        obstime = Dt24(y, int(v[2:4]), bt.day, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo)
                     elif length == 2 : # DYyy
-                        obstime = Dt24(y, bt.month, bt.day, bt.hour, bt.minute, bt.second, tzinfo=zi)
+                        obstime = Dt24(y, bt.month, bt.day, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo)
                     else :
                         raise ShefParserException(f"Bad observation time: {subtoken}")
                 elif subtoken[1] == 'T' :
                     if length == 14 : #DTccyymmddhhnnss
-                        obstime = Dt24(int(v[0:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), int(v[10:12]), int(v[12:14]), tzinfo=zi)
+                        obstime = Dt24(int(v[0:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), int(v[10:12]), int(v[12:14]), tzinfo=bt.tzinfo)
                     elif length == 12 : #DTccyymmddhhnn
-                        obstime = Dt24(int(v[0:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), int(v[10:12]), bt.second, tzinfo=zi)
+                        obstime = Dt24(int(v[0:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), int(v[10:12]), bt.second, tzinfo=bt.tzinfo)
                     elif length == 10 : #DTccyymmddhh
-                        obstime = Dt24(int(v[0:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), bt.minute, bt.second, tzinfo=zi)
+                        obstime = Dt24(int(v[0:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), bt.minute, bt.second, tzinfo=bt.tzinfo)
                     elif length == 8 : #DTccyymmdd
-                        obstime = Dt24(int(v[0:4]), int(v[4:6]), int(v[6:8]), bt.hour, bt.minute, bt.second, tzinfo=zi)
+                        obstime = Dt24(int(v[0:4]), int(v[4:6]), int(v[6:8]), bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo)
                     elif length == 6 : #DTccyymm
-                        obstime = Dt24(int(v[0:4]), int(v[4:6]), bt.day, bt.hour, bt.minute, bt.second, tzinfo=zi)
+                        obstime = Dt24(int(v[0:4]), int(v[4:6]), bt.day, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo)
                     elif length == 4 : #DTccyy
-                        obstime = Dt24(int(v[0:4]), bt.month, bt.day, bt.hour, bt.minute, bt.second, tzinfo=zi)
+                        obstime = Dt24(int(v[0:4]), bt.month, bt.day, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo)
                     elif length == 2 : #DTcc
-                        obstime = Dt24(100*int(v[0:2])+bt.year%100, bt.month, bt.day, bt.hour, bt.minute, bt.second, tzinfo=zi)
+                        obstime = Dt24(100*int(v[0:2])+bt.year%100, bt.month, bt.day, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo)
                     else :
                         raise ShefParserException(f"Bad observation time: {subtoken}")
-                elif subtoken[1] == 'J' : 
+                elif subtoken[1] == 'J' :
                     if length == 7 : # DJccyyddd
-                        obstime = Dt24(int(bt[0:4]), 1, 1, bt.hour, bt.minute, bt.second, tzinfo=zi) + timedelta(days=int(v[4:7]))
+                        obstime = Dt24(int(bt[0:4]), 1, 1, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo) + timedelta(days=int(v[4:7]))
                     elif length == 5 : # DJyyddd
                         y = cur_time.year - cur_time.year % 100 + int(v[0:2])
                         if y - cur_time.year > 10 : y -= 100
-                        obstime = Dt24(y, 1, 1, bt.hour, bt.minute, bt.second, tzinfo=zi) + timedelta(days=int(v[2:5]))
+                        obstime = Dt24(y, 1, 1, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo) + timedelta(days=int(v[2:5]))
                     elif length == 3 : # DJddd
-                        obstime = Dt24(bt.year, 1, 1, bt.hour, bt.minute, bt.second, tzinfo=zi) + timedelta(days=int(v[0:3]))
+                        obstime = Dt24(bt.year, 1, 1, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo) + timedelta(days=int(v[0:3]))
                     else :
                         raise ShefParserException(f"Bad observation time: {subtoken}")
                 elif subtoken[1] == 'R' :
+                    # for .B messages the relative times are kept in the parameter control objects
                     v = subtoken[3:]
-                    length = len(v)
-                    if length != 3 :
-                        raise ShefParserException(f"Bad observation time: {subtoken}")
-                        return None
                     if subtoken[2] == 'S' :
-                        objtime += timedelta(seconds=int(v))
+                        if dot_b :
+                            relativetime = timedelta(seconds=int(v))
+                        else :
+                            obstime = bt + timedelta(seconds=int(v))
                     elif subtoken[2] == 'N' :
-                        objtime += timedelta(minutes=int(v))
+                        if dot_b :
+                            relativetime = timedelta(minutes=int(v))
+                        else :
+                            obstime = bt + timedelta(minutes=int(v))
                     elif subtoken[2] == 'H' :
-                        objtime += timedelta(hours=int(v))
+                        if dot_b :
+                            relativetime = timedelta(hours=int(v))
+                        else :
+                            obstime = bt + timedelta(hours=int(v))
                     elif subtoken[2] == 'D' :
-                        objtime += timedelta(days=int(v))
+                        if dot_b :
+                            relativetime = timedelta(days=int(v))
+                        else :
+                            obstime = bt + timedelta(days=int(v))
                     elif subtoken[2] == 'M' :
-                        obstime = bt.add_months(int(v))
+                        if dot_b :
+                            relativetime = MonthsDelta(int(v))
+                        else :
+                            obstime = bt + MonthsDelta(int(v))
                     elif subtoken[2] == 'E' :
-                        obstime = bt.add_months(int(v), end_of_month = True)
+                        if dot_b :
+                            relativetime = MonthsDelta(int(v), eom=True)
+                        else :
+                            obstime = bt + MonthsDelta(int(v), eom=True)
                     elif subtoken[2] == 'Y' :
-                        obstime = bt.add_months(12*int(v))
+                        if dot_b :
+                            relativetime = MonthsDelta(12*int(v))
+                        else :
+                            obstime = bt + MonthsDelta(12*int(v))
                     else :
                         raise ShefParserException(f"Bad observation time: {subtoken}")
-                return bt
+                return obstime, relativetime
             except :
                 raise ShefParserException(f"Bad observation time: {subtoken}")
 
@@ -1313,7 +1631,7 @@ class ShefParser :
             if units == "EN" and pe_code in ("PC", "PP") and '.' not in m.group(2) :
                 value /= 100
             if units == "SI" and value != -9999. :
-                value *= self._pe_codes[pe_code]
+                value *= self._pe_conversions[pe_code]
         elif matched_groups ==  "FFTF" :
             #---------------------------#
             # Precipitation trace value #
@@ -1352,10 +1670,10 @@ class ShefParser :
         #------------------------------#
         # process the positionl fields #
         #------------------------------#
-        revised   = message[2] == 'R'
-        location  = m.group(1)
-        dateval   = self.parse_header_date(m.group(2))
-        time_zone = m.group(6) if m.group(6) else 'Z'
+        revised   = message[2].upper() == 'R'
+        location  = m.group(1).upper()
+        dateval   = self.parse_header_date(m.group(2).upper())
+        time_zone = m.group(6).upper() if m.group(6) else 'Z'
         length    = m.end()
         if not time_zone : time_zone = 'Z'
         try :
@@ -1384,28 +1702,35 @@ class ShefParser :
         for i in range(len(tokens)) :
             if len(tokens[i]) == 1 :
                 token = tokens[i][0]
-                if self._obs_time_pattern2.match(token) :
+                if self._obs_time_pattern2.search(token) :
                     #------------------------------------------------#
                     # set the observation time for subsequent values #
                     #------------------------------------------------#
-                    if not obstime_defined :
-                        obstime = Dt24(dateval.year, dateval.month, dateval.day, 0, 0, 0, tzinfo=zi)
-                    obstime = self.get_observation_time(obstime, zi, token)
+                    pos = 0
+                    while True :
+                        m = self._obs_time_pattern2.search(token[pos:])
+                        if not m : break
+                        if not obstime_defined :
+                            obstime = Dt24(dateval.year, dateval.month, dateval.day, 0, 0, 0, tzinfo=zi)
+                        obstime, relativetime = self.get_observation_time(obstime, token.upper(), dot_b=False)
+                        pos += m.end(1)+1
+                    if token[pos:] :
+                        raise ShefParserException(f"Unexpected data string item: {token}")
                 elif self._create_time_pattern.match(token) :
                     #---------------------------------------------#
                     # set the creation time for subsequent values #
                     #---------------------------------------------#
-                    createtime = self.get_creation_time(zi, token)
+                    createtime = self.get_creation_time(zi, token.upper())
                 elif self._unit_system_pattern.match(token) :
                     #-------------------------------------------#
                     # set the unit system for subsequent values #
                     #-------------------------------------------#
-                    units = "EN" if token[2] == 'E' else "SI"
+                    units = "EN" if token[2].upper() == 'E' else "SI"
                 elif self._data_qualifier_pattern.match(token) :
                     #-------------------------------------------------#
                     # set the default qualifier for subsequent values #
                     #-------------------------------------------------#
-                    default_qualifier = token[2]
+                    default_qualifier = token[2].upper()
                     if default_qualifier not in self._qualifier_codes :
                         error(f"Bad data qualifier: {default_qualifier}")
                         return
@@ -1413,7 +1738,7 @@ class ShefParser :
                     #----------------------------------------------------------------#
                     # set the duration for subequent values with duration code = 'V' #
                     #----------------------------------------------------------------#
-                    duration_unit = token[2]
+                    duration_unit = token[2].upper()
                     if duration_unit == 'Z' :
                         duration_value = None
                     else :
@@ -1429,8 +1754,8 @@ class ShefParser :
                 #------------#
                 # data value #
                 #------------#
-                code = tokens[i][0]
-                if len(code) < 2 or (code[:2] not in self._send_codes and code[:2] not in self._pe_codes) :
+                code = tokens[i][0].upper()
+                if len(code) < 2 or (code[:2] not in self._send_codes and code[:2] not in self._pe_conversions) :
                     raise ShefParserException(f"Invalid PE code: {code[:min(2, len(code))]}")
                 parameter_code, use_prev_7am = self.get_parameter_code(code)
                 if use_prev_7am :
@@ -1439,7 +1764,7 @@ class ShefParser :
                     obstime = Dt24(t.year, t.month, t.day, 7, 0, 0, t.tzinfo)
                 if len(tokens[i]) == 1 :
                     continue # same as a NULL field - a parameter code with no value
-                value, qualifier = self.parse_value_token(tokens[i][1], parameter_code[:2], units)
+                value, qualifier = self.parse_value_token(tokens[i][1].upper(), parameter_code[:2], units)
                 if not qualifier : qualifier = default_qualifier
                 if qualifier not in self._qualifier_codes :
                     raise ShefParserException(f"Invalid data qualifier: {qualifier}")
@@ -1448,11 +1773,8 @@ class ShefParser :
                     comment = tokens[i][2]
                     if comment :
                         if comment[0] not in "'\"" :
-                            if qualifier in self._qualifier_codes :
-                                raise ShefParserException(f"Data qualifier: {qualifier} does not immediately follow value {tokens[i][1]}")
-                            else :
-                                raise ShefParserException(f"Invalid retained comment {tokens[i][2]}")
-                        comment = comment[1:-1]
+                            raise ShefParserException(f"Invalid retained comment {tokens[i][2]}")
+                        comment = comment.strip("'").strip('"')
 
                 outrec = OutputRecord(
                     location,
@@ -1485,10 +1807,10 @@ class ShefParser :
         #-------------------------------#
         # process the positional fields #
         #-------------------------------#
-        revised   = message[2] == 'R'
-        location  = m.group(1)
-        dateval   = self.parse_header_date(m.group(2))
-        time_zone = m.group(6) if m.group(6) else 'Z'
+        revised   = message[2].upper() == 'R'
+        location  = m.group(1).upper()
+        dateval   = self.parse_header_date(m.group(2).upper())
+        time_zone = m.group(6).upper() if m.group(6) else 'Z'
         length    = m.end()
         if not time_zone : time_zone = 'Z'
         try :
@@ -1524,29 +1846,36 @@ class ShefParser :
             token = tokens[i][0]
             value = None
             comment = None
-            if self._obs_time_pattern2.match(token) :
+            if self._obs_time_pattern2.search(token) :
                 #------------------------------------------------#
                 # set the observation time for subsequent values #
                 #------------------------------------------------#
-                if not obstime_defined :
-                    obstime = Dt24(dateval.year, dateval.month, dateval.day, 0, 0, 0, tzinfo=zi)
-                obstime = self.get_observation_time(obstime, zi, token)
+                pos = 0
+                while True :
+                    m = self._obs_time_pattern2.search(token[pos:])
+                    if not m : break
+                    if not obstime_defined :
+                        obstime = Dt24(dateval.year, dateval.month, dateval.day, 0, 0, 0, tzinfo=zi)
+                    obstime, relativetime = self.get_observation_time(obstime, token.upper(), dot_b=False)
+                    pos += m.end(1)+1
+                if token[pos:] :
+                    raise ShefParserException(f"Unexpected data string item: {token}")
                 time_series_code = 1
             elif self._create_time_pattern.match(token) :
                 #---------------------------------------------#
                 # set the creation time for subsequent values #
                 #---------------------------------------------#
-                createtime = self.get_creation_time(zi, token)
+                createtime = self.get_creation_time(zi, token.upper())
             elif self._unit_system_pattern.match(token) :
                 #-------------------------------------------#
                 # set the unit system for subsequent values #
                 #-------------------------------------------#
-                units = "EN" if token[2] == 'E' else "SI"
+                units = "EN" if token[2].upper() == 'E' else "SI"
             elif self._data_qualifier_pattern.match(token) :
                 #-------------------------------------------------#
                 # set the default qualifier for subsequent values #
                 #-------------------------------------------------#
-                default_qualifier = token[2]
+                default_qualifier = token[2].upper()
                 if default_qualifier not in self._qualifier_codes :
                     error(f"Bad data qualifier: {default_qualifier}")
                     return
@@ -1554,7 +1883,7 @@ class ShefParser :
                 #----------------------------------------------------------------#
                 # set the duration for subequent values with duration code = 'V' #
                 #----------------------------------------------------------------#
-                duration_unit = token[2]
+                duration_unit = token[2].upper()
                 if duration_unit == 'Z' :
                     duration_value = None
                 else :
@@ -1566,8 +1895,8 @@ class ShefParser :
                 #-------------------------------------------------#
                 if parameter_code :
                     raise ShefParserException("Parameter code specified more than once")
-                code = token
-                if len(code) < 2 or (code[:2] not in self._send_codes and code[:2] not in self._pe_codes) :
+                code = token.upper()
+                if len(code) < 2 or (code[:2] not in self._send_codes and code[:2] not in self._pe_conversions) :
                     raise ShefParserException(f"Invalid PE code: {code[:min(2, len(code))]}")
                 parameter_code, use_prev_7am = self.get_parameter_code(code)
             elif self._interval_pattern.match(token) :
@@ -1577,7 +1906,7 @@ class ShefParser :
                 if interval :
                     raise ShefParserException("Interval specified more than once")
                 time_series_code = 1
-                interval_unit = token[2]
+                interval_unit = token[2].upper()
                 interval_value = int(token[3:])
                 if interval_unit == 'S' :
                     interval = timedelta(seconds=interval_value)
@@ -1597,7 +1926,7 @@ class ShefParser :
                 #------------#
                 # data value #
                 #------------#
-                value, qualifier = self.parse_value_token(token, parameter_code[:2], units)
+                value, qualifier = self.parse_value_token(token.upper(), parameter_code[:2], units)
                 if not qualifier : qualifier = default_qualifier
                 if qualifier not in self._qualifier_codes :
                     raise ShefParserException(f"Invalid data qualifier: {qualifier}")
@@ -1606,11 +1935,8 @@ class ShefParser :
                     comment = tokens[i][2]
                     if comment :
                         if comment[0] not in "'\"" :
-                            if qualifier in self._qualifier_codes :
-                                raise ShefParserException(f"Data qualifier: {qualifier} does not immediately follow value {tokens[i][1]}")
-                            else :
-                                raise ShefParserException(f"Invalid retained comment {tokens[i][2]}")
-                        comment = comment[1:-1]
+                            raise ShefParserException(f"Invalid retained comment {tokens[i][2]}")
+                        comment = comment.strip("'").strip('"')
             elif not token :
                 #------------------------------------#
                 # missing value if in list of values #
@@ -1626,7 +1952,7 @@ class ShefParser :
                 #------------------#
                 if not value :
                     raise ShefParserException("Comment encountered before value")
-                comment = token[1:-1]
+                comment = token.strip("'").strip('"')
             else :
                 raise ShefParserException(f"Unexpected data string item: {token}")
 
@@ -1669,7 +1995,7 @@ class ShefParser :
             if lines[0][-1] != '/' and lines[i][0] != '/' : lines[0] += '/'
             lines[0] += lines[i]
         header = lines[0]
-        datastr = "\n".join(message[m.end():].strip().split("\n")[:-1]).strip()
+        body = "\n".join(message[m.end():].strip().split("\n")[:-1]).strip()
         #------------------------------------#
         # parse the header positional fields #
         #------------------------------------#
@@ -1684,10 +2010,10 @@ class ShefParser :
         #--------------------------------------#
         # process the header positional fields #
         #--------------------------------------#
-        revised    = message[2] == 'R'
-        msg_source = m.group(1)
-        dateval    = self.parse_header_date(m.group(2))
-        time_zone  = m.group(6) if m.group(6) else 'Z'
+        revised    = message[2].upper() == 'R'
+        msg_source = m.group(1).upper()
+        dateval    = self.parse_header_date(m.group(2).upper())
+        time_zone  = m.group(6).upper() if m.group(6) else 'Z'
         length     = m.end()
         if not time_zone : time_zone = 'Z'
         try :
@@ -1695,7 +2021,6 @@ class ShefParser :
         except :
             raise ShefParserException(f"Cannot instantiate time zone {self._tz_names[time_zone]} for SHEF time zone {time_zone}")
         dateval = Dt24(dateval.year, dateval.month, dateval.day, tzinfo=zi)
-        datastr = message[length:].strip()
         #-----------------------------#
         # set the default data values #
         #-----------------------------#
@@ -1706,6 +2031,7 @@ class ShefParser :
         dateval = Dt24(dateval.year, dateval.month, dateval.day, tzinfo=zi)
         parameter_code    = None
         obstime_defined   = False
+        relativetime      = None
         createtime        = None
         interval          = None
         time_series_code  = 0
@@ -1715,36 +2041,54 @@ class ShefParser :
         duration_value    = None
         use_prev_7am      = False
         param_control     = []
+        outrecs           = []
         #--------------------------------------#
         # process the parameter control fields #
         #--------------------------------------#
         param_str = header[m.end():].strip()
-        param_str = self._obs_time_pattern.sub(r"\1@\6", param_str).strip('@')
-        param_tokens = list(map(lambda s : s.strip(), param_str.split('/')))
+        while self._multiple_obs_time_pattern.match(param_str) :
+            param_str = self._multiple_obs_time_pattern.sub(r"\1@\6\7", param_str)
+        param_tokens = list(map(lambda s : s.strip().strip('@'), param_str.split('/')))
         for token in param_tokens :
+            if self._obs_time_pattern2.search(token) :
+                #----------------------------------------------------#
+                # set the observation time for subsequent parameters #
+                #----------------------------------------------------#
+                pos = 0
+                while True :
+                    m = self._obs_time_pattern2.search(token[pos:])
+                    if not m : break
+                    if not obstime_defined :
+                        obstime = Dt24(dateval.year, dateval.month, dateval.day, 0, 0, 0, tzinfo=zi)
+                    obstime, relativetime = self.get_observation_time(obstime, token.upper(), dot_b=True)
+                    if relativetime :
+                        raise ShefParserException(f"Relative time not allowed in .B body: {token.replace('@', '/')}")
+                    pos += m.end(1)+1
+                if token[pos:] :
+                    raise ShefParserException(f"Unexpected data string item: {token.replace('@', '/')}")
             if self._obs_time_pattern2.match(token) :
                 #----------------------------------------------------#
                 # set the observation time for subsequent parameters #
                 #----------------------------------------------------#
                 if not obstime_defined :
                     default_obstime = Dt24(dateval.year, dateval.month, dateval.day, 0, 0, 0, tzinfo=zi)
-                obstime = self.get_observation_time(default_obstime, zi, token)
+                obstime, relativetime = self.get_observation_time(default_obstime, token, dot_b=True)
                 time_series_code = 1
             elif self._create_time_pattern.match(token) :
                 #-------------------------------------------------#
                 # set the creation time for subsequent parameters #
                 #-------------------------------------------------#
-                createtime = self.get_creation_time(zi, token)
+                createtime = self.get_creation_time(zi, token.upper())
             elif self._unit_system_pattern.match(token) :
                 #-----------------------------------------------#
                 # set the unit system for subsequent parameters #
                 #-----------------------------------------------#
-                units = "EN" if token[2] == 'E' else "SI"
+                units = "EN" if token[2].upper() == 'E' else "SI"
             elif self._data_qualifier_pattern.match(token) :
                 #---------------------------------------------#
                 # set the qualifier for subsequent parameters #
                 #---------------------------------------------#
-                qualifier = token[2]
+                qualifier = token[2].upper()
                 if qualifier not in self._qualifier_codes :
                     error(f"Bad data qualifier: {qualifier}")
                     return
@@ -1752,7 +2096,7 @@ class ShefParser :
                 #--------------------------------------------------------------------#
                 # set the duration for subequent parameters with duration code = 'V' #
                 #--------------------------------------------------------------------#
-                duration_unit = token[2]
+                duration_unit = token[2].upper()
                 if duration_unit == 'Z' :
                     duration_value = None
                 else :
@@ -1762,8 +2106,8 @@ class ShefParser :
                 #----------------------------------------------------------#
                 # create a new parameter control object for this parameter #
                 #----------------------------------------------------------#
-                code = token
-                if len(code) < 2 or (code[:2] not in self._send_codes and code[:2] not in self._pe_codes) :
+                code = token.upper()
+                if len(code) < 2 or (code[:2] not in self._send_codes and code[:2] not in self._pe_conversions) :
                     raise ShefParserException(f"Invalid PE code: {code[:min(2, len(code))]}")
                 parameter_code, use_prev_7am = self.get_parameter_code(code)
                 t = obstime if obstime else default_obstime
@@ -1772,15 +2116,16 @@ class ShefParser :
                     if t.hour < 7 :
                         t -= timedelta(days=1)
                     t = Dt24(t.year, t.month, t.day, 7, 0, 0, tzinfo=t.tzinfo)
-                print(t, type(t))
                 param_control.append(ShefParser.ParameterControl(
+                    parameter_code,
                     t,
+                    relativetime,
                     createtime,
                     units,
                     qualifier,
                     duration_unit,
-                    duration_value,
-                    parameter_code))
+                    duration_value))
+                relativetime = None
             elif not token :
                 #------------------------------------#
                 # missing value if in list of values #
@@ -1788,12 +2133,47 @@ class ShefParser :
                 raise ShefParserException("Null field in parameter control string")
             else :
                 raise ShefParserException(f"Unexpected data string item: {token}")
-        
-        # print(f"\nmessage = {message}")
-        print(f"header = {header}")
-        for i in range(len(param_control)) :
-            print(f"\t{i} = {param_control[i]}")
-        # print(f"datastr = {datastr}")
+        #------------------#
+        # process the body #
+        #------------------#
+        body = body.replace(",", "\n")
+        bodylines = list(map(lambda x : x.strip(), body.split("\n")[:-1]))
+        for i in range(len(bodylines)) :
+            p = 0
+            time_override = None
+            if not self._dot_b_body_line_pattern.match(bodylines[i]) and bodylines[i].strip() :
+                raise ShefParserException(f"Invalid body line: {bodylines[i]}")
+            location = bodylines[i].split()[0]
+            bodytokens = list(map(lambda s: s.strip(), bodylines[i][len(location):].strip().split("/")))
+            for token in bodytokens :
+                if token[0] == 'D' :
+                    try :
+                        assert token[1] in "SNHDMYJ"
+                        j = int(token[2:])
+                    except :
+                        raise ShefParserException(f"Bad date/data override in data: {token}")
+                    t = obstime if obstime else default_obstime
+                    time_override = self.get_observation_time(t, token, dot_b=True)
+                else :
+                    m = self._value_pattern.search(token)
+                    if not m :
+                        raise ShefParserException(f"Bad field in data: {token}")
+                    value, qualifier = self.parse_value_token(token, param_control[p].pe_code, param_control[p].units)
+                    comment = token[m.end():].strip()
+                    if comment :
+                        if comment[0] not in "'\"" :
+                            raise ShefParserException(f"Bad field in data: {token}")
+                            comment = comment.strip("'").strip('"')
+
+                    outrecs.append(param_control[p].get_output_record(
+                        self,
+                        revised,
+                        msg_source,
+                        location,
+                        time_override,value,
+                        qualifier,
+                        comment))
+        return outrecs
 
 def main() :
     '''
@@ -1913,17 +2293,17 @@ def main() :
         if not message : break
         outrecs = None
         try :
-            if message.startswith(".B") :
+            if message.startswith(".A") :
+                outrecs = parser.parse_dot_a_message(message)
+            elif message.startswith(".B") :
                 outrecs = parser.parse_dot_b_message(message)
-            # elif message.startswith(".A") :
-            #     outrecs = parser.parse_dot_a_message(message)
-            # elif message.startswith(".E") :
-            #     outrecs = parser.parse_dot_e_message(message)
-            if outrecs : 
+            elif message.startswith(".E") :
+                outrecs = parser.parse_dot_e_message(message)
+            if outrecs :
                 for outrec in outrecs : parser.output(outrec)
         except Exception as e :
             parser.error(f"{e} in message at {message_location}: {message}")
-            if str(e).find("parser") != -1 : raise
+            if str(e).find("empty") != -1 : raise
 
 if __name__ == "__main__" :
     main()
