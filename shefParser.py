@@ -125,12 +125,12 @@ class Dt24 :
         t = datetime.now()
         return Dt24(t.year, t.month, t.day, t.hour, t.minute, t.second)
 
-    def clone(self) :
+    @staticmethod
+    def clone(other) :
         '''
         Create a (distinct) copy of this object
         '''
-        dt = self._dt
-        y, m, d, h, n, s, z = dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, dt.tzinfo
+        y, m, d, h, n, s, z = other.year, other.month, other.day, other.hour, other.minute, other.second, other.tzinfo
         return Dt24(y, m, d, h, n, s, tzinfo=z)
 
     def add_months(self, months: int, end_of_month: bool = False) :
@@ -174,7 +174,7 @@ class Dt24 :
         return self._dt.__str__()
 
     def __getattribute__(self, name) :
-        if name in ("_dt", "_adjusted", "clone", "add_months") :
+        if name in ("_dt", "_adjusted", "add_months") :
             return super().__getattribute__(name)
         elif name == "year" :
             if self._adjusted :
@@ -814,9 +814,9 @@ class ShefParser :
                 raise ShefParserException("Missing observation time")
 
             self._parameter_code = parameter_code
-            self._obstime        = obstime.clone()
-            self._relativetime   = relativetime.clone() if relativetime else None
-            self._createtime     = createtime.clone() if createtime else None
+            self._obstime        = Dt24.clone(obstime)
+            self._relativetime   = Dt24.clone(relativetime) if relativetime else None
+            self._createtime     = Dt24.clone(createtime) if createtime else None
             self._units          = units
             self._qualifier      = qualifier
             self._duration_unit  = duration_unit
@@ -1523,13 +1523,13 @@ class ShefParser :
                         raise ShefParserException(f"Bad observation time: {subtoken}")
                 elif subtoken[1] == 'J' :
                     if length == 7 : # DJccyyddd
-                        obstime = Dt24(int(bt[0:4]), 1, 1, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo) + timedelta(days=int(v[4:7]))
+                        obstime = Dt24(int(bt[0:4]), 1, 1, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo) + timedelta(days=int(v[4:7])-1)
                     elif length == 5 : # DJyyddd
                         y = cur_time.year - cur_time.year % 100 + int(v[0:2])
                         if y - cur_time.year > 10 : y -= 100
-                        obstime = Dt24(y, 1, 1, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo) + timedelta(days=int(v[2:5]))
+                        obstime = Dt24(y, 1, 1, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo) + timedelta(days=int(v[2:5])-1)
                     elif length == 3 : # DJddd
-                        obstime = Dt24(bt.year, 1, 1, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo) + timedelta(days=int(v[0:3]))
+                        obstime = Dt24(bt.year, 1, 1, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo) + timedelta(days=int(v[0:3])-1)
                     else :
                         raise ShefParserException(f"Bad observation time: {subtoken}")
                 elif subtoken[1] == 'R' :
@@ -1572,9 +1572,9 @@ class ShefParser :
                             obstime = bt + MonthsDelta(12*int(v))
                     else :
                         raise ShefParserException(f"Bad observation time: {subtoken}")
-                return obstime, relativetime
             except :
                 raise ShefParserException(f"Bad observation time: {subtoken}")
+        return obstime, relativetime
 
     def get_creation_time(self, zi: ZoneInfo, token: str) :
         '''
@@ -1696,6 +1696,7 @@ class ShefParser :
         units             = "EN"
         duration_unit     = 'Z'
         duration_value    = None
+        outrecs           = []
         #--------------------------------#
         # process the data string fields #
         #--------------------------------#
@@ -1712,10 +1713,12 @@ class ShefParser :
                         if not m : break
                         if not obstime_defined :
                             obstime = Dt24(dateval.year, dateval.month, dateval.day, 0, 0, 0, tzinfo=zi)
+                            obstime_defined = True
                         obstime, relativetime = self.get_observation_time(obstime, token.upper(), dot_b=False)
                         pos += m.end(1)+1
                     if token[pos:] :
-                        raise ShefParserException(f"Unexpected data string item: {token}")
+                        self.error(f"Unexpected data string item: {token}")
+                        return outrecs
                 elif self._create_time_pattern.match(token) :
                     #---------------------------------------------#
                     # set the creation time for subsequent values #
@@ -1732,8 +1735,8 @@ class ShefParser :
                     #-------------------------------------------------#
                     default_qualifier = token[2].upper()
                     if default_qualifier not in self._qualifier_codes :
-                        error(f"Bad data qualifier: {default_qualifier}")
-                        return
+                        self.error(f"Bad data qualifier: {default_qualifier}")
+                        return outrecs
                 elif self._duration_code_pattern.match(token) :
                     #----------------------------------------------------------------#
                     # set the duration for subequent values with duration code = 'V' #
@@ -1749,7 +1752,8 @@ class ShefParser :
                     #----------------------------------#
                     pass
                 else :
-                    raise ShefParserException(f"Unexpected data string item: {token}")
+                    self.error(f"Unexpected data string item: {token}")
+                    return outrecs
             else :
                 #------------#
                 # data value #
@@ -1767,16 +1771,18 @@ class ShefParser :
                 value, qualifier = self.parse_value_token(tokens[i][1].upper(), parameter_code[:2], units)
                 if not qualifier : qualifier = default_qualifier
                 if qualifier not in self._qualifier_codes :
-                    raise ShefParserException(f"Invalid data qualifier: {qualifier}")
+                    self.error(f"Invalid data qualifier: {qualifier}")
+                    return outrecs
                 comment = None
                 if len(tokens[i]) > 2 :
                     comment = tokens[i][2]
                     if comment :
                         if comment[0] not in "'\"" :
-                            raise ShefParserException(f"Invalid retained comment {tokens[i][2]}")
+                            self.error(f"Invalid retained comment {tokens[i][2]}")
+                            return outrecs
                         comment = comment.strip("'").strip('"')
 
-                outrec = OutputRecord(
+                outrecs.append(OutputRecord(
                     location,
                     parameter_code,
                     obstime.astimezone(ShefParser.UTC),
@@ -1786,8 +1792,8 @@ class ShefParser :
                     revised,
                     duration_unit,
                     duration_value,
-                    comment = comment)
-                return [outrec]
+                    comment = comment))
+        return outrecs
 
     def parse_dot_e_message(self, message: str) :
         '''
@@ -1856,10 +1862,12 @@ class ShefParser :
                     if not m : break
                     if not obstime_defined :
                         obstime = Dt24(dateval.year, dateval.month, dateval.day, 0, 0, 0, tzinfo=zi)
+                        obstime_defined = True
                     obstime, relativetime = self.get_observation_time(obstime, token.upper(), dot_b=False)
                     pos += m.end(1)+1
                 if token[pos:] :
-                    raise ShefParserException(f"Unexpected data string item: {token}")
+                    self.error(f"Unexpected data string item: {token}")
+                    return outrecs
                 time_series_code = 1
             elif self._create_time_pattern.match(token) :
                 #---------------------------------------------#
@@ -1877,8 +1885,8 @@ class ShefParser :
                 #-------------------------------------------------#
                 default_qualifier = token[2].upper()
                 if default_qualifier not in self._qualifier_codes :
-                    error(f"Bad data qualifier: {default_qualifier}")
-                    return
+                    self.error(f"Bad data qualifier: {default_qualifier}")
+                    return outrecs
             elif self._duration_code_pattern.match(token) :
                 #----------------------------------------------------------------#
                 # set the duration for subequent values with duration code = 'V' #
@@ -1889,22 +1897,13 @@ class ShefParser :
                 else :
                     duration_value = int(token[3:])
                 time_series_code = 1
-            elif self._parameter_code_pattern.match(token) :
-                #-------------------------------------------------#
-                # set the parameter code for the susequent values #
-                #-------------------------------------------------#
-                if parameter_code :
-                    raise ShefParserException("Parameter code specified more than once")
-                code = token.upper()
-                if len(code) < 2 or (code[:2] not in self._send_codes and code[:2] not in self._pe_conversions) :
-                    raise ShefParserException(f"Invalid PE code: {code[:min(2, len(code))]}")
-                parameter_code, use_prev_7am = self.get_parameter_code(code)
             elif self._interval_pattern.match(token) :
                 #-----------------------------------------#
                 # set the intrerval for subsequent values #
                 #-----------------------------------------#
                 if interval :
-                    raise ShefParserException("Interval specified more than once")
+                    self.error("Interval specified more than once")
+                    return outrecs
                 time_series_code = 1
                 interval_unit = token[2].upper()
                 interval_value = int(token[3:])
@@ -1922,6 +1921,18 @@ class ShefParser :
                     interval = MonthsDelta(interval_value, eom=True)
                 elif interval_unit == 'Y' :
                     interval = {"months" : 12 * interval_value, "eom" : False}
+            elif self._parameter_code_pattern.match(token) :
+                #-------------------------------------------------#
+                # set the parameter code for the susequent values #
+                #-------------------------------------------------#
+                if parameter_code :
+                    self.error("Parameter code specified more than once")
+                    return outrecs
+                code = token.upper()
+                if len(code) < 2 or (code[:2] not in self._send_codes and code[:2] not in self._pe_conversions) :
+                    self.error(f"Invalid PE code: {code[:min(2, len(code))]}")
+                    return outrecs
+                parameter_code, use_prev_7am = self.get_parameter_code(code)
             elif self._value_pattern.match(token) :
                 #------------#
                 # data value #
@@ -1929,7 +1940,8 @@ class ShefParser :
                 value, qualifier = self.parse_value_token(token.upper(), parameter_code[:2], units)
                 if not qualifier : qualifier = default_qualifier
                 if qualifier not in self._qualifier_codes :
-                    raise ShefParserException(f"Invalid data qualifier: {qualifier}")
+                    self.error(f"Invalid data qualifier: {qualifier}")
+                    return outrecs
                 comment = None
                 if len(tokens[i]) > 2 :
                     comment = tokens[i][2]
@@ -1943,8 +1955,6 @@ class ShefParser :
                 #------------------------------------#
                 if not (parameter_code and interval) :
                     raise ShefParserException("Null field in data definition")
-                value = -9999.
-                qualifier = default_qualifier
                 obstime += interval
             elif token[0] in "\"'" :
                 #------------------#
@@ -2060,20 +2070,14 @@ class ShefParser :
                     if not m : break
                     if not obstime_defined :
                         obstime = Dt24(dateval.year, dateval.month, dateval.day, 0, 0, 0, tzinfo=zi)
+                        obstime_defined = True
                     obstime, relativetime = self.get_observation_time(obstime, token.upper(), dot_b=True)
                     if relativetime :
                         raise ShefParserException(f"Relative time not allowed in .B body: {token.replace('@', '/')}")
                     pos += m.end(1)+1
                 if token[pos:] :
-                    raise ShefParserException(f"Unexpected data string item: {token.replace('@', '/')}")
-            if self._obs_time_pattern2.match(token) :
-                #----------------------------------------------------#
-                # set the observation time for subsequent parameters #
-                #----------------------------------------------------#
-                if not obstime_defined :
-                    default_obstime = Dt24(dateval.year, dateval.month, dateval.day, 0, 0, 0, tzinfo=zi)
-                obstime, relativetime = self.get_observation_time(default_obstime, token, dot_b=True)
-                time_series_code = 1
+                    self.error(f"Unexpected data string item: {token.replace('@', '/')}")
+                    return outrecs
             elif self._create_time_pattern.match(token) :
                 #-------------------------------------------------#
                 # set the creation time for subsequent parameters #
@@ -2090,8 +2094,8 @@ class ShefParser :
                 #---------------------------------------------#
                 qualifier = token[2].upper()
                 if qualifier not in self._qualifier_codes :
-                    error(f"Bad data qualifier: {qualifier}")
-                    return
+                    self.error(f"Bad data qualifier: {qualifier}")
+                    return outrecs
             elif self._duration_code_pattern.match(token) :
                 #--------------------------------------------------------------------#
                 # set the duration for subequent parameters with duration code = 'V' #
@@ -2108,7 +2112,8 @@ class ShefParser :
                 #----------------------------------------------------------#
                 code = token.upper()
                 if len(code) < 2 or (code[:2] not in self._send_codes and code[:2] not in self._pe_conversions) :
-                    raise ShefParserException(f"Invalid PE code: {code[:min(2, len(code))]}")
+                    self.error(f"Invalid PE code: {code[:min(2, len(code))]}")
+                    return outrecs
                 parameter_code, use_prev_7am = self.get_parameter_code(code)
                 t = obstime if obstime else default_obstime
                 if use_prev_7am :
@@ -2130,39 +2135,49 @@ class ShefParser :
                 #------------------------------------#
                 # missing value if in list of values #
                 #------------------------------------#
-                raise ShefParserException("Null field in parameter control string")
+                self.error("Null field in parameter control string")
+                return outrecs
             else :
-                raise ShefParserException(f"Unexpected data string item: {token}")
+                self.error(f"Unexpected data string item: {token}")
+                return outrecs
         #------------------#
         # process the body #
         #------------------#
         body = body.replace(",", "\n")
-        bodylines = list(map(lambda x : x.strip(), body.split("\n")[:-1]))
+        bodylines = list(map(lambda x : x.strip(), body.split("\n")))
         for i in range(len(bodylines)) :
             p = 0
             time_override = None
             if not self._dot_b_body_line_pattern.match(bodylines[i]) and bodylines[i].strip() :
-                raise ShefParserException(f"Invalid body line: {bodylines[i]}")
+                self.error(f"Invalid body line: {bodylines[i]}")
+                return outrecs
+            if not bodylines[i].strip() :
+                continue;
             location = bodylines[i].split()[0]
             bodytokens = list(map(lambda s: s.strip(), bodylines[i][len(location):].strip().split("/")))
             for token in bodytokens :
                 if token[0] == 'D' :
                     try :
-                        assert token[1] in "SNHDMYJ"
+                        if token[1] not in "SNHDMYJ" :
+                            self.error(f"Bad date/data override in data: {token}")
+                            return outrecs
                         j = int(token[2:])
                     except :
-                        raise ShefParserException(f"Bad date/data override in data: {token}")
+                        self.error(f"Bad date/data override in data: {token}")
+                        return outrecs
                     t = obstime if obstime else default_obstime
                     time_override = self.get_observation_time(t, token, dot_b=True)
                 else :
                     m = self._value_pattern.search(token)
                     if not m :
-                        raise ShefParserException(f"Bad field in data: {token}")
+                        self.error(f"Bad field in data: {token}")
+                        return outrecs
                     value, qualifier = self.parse_value_token(token, param_control[p].pe_code, param_control[p].units)
                     comment = token[m.end():].strip()
                     if comment :
                         if comment[0] not in "'\"" :
-                            raise ShefParserException(f"Bad field in data: {token}")
+                            self.error(f"Bad field in data: {token}")
+                            return outrecs
                             comment = comment.strip("'").strip('"')
 
                     outrecs.append(param_control[p].get_output_record(
@@ -2173,6 +2188,7 @@ class ShefParser :
                         time_override,value,
                         qualifier,
                         comment))
+                    p += 1
         return outrecs
 
 def main() :
@@ -2291,6 +2307,7 @@ def main() :
     while True :
         message_location, message = parser.get_next_message()
         if not message : break
+        # print(f"message = {message}")
         outrecs = None
         try :
             if message.startswith(".A") :
@@ -2303,7 +2320,6 @@ def main() :
                 for outrec in outrecs : parser.output(outrec)
         except Exception as e :
             parser.error(f"{e} in message at {message_location}: {message}")
-            if str(e).find("empty") != -1 : raise
 
 if __name__ == "__main__" :
     main()
