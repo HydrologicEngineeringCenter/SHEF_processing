@@ -3,6 +3,7 @@ from argparse    import ArgumentParser
 from collections import deque
 from datetime    import datetime
 from datetime    import timedelta
+from datetime    import timezone
 from pathlib     import Path
 from typing      import Union
 from zoneinfo    import ZoneInfo
@@ -94,23 +95,42 @@ class MonthsDelta :
 
 class Dt24 :
     '''
-    Datetime class that accepts and generates 2400 instead of 0000
+    Datetime class for use with SHEF
+    * accepts and produces 2400 for midnight
+    * can be incremented by MonthsDelta
+    * can replicate time zone adjustments in NOAA Fortran SHEF parsing code
     '''
-    def __init__(self, *args, **kwargs) :
-        '''
-        Constructor allowing 2400
-        '''
-        args2   = args[:]
-        adjust = False
-        length = len(args2)
-        if length > 3 :
-            if args2[3] == 24 :
-                adjust = True
-                args2 = args2[:3]+(23,)+args2[4:]
-        self._dt = datetime(*args2, **kwargs)
-        if adjust :
-            self._dt += timedelta(hours=1)
-        self._adjusted = adjust
+
+    DST_DATES = (
+        #
+        # DOM of transition for winter->summer and summer->winter for years 1976-2040.
+        # Before 2007, months are April/October, afterward months are March/November
+        #
+        (26,31), (24,30), (30,29), (29,28), (27,26), (26,25),
+        (25,31), (24,30), (29,28), (28,27), (27,26), ( 5,25),
+        ( 3,30), ( 2,29), ( 1,28), ( 7,27), ( 5,25), ( 4,31),
+        ( 3,30), ( 2,29), ( 7,27), ( 6,26), ( 5,25), ( 4,31),
+        ( 2,29), ( 1,28), ( 7,27), ( 6,26), ( 4,31), ( 3,30),
+        ( 2,29), (11, 4), ( 9, 2), ( 8, 1), (14, 7), (13, 6),
+        (11, 4), (10, 3), ( 9, 2), ( 8, 1), (13, 6), (12, 5),
+        (11, 4), (10, 3), ( 8, 1), (14, 7), (13, 6), (12, 5),
+        (10, 3), ( 9, 2), ( 8, 1), (14, 7), (12, 5), (11, 4),
+        (10, 3), ( 9, 2), (14, 7), (13, 6), (12, 5), (11, 4),
+        ( 9, 2), ( 8, 1), (14, 7), (13, 6), (11, 4))
+
+    TZ_OFFSETS = {
+        "Z" :  0,
+        "N" :  210, "NS" : 210, "ND" : 210,
+        "A" :  240, "AS" : 240, "AD" : 180,
+        "E" :  300, "ES" : 300, "ED" : 240,
+        "C" :  360, "CS" : 360, "CD" : 300,
+        "M" :  420, "MS" : 420, "MD" : 360,
+        "P" :  480, "PS" : 480, "PD" : 420,
+        "Y" :  540, "YS" : 540, "YD" : 480,
+        "L" :  540, "LS" : 540, "LD" : 480,
+        "H" :  600, "HS" : 600, "HD" : 600,
+        "B" :  660, "BS" : 660, "BD" : 600,
+        "J" : -480}
 
     @staticmethod
     def is_leap(y: int) :
@@ -123,7 +143,7 @@ class Dt24 :
     @staticmethod
     def now() :
         t = datetime.now()
-        return Dt24(t.year, t.month, t.day, t.hour, t.minute, t.second)
+        return Dt24(t.year, t.month, t.day, t.hour, t.minute, t.second, tzinfo=ZoneInfo("UTC"))
 
     @staticmethod
     def clone(other) :
@@ -131,7 +151,111 @@ class Dt24 :
         Create a (distinct) copy of this object
         '''
         y, m, d, h, n, s, z = other.year, other.month, other.day, other.hour, other.minute, other.second, other.tzinfo
+        if isinstance(other._tzinfo, str) :
+            z = other._tzinfo
         return Dt24(y, m, d, h, n, s, tzinfo=z)
+
+    def __init__(self, *args, **kwargs) :
+        '''
+        Constructor
+        '''
+        args2   = args[:]
+        kwargs2 = copy.deepcopy(kwargs)
+        if "tzinfo" in kwargs2 :
+            tzinfo = kwargs2["tzinfo"]
+        else :
+            raise ShefParserException(f"Cannot instantiate {self.__class__.__name__} object without tzinfo")
+        adjust = False
+        length = len(args2)
+        if length > 3 :
+            if args2[3] == 24 :
+                adjust = True
+                args2 = args2[:3]+(23,)+args2[4:]
+        if isinstance(tzinfo, str) :
+            del kwargs2["tzinfo"]
+            tzinfo = tzinfo.upper()
+            if tzinfo not in Dt24.TZ_OFFSETS :
+                raise ShefParserException(f"Invalid SHEF time zone: {tzinfo}")
+        elif isinstance(tzinfo, (timezone, ZoneInfo)) :
+            pass
+        else :
+            raise ShefParserException(f"Invalid type for tzinfo: {tzinfo.__class__.__name__}")
+        self._dt       = datetime(*args2, **kwargs2)
+        self._tzinfo   = tzinfo
+        self._adjusted = adjust
+        if self._adjusted :
+            self._dt += timedelta(hours=1)
+
+    def to_timezone(self, tz) :
+        '''
+        Create a new object translated to the specified time zone
+        '''
+        def is_shef_summer_time(tz, y, m, d, h) :
+            '''
+            Determine whether a date is in summer time as defined by the SHEF Fortran parses
+            '''
+            summer_time = False
+            if len(tz) == 1 and tz not in "ZJHN" :
+                if 10 >= dt.month >= 3 :
+                    if not (1976 <= dt.year <= 2040) :
+                        raise ShefParserException("Can only perform SHEF time zone DST operations for years 1976-2040")
+                    dom = Dt24.DST_DATES[dt.year-1976]
+                    if dt.year < 2007 :
+                        months = (4, 10)
+                    else :
+                        months = (3, 11)
+                    if months[0] < dt.month < months[1] :
+                        summer_time = True
+                    elif dt.month == months[0] and (dt.day > dom[0] or dt.day == dom[0] and dt.hour >= 2) :
+                        summer_time = True
+                    elif dt.month == months[1] and (dt.day < dom[1] or dt.day == dom[1] and dt.hour < 2) :
+                        summer_time = True
+            return summer_time
+
+        dt = self
+        if not isinstance(tz, (ZoneInfo, str)) :
+            raise ShefParserException(f"Invalid time zone type: {tz.__class__.__name__}")
+        if isinstance(self._tzinfo, (timezone, ZoneInfo)) and isinstance(tz, (timezone, ZoneInfo)) :
+            #-------------------------------#
+            # move directly to specified TZ #
+            #-------------------------------#
+            dt = self._dt.astimezone(tz)
+        elif isinstance(self._tzinfo, str) and isinstance(tz, str) :
+            tz = tz.upper()
+            if tz == "UTC" : tz = "Z"
+            if tz not in Dt24.TZ_OFFSETS :
+                raise ShefParserException(f"Invalid SHEF time zone: {tz}")
+            #-------------------#
+            # first move to UTC #
+            #-------------------#
+            adjusted = False
+            if is_shef_summer_time(self._tzinfo, dt.year, dt.month, dt.day, dt.hour) :
+                dt -= timedelta(hours=1)
+                adjusted = True
+            dt += timedelta(minutes=Dt24.TZ_OFFSETS[self._tzinfo])
+            #---------------------------#
+            # next move to specified TZ #
+            #---------------------------#
+            dt -= timedelta(minutes=Dt24.TZ_OFFSETS[tz])
+            if not adjusted and is_shef_summer_time(self._tzinfo, dt.year, dt.month, dt.day, dt.hour) :
+                dt += timedelta(hours=1)
+        elif isinstance(self._tzinfo, str) and isinstance(tz, (timezone, ZoneInfo)) :
+            #-------------------#
+            # first move to UTC #
+            #-------------------#
+            if is_shef_summer_time(self._tzinfo, dt.year, dt.month, dt.day, dt.hour) :
+                dt -= timedelta(hours=1)
+            dt += timedelta(minutes=Dt24.TZ_OFFSETS[self._tzinfo])
+            self._dt = datetime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, tzinfo=ShefParser.UTC)
+            self._tzinfo = tzinfo=ShefParser.UTC
+            #---------------------------#
+            # next move to specified TZ #
+            #---------------------------#
+            dt = self._dt.astimezone(tz)
+        else :
+            raise ShefParserException(f"Invalid time zone combination: {self._tzinfo.__class__.__name__}, {tz.__class__.__name__}")
+        dt = Dt24(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, tzinfo=tz)
+        return dt
 
     def add_months(self, months: int, end_of_month: bool = False) :
         '''
@@ -154,27 +278,29 @@ class Dt24 :
 
     def __add__(self, other : Union[timedelta, MonthsDelta]) :
         if isinstance(other, timedelta) :
-            return self._dt.__add__(other)
+            dt = self._dt.__add__(other)
         if isinstance(other, MonthsDelta) :
-            return self.add_months(other.months, other.eom)
+            dt = self.add_months(other.months, other.eom)
+        return Dt24(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, tzinfo=self._tzinfo)
 
     def __sub__(self, other : Union[timedelta, MonthsDelta]) :
         if isinstance(other, timedelta) :
-            return self._dt.__sub__(other)
+            dt = self._dt.__sub__(other)
         if isinstance(other, MonthsDelta) :
-            return self.add_months(-other.months, other.eom)
+            dt = self.add_months(-other.months, other.eom)
         if isinstance(other, Dt24) :
             return self._dt - other._dt
+        return Dt24(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, tzinfo=self._tzinfo)
 
-    def __str__(self) :
+    def __repr__(self) :
         dt = self._dt
         if dt.hour == dt.minute == dt.second == 0 :
-            s = (dt - timedelta(hours=1)).__str__()
-            return s[:11] + "24" + s[13:]
-        return self._dt.__str__()
+            s = (dt - timedelta(hours=1)).__repr__()
+            return s[:11] + "24" + s[13:] + f" tzinfo={self._tzinfo}"
+        return self._dt.__repr__() + f" tzinfo={self._tzinfo}"
 
     def __getattribute__(self, name) :
-        if name in ("_dt", "_adjusted", "add_months") :
+        if name in ("_dt", "_adjusted", "to_timezone", "add_months", "_tzinfo", "__class__") :
             return super().__getattribute__(name)
         elif name == "year" :
             if self._adjusted :
@@ -209,6 +335,13 @@ class Dt24 :
                 return h
             else :
                 return self._dt.hour
+
+        elif name == "tzinfo" :
+            return self._tzinfo
+
+        elif name == "astimezone" :
+            return self.to_timezone
+
         else :
             return super().__getattribute__("_dt").__getattribute__(name)
 
@@ -759,36 +892,52 @@ class ShefParser :
         'S' : 7000, 'N' :    0, 'H' : 1000, 'D' : 2000, 'M' : 3000, 'Y' : 4000}
 
     TZ_NAMES = {
-        "N"  : "Canada/Newfoundland", # Newfoundland local
-        "NS" : "Canada/Newfoundland", # Newfoundland standard (this will be off by 1 hour during DST)
-        "A"  : "Canada/Atlantic",     # Atlantic local
-        "AD" : "Etc/GMT+3",           # Atlantic daylight
-        "AS" : "Etc/GMT+4",           # Atlantic standard
-        "E"  : "US/Eastern",          # Eastern local
-        "ED" : "Etc/GMT+4",           # Eastern daylight
-        "ES" : "Etc/GMT+5",           # Eastern standard
-        "C"  : "US/Central",          # Central
-        "CD" : "Etc/GMT+5",           # Central daylight
-        "CS" : "Etc/GMT+6",           # Central standard
-        "J"  : "CTT",                 # China
-        "M"  : "US/Mountain",         # Mountain local
-        "MD" : "Etc/GMT+6",           # Mountain daylight
-        "MS" : "Etc/GMT+7",           # Mountain standard
-        "P"  : "US/Pacific",          # Pacific local
-        "PD" : "Etc/GMT+7",           # Pacific daylight
-        "PS" : "Etc/GMT+8",           # Pacific standard
-        "Y"  : "Canada/Yukon",        # Yukon local
-        "YD" : "Etc/GMT+7",           # Yukon daylight
-        "YS" : "Etc/GMT+8",           # Yukon standard
-        "H"  : "US/Hawaii",           # Hawaiian local
-        "HS" : "US/Hawaii",           # Hawaiian standard
-        "L"  : "US/Alaska",           # Alaskan local
-        "LD" : "Etc/GMT+8",           # Alaskan daylight
-        "LS" : "Etc/GMT+9",           # Alaskan standard
-        "B"  : "Pacific/Midway",      # Bering local
-        "BD" : "Pacific/Midway",      # Bering daylight
-        "BS" : "Pacific/Midway",      # Bering standard
-        "Z"  : "UTC"}                 # Zulu
+        #
+        # May not be modified by SHEFPARM file
+        #
+        "J"  : "CTT",                              # China
+
+        "HS" : "US/Hawaii",                        # Hawaiian standard
+        "HD" : "US/Hawaii",                        # Hawaiian daylight
+        "H"  : "US/Hawaii",                        # Hawaiian local
+
+        "BS" : "Etc/GMT+11",                       # Bering standard       (obsolete, Aleutian Islands now use US/Alaska)
+        "BD" : "Etc/GMT+10",                       # Bering daylight       (obsolete, Aleutian Islands now use US/Alaska)
+        "B"  : "Pacific/Midway",                   # Bering local          (obsolete, Aleutian Islands now use US/Alaska)
+
+        "LS" : "Etc/GMT+9",                        # Alaskan standard
+        "LD" : "Etc/GMT+8",                        # Alaskan daylight
+        "L"  : "US/Alaska",                        # Alaskan local
+
+        "YS" : "Etc/GMT+8",                        # Yukon standard        (--strict gives bad times always)
+        "YD" : "Etc/GMT+7",                        # Yukon daylight        (--strict gives bad times always)
+        "Y"  : "Canada/Yukon",                     # Yukon local           (--strict gives bad times always)
+
+        "PS" : "Etc/GMT+8",                        # Pacific standard
+        "PD" : "Etc/GMT+7",                        # Pacific daylight
+        "P"  : "US/Pacific",                       # Pacific local
+
+        "MS" : "Etc/GMT+7",                        # Mountain standard
+        "MD" : "Etc/GMT+6",                        # Mountain daylight
+        "M"  : "US/Mountain",                      # Mountain local
+
+        "CS" : "Etc/GMT+6",                        # Central standard
+        "CD" : "Etc/GMT+5",                        # Central daylight
+        "C"  : "US/Central",                       # Central
+
+        "ES" : "Etc/GMT+5",                        # Eastern standard
+        "ED" : "Etc/GMT+4",                        # Eastern daylight
+        "E"  : "US/Eastern",                       # Eastern local
+
+        "AS" : "Etc/GMT+4",                        # Atlantic standard
+        "AD" : "Etc/GMT+3",                        # Atlantic daylight
+        "A"  : "Canada/Atlantic",                  # Atlantic local
+
+        "NS" : "timedelta(hours=-3, minutes=-30)", # Newfoundland standard
+        "ND" : "timedelta(hours=-2, minutes=-30)", # Newfoundland daylight (--strict gives bad times always)
+        "N"  : "Canada/Newfoundland",              # Newfoundland local    (--strict gives bad times in summer)
+
+        "Z"  : "UTC"}                              # Zulu
 
     UTC = ZoneInfo("UTC")
 
@@ -798,6 +947,7 @@ class ShefParser :
         '''
         def __init__(
                 self,
+                parser:         'ShefParser',
                 parameter_code: str,
                 obstime:        Dt24,
                 relativetime:   Union[timedelta, MonthsDelta],
@@ -813,6 +963,7 @@ class ShefParser :
             if not obstime :
                 raise ShefParserException("Missing observation time")
 
+            self._parser         = parser
             self._parameter_code = parameter_code
             self._obstime        = Dt24.clone(obstime)
             self._relativetime   = Dt24.clone(relativetime) if relativetime else None
@@ -866,8 +1017,8 @@ class ShefParser :
             return OutputRecord(
                 location,
                 self._parameter_code,
-                t.astimezone(ShefParser.UTC),
-                self._createtime.astimezone(ShefParser.UTC) if self._createtime else None,
+                t.astimezone("Z" if parser.strict else ShefParser.UTC),
+                self._createtime.astimezone("Z" if parser.strict else ShefParser.UTC) if self._createtime else None,
                 value if self._units == "EN" else value * shefParser._pe_conversions[self._parameter_code[:2]],
                 qulifier if qualifier else self.qualifier,
                 revised,
@@ -879,17 +1030,18 @@ class ShefParser :
 
         def __repr__(self) :
             if self._relativetime :
-                return f"{self._parameter_code} @ {self._obstime.astimezone(ShefParser.UTC)} ({self._relativetime})"
+                return f'{self._parameter_code} @ {self._obstime.astimezone("Z" if parser.strict else ShefParser.UTC)} ({self._relativetime})'
             else :
-                return f"{self._parameter_code} @ {self._obstime.astimezone(ShefParser.UTC)}"
+                return f'{self._parameter_code} @ {self._obstime.astimezone("Z" if parser.strict else ShefParser.UTC)}'
 
 
-    def __init__(self, output_format, shefparm_pathname=None) :
+    def __init__(self, output_format, shefparm_pathname=None, strict=False) :
         '''
         Constructor
         '''
         self._shefparm_pathname = shefparm_pathname
         self._output_format     = output_format
+        self._strict            = strict
         #-----------------------------#
         # initialize program defaults #
         #-----------------------------#
@@ -900,8 +1052,7 @@ class ShefParser :
         self._extremum_codes             = copy.deepcopy(ShefParser.EXTREMUM_CODES)
         self._probability_codes          = copy.deepcopy(ShefParser.PROBABILITY_CODES)
         self._qualifier_codes            = copy.deepcopy(ShefParser.QUALIFIER_CODES)
-        self._tz_names                   = copy.deepcopy(ShefParser.TZ_NAMES)
-        self._max_error_count            = 500 # May be modified by SHEFPARM file
+        self._max_error_count            = 1500 # May be modified by SHEFPARM file
         self._error_count                = 0
         self._default_duration_code      = 'I' # May not be modified by SHEFPARM file
         self._default_type_code          = 'R' # May not be modified by SHEFPARM file
@@ -924,7 +1075,7 @@ class ShefParser :
                                            #                 1           23       4
                                               r"^\.[AEB]R?\s+(\w{3,8})\s+((\d{2})?(\d{2})?\d{4})" \
                                            #    5   6
-                                              r"(\s+([NH]S?|[AECMPYLB][DS]?|[JZ])\s{1,15})?", re.I|re.M)
+                                              r"(\s+([NAECMPYLHB][DS]?|[JZ])\s{1,15})?", re.I|re.M)
         self._dot_b_header_lines_pattern = re.compile(r"^.B(R?)\s.+?$(\n^.B\1?\d\s.+?$)*", re.I|re.M)
         self._dot_b_body_line_pattern    = re.compile(r"^(\w{3,8})\s+\S+.*$")
         self._obs_time_pattern           = re.compile(
@@ -969,6 +1120,10 @@ class ShefParser :
 
         if self._shefparm_pathname :
             self.read_shefparm(self._shefparm_pathname)
+
+    @property
+    def strict(self) :
+        return self._strict
 
     def read_shefparm(self, shefparm_pathname) :
         '''
@@ -1131,6 +1286,7 @@ class ShefParser :
         '''
         Log and track errors. Abort if max errors exceeded.
         '''
+        raise Exception(message)
         logger.error(message)
         if abort :
             raise ShefParserException(message)
@@ -1213,14 +1369,21 @@ class ShefParser :
         if output_object.__class__.__name__ == "TextIOWrapper" :
             self._output = output_object
         else :
-            self._output = open(output_object)
+            self._output = open(output_object, "wb")
         self._output_name = self._output.name
         logger.debug(f"Data output set to {self._output_name}")
 
     def output(self, outrec : OutputRecord) :
         if not self._output :
             raise ShefParserException("Cannot output record; output is closed or never opened")
-        self._output.write(f"{outrec.format(self._output_format)}\n")
+        outstr = f"{outrec.format(self._output_format)}\n"
+        outdev_type = self._output.__class__.__name__
+        if outdev_type == "TextIOWrapper" :
+            self._output.write(outstr)
+        elif outdev_type == "BufferedWriter" :
+            self._output.write(outstr.encode("utf-8"))
+        else :
+            raise ShefParserException(f"Unexpected output device type: {outdev_type}")
 
     def remove_comment_fields(self, line) :
         '''
@@ -1341,7 +1504,7 @@ class ShefParser :
         else :
             raise ShefParserException(f"Bad date string: {datestr}")
         try :
-            dateval = Dt24(int(datestr[:4]), int(datestr[4:6]), int(datestr[6:]))
+            dateval = Dt24(int(datestr[:4]), int(datestr[4:6]), int(datestr[6:]), tzinfo="Z" if self.strict else ShefParser.UTC)
             if length == 4 :
                 # no year specified, use closeset date
                 prev_year = dateval - MonthsDelta(12)
@@ -1652,6 +1815,22 @@ class ShefParser :
         qualifier = m.group(6)
         return value, qualifier
 
+    def get_time_zone(self, name) :
+        '''
+        Create a time zone from the name
+        '''
+        if self.strict :
+            return name
+        else :
+            text = ShefParser.TZ_NAMES[name]
+            try :
+                if text.startswith("timedelta") :
+                    return timezone(eval(text))
+                else :
+                    return ZoneInfo(text)
+            except :
+                raise # ShefParserException(f"Cannot instantiate time zone {name}")
+
     def parse_dot_a_message(self, message: str) :
         '''
         Parses a .A or .AR message
@@ -1675,14 +1854,12 @@ class ShefParser :
         dateval   = self.parse_header_date(m.group(2).upper())
         time_zone = m.group(6).upper() if m.group(6) else 'Z'
         length    = m.end()
+        zi = self.get_time_zone(time_zone)
         if not time_zone : time_zone = 'Z'
-        try :
-            zi = ZoneInfo(self._tz_names[time_zone])
-        except :
-            raise ShefParserException(f"Cannot instantiate time zone {self._tz_names[time_zone]} for SHEF time zone {time_zone}")
+        zi      = self.get_time_zone(time_zone)
         dateval = Dt24(dateval.year, dateval.month, dateval.day, tzinfo=zi)
         datastr = message[length:].strip()
-        tokens = self.crack_a_e_data_string(datastr, 'A', revised)
+        tokens  = self.crack_a_e_data_string(datastr, 'A', revised)
         #-----------------------------#
         # set the default data values #
         #-----------------------------#
@@ -1760,15 +1937,24 @@ class ShefParser :
                 #------------#
                 code = tokens[i][0].upper()
                 if len(code) < 2 or (code[:2] not in self._send_codes and code[:2] not in self._pe_conversions) :
-                    raise ShefParserException(f"Invalid PE code: {code[:min(2, len(code))]}")
-                parameter_code, use_prev_7am = self.get_parameter_code(code)
+                    self.error(f"Invalid PE code: {code[:min(2, len(code))]}")
+                    continue
+                try :
+                    parameter_code, use_prev_7am = self.get_parameter_code(code)
+                except ShefParserException as spe :
+                    self.error(str(spe))
+                    continue
                 if use_prev_7am :
                     t = Dt24(obstime.year, obstime.month, obstime.day, obstime.hour, obstime.minute, obstime.second, tzinfo = obstime.tzinfo)
                     if t.hour < 7 : t -= timedelta(days=1)
                     obstime = Dt24(t.year, t.month, t.day, 7, 0, 0, t.tzinfo)
                 if len(tokens[i]) == 1 :
                     continue # same as a NULL field - a parameter code with no value
-                value, qualifier = self.parse_value_token(tokens[i][1].upper(), parameter_code[:2], units)
+                try :
+                    value, qualifier = self.parse_value_token(tokens[i][1].upper(), parameter_code[:2], units)
+                except ShefParserException as spe :
+                    self.error(str(spe))
+                    continue
                 if not qualifier : qualifier = default_qualifier
                 if qualifier not in self._qualifier_codes :
                     self.error(f"Invalid data qualifier: {qualifier}")
@@ -1785,8 +1971,8 @@ class ShefParser :
                 outrecs.append(OutputRecord(
                     location,
                     parameter_code,
-                    obstime.astimezone(ShefParser.UTC),
-                    createtime.astimezone(ShefParser.UTC) if createtime else None,
+                    obstime.astimezone("Z" if self.strict else ShefParser.UTC),
+                    createtime.astimezone("Z" if self.strict else ShefParser.UTC) if createtime else None,
                     value,
                     qualifier,
                     revised,
@@ -1819,13 +2005,10 @@ class ShefParser :
         time_zone = m.group(6).upper() if m.group(6) else 'Z'
         length    = m.end()
         if not time_zone : time_zone = 'Z'
-        try :
-            zi = ZoneInfo(self._tz_names[time_zone])
-        except :
-            raise ShefParserException(f"Cannot instantiate time zone {self._tz_names[time_zone]} for SHEF time zone {time_zone}")
+        zi      = self.get_time_zone(time_zone)
         dateval = Dt24(dateval.year, dateval.month, dateval.day, tzinfo=zi)
         datastr = message[length:].strip()
-        tokens = self.crack_a_e_data_string(datastr, 'E', revised)
+        tokens  = self.crack_a_e_data_string(datastr, 'E', revised)
         #-----------------------------#
         # set the default data values #
         #-----------------------------#
@@ -1974,8 +2157,8 @@ class ShefParser :
                 outrec = OutputRecord(
                     location,
                     parameter_code,
-                    obstime.astimezone(ShefParser.UTC),
-                    createtime.astimezone(ShefParser.UTC) if createtime else None,
+                    obstime.astimezone("Z" if self.strict else ShefParser.UTC),
+                    createtime.astimezone("Z" if self.strict else ShefParser.UTC) if createtime else None,
                     value,
                     qualifier,
                     revised,
@@ -2026,10 +2209,7 @@ class ShefParser :
         time_zone  = m.group(6).upper() if m.group(6) else 'Z'
         length     = m.end()
         if not time_zone : time_zone = 'Z'
-        try :
-            zi = ZoneInfo(self._tz_names[time_zone])
-        except :
-            raise ShefParserException(f"Cannot instantiate time zone {self._tz_names[time_zone]} for SHEF time zone {time_zone}")
+        zi      = self.get_time_zone(time_zone)
         dateval = Dt24(dateval.year, dateval.month, dateval.day, tzinfo=zi)
         #-----------------------------#
         # set the default data values #
@@ -2122,6 +2302,7 @@ class ShefParser :
                         t -= timedelta(days=1)
                     t = Dt24(t.year, t.month, t.day, 7, 0, 0, tzinfo=t.tzinfo)
                 param_control.append(ShefParser.ParameterControl(
+                    self,
                     parameter_code,
                     t,
                     relativetime,
@@ -2251,6 +2432,10 @@ def main() :
         "--timestamps",
         action="store_true",
         help="specifies timestamping log records")
+    argparser.add_argument(
+        "--strict",
+        action="store_true",
+        help="specifies strict adherence to NOAA shefit program")
     args = argparser.parse_args()
     #-----------------------------------------------------------------#
     # get default SHEFPARM file if exists and --default not specified #
@@ -2300,7 +2485,7 @@ def main() :
     #-------------------#
     # create the parser #
     #-------------------#
-    parser = ShefParser(args.format, args.shefparm)
+    parser = ShefParser(args.format, args.shefparm, strict=args.strict)
     parser.set_input(args.infile)
     parser.set_output(args.outfile)
 
