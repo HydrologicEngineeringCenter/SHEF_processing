@@ -60,8 +60,8 @@
 .A S_HD 20200801 HD DH12 /HG 0   : Hawaiian Daylight
 .A S_H_ 20200801 H  DH12 /HG 0   : Hawaiian Local
 
-.A S_BS 20200801 BS DH12 /HG 0   : Bering Standard
-.A S_BD 20200801 BD DH12 /HG 0   : Bering Daylight
+.A S_BS 20200801 BS DH12 /HG 0   : Bering Standard (obsolete, Aleutian Islands now use Alaska)
+.A S_BD 20200801 BD DH12 /HG 0   : Bering Daylight (obsolete, Aleutian Islands now use Alaska)
 .A S_B_ 20200801 B  DH12 /HG 0   : Bering local    (bad)
 
 .A S_LS 20200801 LS DH12 /HG 0   : Alaska Standard

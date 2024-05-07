@@ -895,7 +895,7 @@ class ShefParser :
         #
         # May not be modified by SHEFPARM file
         #
-        "J"  : "CTT",                              # China
+        "J"  : "PRC",                              # China
 
         "HS" : "US/Hawaii",                        # Hawaiian standard
         "HD" : "US/Hawaii",                        # Hawaiian daylight
