@@ -7,7 +7,7 @@
 :
 : WINTER TIMES
 :
-.A W_J_ 20200201 HS DH12 /HG 0   : China
+.A W_J_ 20200201 J  DH12 /HG 0   : China
 
 .A W_HS 20200201 HS DH12 /HG 0   : Hawaiian Standard
 .A W_HD 20200201 HD DH12 /HG 0   : Hawaiian Daylight
@@ -54,7 +54,7 @@
 :
 : SUMMER TIMES
 :
-.A W_J_ 20200801 HS DH12 /HG 0   : China
+.A S_J_ 20200801 J  DH12 /HG 0   : China
 
 .A S_HS 20200801 HS DH12 /HG 0   : Hawaiian Standard
 .A S_HD 20200801 HD DH12 /HG 0   : Hawaiian Daylight
