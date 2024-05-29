@@ -2609,7 +2609,7 @@ class ShefParser :
                         if self._reject_problematic :
                             return []
                         continue
-                    if obstime.tzinfo == ('Z' if parser.shefit_times else ShefParser.UTC) :
+                    if obstime.tzinfo == ('Z' if self.shefit_times else ShefParser.UTC) :
                         self.error("Cannot use Zulu/UTC time zone with send codes QY, HY, or PY")
                         if self._reject_problematic :
                             return []
@@ -2862,7 +2862,7 @@ class ShefParser :
                 if use_prev_7am :
                     if relative_specified :
                         raise ShefParser.ParseException("Cannot use relative date/time offsets with send codes QY, HY, or PY")
-                    if obstime.tzinfo == ('Z' if parser.shefit_times else ShefParser.UTC) :
+                    if obstime.tzinfo == ('Z' if self.shefit_times else ShefParser.UTC) :
                         raise ShefParser.ParseException("Cannot use Zulu/UTC time zone with send codes QY, HY, or PY")
                     if interval :
                         raise ShefParser.ParseException("Cannot data interval with send codes QY, HY, or PY")
