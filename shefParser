@@ -4,9 +4,9 @@ from collections import deque
 from datetime    import datetime
 from datetime    import timedelta
 from datetime    import timezone
+from io          import BufferedRandom
 from io          import StringIO
 from io          import TextIOWrapper
-from io          import BufferedRandom
 from pathlib     import Path
 from typing      import Any
 from typing      import Optional
@@ -62,727 +62,48 @@ versions = '''
 +-------+-----------+-----+-------------------------------------------------------------------------+
 | 1.0.1 | 28May2024 | MDP | Mods to pass mypy type checks                                           |
 +-------+-----------+-----+-------------------------------------------------------------------------+
+| 1.0.2 | 29May2024 | MDP | Reorg, clean up, improve comments, add --make_shefparm                  |
++-------+-----------+-----+-------------------------------------------------------------------------+
 
 Authors:
     MDP  Mike Perryman, USACE IWR-HEC
 '''
 
-version      = "1.0.1"
-version_date = "28May2024"
-logger       = logging.getLogger() # make mypy happy
-
-class ShefParserException(Exception) :
-    pass
+progname     = Path(sys.argv[0]).stem
+version      = "1.0.2"
+version_date = "29May2024"
+logger       = logging.getLogger() # make mypy complains if set to None
 
 class MonthsDelta :
     '''
-    Class to hold information about months to increment a time by
+    Class to hold a calendar increment
+
+        months = the number of months in the increment
+        eom    = whether this is an end-of-month increment
     '''
     def __init__(self, months: int, eom: bool=False)  -> None :
+        '''
+        MontsDelta constructor
+        '''
         self._months = months
         self._eom    = eom
 
     @property
     def months(self) -> int :
+        '''
+        Get months count
+        '''
         return self._months
 
     @property
     def eom(self) -> bool :
+        '''
+        Get end-of-month flag
+        '''
         return self._eom
 
     def __repr__(self) -> str :
         return f"months={self._months}, eom={self._eom}"
-
-class ShefDateTime :
-    '''
-    Datetime class for use with SHEF
-    * accepts and produces 2400 for midnight
-    * can be incremented by MonthsDelta
-    * can replicate time zone adjustments in NWS program shefit (when time zone is a string)
-    '''
-
-    DST_DATES = (
-        #
-        # DOM of transition for winter->summer and summer->winter for years 1976-2040.
-        # Before 2007, months are April/October, afterward months are March/November
-        # Used only when time zone is a string.
-        #
-        (26,31), (24,30), (30,29), (29,28), (27,26), (26,25),
-        (25,31), (24,30), (29,28), (28,27), (27,26), ( 5,25),
-        ( 3,30), ( 2,29), ( 1,28), ( 7,27), ( 5,25), ( 4,31),
-        ( 3,30), ( 2,29), ( 7,27), ( 6,26), ( 5,25), ( 4,31),
-        ( 2,29), ( 1,28), ( 7,27), ( 6,26), ( 4,31), ( 3,30),
-        ( 2,29), (11, 4), ( 9, 2), ( 8, 1), (14, 7), (13, 6),
-        (11, 4), (10, 3), ( 9, 2), ( 8, 1), (13, 6), (12, 5),
-        (11, 4), (10, 3), ( 8, 1), (14, 7), (13, 6), (12, 5),
-        (10, 3), ( 9, 2), ( 8, 1), (14, 7), (12, 5), (11, 4),
-        (10, 3), ( 9, 2), (14, 7), (13, 6), (12, 5), (11, 4),
-        ( 9, 2), ( 8, 1), (14, 7), (13, 6), (11, 4))
-
-    TZ_OFFSETS = {
-        #
-        # Time zone offsets in minutes from UTC.
-        # Used only when time zone is a string.
-        #
-        'Z' :  0,
-        'N' :  210, "NS" : 210, "ND" : 210,
-        'A' :  240, "AS" : 240, "AD" : 180,
-        'E' :  300, "ES" : 300, "ED" : 240,
-        'C' :  360, "CS" : 360, "CD" : 300,
-        'M' :  420, "MS" : 420, "MD" : 360,
-        'P' :  480, "PS" : 480, "PD" : 420,
-        'Y' :  540, "YS" : 540, "YD" : 480,
-        'L' :  540, "LS" : 540, "LD" : 480,
-        'H' :  600, "HS" : 600, "HD" : 600,
-        'B' :  660, "BS" : 660, "BD" : 600,
-        'J' : -480}
-
-    @staticmethod
-    def is_leap(y: int) -> bool :
-        '''
-        Is year a leap year?
-        '''
-        return (not bool(y % 4) and bool(y % 100)) or (not bool(y % 400))
-
-    @staticmethod
-    def last_day(y: int, m: int) -> int :
-        '''
-        Get last day of month (year required for February)
-        '''
-        return 31 if m in (1,3,5,7,8,10,12) else 30 if m in (4,6,9,11) else 29 if ShefDateTime.is_leap(y) else 28
-
-    @staticmethod
-    def is_shef_summer_time(y: int, m: int, d: int, h: int, n: int) -> bool :
-        '''
-        Shefit algorithm for determining whether a date/time is in daylight savings (summer) time.
-        Used only when time zone is a string.
-        '''
-        summer_time = False
-        y = max(min(y, 2040), 1976)
-        if 1976 <= y <= 2040 and 3 <= m <= 10 :
-            dom = ShefDateTime.DST_DATES[y-1976]
-            if y < 2007 :
-                months = (4, 10)
-            else :
-                months = (3, 11)
-            if months[0] < m < months[1] :
-                summer_time = True
-            elif m == months[0] and (d > dom[0] or (d == dom[0] and h > 2) or (d == dom[0] and h == 2 and n > 0)) :
-                summer_time = True
-            elif m == months[1] and (d < dom[1] or (d == dom[1] and h < 2) or (d == dom[1] and h == 2 and n == 0)) :
-                summer_time = True
-        return summer_time
-
-    @staticmethod
-    def now(tz: Union[timezone, ZoneInfo, str]) -> "ShefDateTime" :
-        '''
-        Get current time in specified time zone
-        '''
-        t = datetime.now()
-        return ShefDateTime(t.year, t.month, t.day, t.hour, t.minute, t.second, tzinfo=tz)
-
-    @staticmethod
-    def clone(other: "ShefDateTime") -> "ShefDateTime" :
-        '''
-        Create a copy
-        '''
-        y, m, d, h, n, s, z = other.year, other.month, other.day, other.hour, other.minute, other.second, other.tzinfo
-        if isinstance(other._tzinfo, str) :
-            z = other._tzinfo
-        return ShefDateTime(y, m, d, h, n, s, tzinfo=z)
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None :
-        '''
-        ShefDateTime constructor
-        '''
-        args2   = args[:]
-        kwargs2 = copy.deepcopy(kwargs)
-        if "tzinfo" in kwargs2 :
-            tzinfo = kwargs2["tzinfo"]
-        else :
-            raise ShefParserException(f"Cannot instantiate {self.__class__.__name__} object without tzinfo")
-        adjust = False
-        length = len(args2)
-        if length > 3 :
-            if args2[3] == 24 :
-                if length > 5 and args2[5] != 0 or length > 4 and args2[4] != 0 :
-                    raise ShefParserException(f"Non-zero minutes or seconds on hour = 24: [{''.join(args2[3:])}]")
-                adjust = True
-                args2 = args2[:3]+(23,)+args2[4:]
-        if isinstance(tzinfo, str) :
-            del kwargs2["tzinfo"]
-            tzinfo = tzinfo.upper()
-            if tzinfo not in ShefDateTime.TZ_OFFSETS :
-                raise ShefParserException(f"Invalid SHEF time zone: [{tzinfo}]")
-        elif isinstance(tzinfo, (timezone, ZoneInfo)) :
-            pass
-        else :
-            raise ShefParserException(f"Invalid type for tzinfo: [{tzinfo.__class__.__name__}]")
-        self._dt       = datetime(*args2, **kwargs2)
-        self._tzinfo   = tzinfo
-        self._adjusted = adjust
-        if self._adjusted :
-            self._dt += timedelta(hours=1)
-        invalid_time = False
-        if isinstance(tzinfo, str) and len(tzinfo) == 1 and tzinfo not in "ZNH" :
-            y, m, d, h, n, s = self._dt.year, self._dt.month, self._dt.day, self._dt.hour, self._dt.minute, self._dt.second
-            if 1976 <= y <= 2040 and m in (3,4) and h == 2 and (n != 0 or s != 0) :
-                dom = ShefDateTime.DST_DATES[y-1976]
-                mo = 4 if y < 2007 else 3
-                invalid_time = m == mo and d == dom[0]
-        elif self._dt.hour == 2 and not isinstance(tzinfo, str) :
-            invalid_time = self._dt.astimezone(ShefParser.UTC).astimezone(tzinfo).hour == 3
-        if invalid_time :
-            raise ShefParserException(f"Invalid time: [{self._dt}]. 0200..0259 is not allowed on date of transition to Daylight Saving with time zone [{tzinfo}]")
-
-    def is_dst(self) -> bool :
-        '''
-        Determine whether this object has a daylight saving offset applied
-        '''
-        dt = self._dt
-        if isinstance(self._tzinfo, str) :
-            if len(self._tzinfo) == 1 and self._tzinfo not in "ZNH" :
-                return  ShefDateTime.is_shef_summer_time(dt.year, dt.month, dt.day, dt.hour, dt.minute)
-            return False
-        else :
-            return dt.timetuple().tm_isdst == 1
-
-    def to_timezone(self, tz: Union[timezone, ZoneInfo, str]) -> "ShefDateTime" :
-        '''
-        Create a new object translated to the specified time zone
-        '''
-        if not isinstance(tz, (timezone, ZoneInfo, str)) :
-            raise ShefParserException(f"Invalid time zone type: [{tz.__class__.__name__}]")
-        if isinstance(tz, str) :
-            tz = tz.upper()
-            if tz not in ShefDateTime.TZ_OFFSETS :
-                raise ShefParserException(f"Invalid SHEF time zone: [{tz}]")
-
-        if isinstance(self._tzinfo, (timezone, ZoneInfo)) and isinstance(tz, (timezone, ZoneInfo)) :
-            dt = self._dt.astimezone(tz)
-        elif isinstance(self._tzinfo, str) and isinstance(tz, str) :
-            dt = self._dt
-            if tz != self._tzinfo :
-                if self.is_dst() :
-                    dt -= timedelta(hours=1)
-                dt += timedelta(minutes=ShefDateTime.TZ_OFFSETS[self._tzinfo])
-                dt -= timedelta(minutes=ShefDateTime.TZ_OFFSETS[tz])
-        else :
-            type1 = self._tzinfo.__class__.__name__
-            type2 = tz.__class__.__name__
-            raise ShefParserException(f"Cannot move a ShefDateTime object with a [{type1}] time zone to a [{type2}] time zone")
-
-        rv = ShefDateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, tzinfo=tz)
-        return rv
-
-    def add_months(self, months: int, end_of_month: Optional[bool]=False) -> "ShefDateTime" :
-        '''
-        Add a number of months this object and return result
-        '''
-        dt = self
-        y, m, d, h, n, s, z = dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, self._tzinfo
-        islastday = d == ShefDateTime.last_day(y, m)
-        if end_of_month and not islastday :
-            raise ShefParserException(f"End-of-month interval specified on non-end-of-month date [{dt}]")
-        m += months
-        while m > 12 :
-            y += 1
-            m -= 12
-        while m < 1 :
-            y -= 1
-            m += 12
-        if islastday :
-            if end_of_month :
-                #--------------------------#
-                # set to last day of month #
-                #--------------------------#
-                dt = ShefDateTime(y, m, ShefDateTime.last_day(y, m), h, n, s, tzinfo=z)
-            else :
-                #------------------------------------#
-                # don't set beyond last day of month #
-                #------------------------------------#
-                dt = ShefDateTime(y, m, min(d, ShefDateTime.last_day(y, m)), h, n, s, tzinfo=z)
-        else :
-            dt = ShefDateTime(y, m, d, h, n, s, tzinfo=z)
-        return dt
-
-    def replace(
-            self:  "ShefDateTime",
-            year:   Optional[int] = None,
-            month:  Optional[int] = None,
-            day:    Optional[int] = None,
-            hour:   Optional[int] = None,
-            minute: Optional[int] = None,
-            second: Optional[int] = None,
-            tzinfo: Optional[Union[timezone, ZoneInfo, str]] = None) -> "ShefDateTime" :
-        '''
-        Replace component values
-        '''
-        y = year   if year   else self.year
-        m = month  if month  else self.month
-        d = day    if day    else self.day
-        h = hour   if hour   else self.hour
-        n = minute if minute else self.minute
-        s = second if second else self.second
-        z = tzinfo if tzinfo else self._tzinfo
-
-        adjust = False
-        if h == 24 :
-            if not (n == 0 and s == 0) :
-                raise ShefParserException("Cannot set hour to 24 with non-zero minute or second")
-            adjust = True
-            h = 23
-
-        self._dt = self._dt.replace(year=y, month=m, day=d, hour=h, minute=n, second=s, tzinfo=None if isinstance(z, str) else z)
-        self._tzinfo = z
-        self._adjusted = adjust
-        if self._adjusted :
-            self._dt += timedelta(hours=1)
-        dt = self
-        return ShefDateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, tzinfo=self._tzinfo)
-
-    def __add__(self, other : Union[None, timedelta, MonthsDelta]) -> "ShefDateTime" :
-        '''
-        Add a time increment (timedelta) or calendar increment (MonthsDelta)
-        '''
-        if not other :
-            dt = self._dt
-        elif isinstance(other, timedelta) :
-            dt = self._dt.__add__(other)
-        elif isinstance(other, MonthsDelta) :
-            dt = self.add_months(other.months, other.eom)._dt
-        else :
-            raise ShefParserException(f"Invalid type to add: [{other.__class__.__name__}]")
-        return ShefDateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, tzinfo=self._tzinfo)
-
-    def __sub__(self, other : Union[None, timedelta, MonthsDelta, "ShefDateTime"]) -> Union[timedelta, "ShefDateTime"] :
-        '''
-        Subtract a time increment (timedelta), calendar increment (MonthsDelta), or datetime (ShefDateTime).
-        Returns a timedelta if subtracting a ShefDateTime, otherwise returns a ShefDateTime
-        '''
-        if not other :
-            dt = self._dt
-        elif isinstance(other, timedelta) :
-            dt = self._dt.__sub__(other)
-        elif isinstance(other, MonthsDelta) :
-            dt = self.add_months(-other.months, other.eom)._dt
-        elif isinstance(other, ShefDateTime) :
-            dt1 = self.astimezone('Z' if isinstance(self._tzinfo, str) else ShefParser.UTC)
-            dt1 = datetime(dt1.year, dt1.month, dt1.day, dt1.hour, dt1.minute, dt1.second)
-            dt2 = other.astimezone('Z' if isinstance(self._tzinfo, str) else ShefParser.UTC)
-            dt2 = datetime(dt2.year, dt2.month, dt2.day, dt2.hour, dt2.minute, dt2.second)
-            return dt1 - dt2
-        else :
-            raise ShefParserException(f"Invalid type to add: [{other.__class__.__name__}]")
-        return ShefDateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, tzinfo=self._tzinfo)
-
-    def __lt__(self, other: "ShefDateTime") -> bool :
-        '''
-        Compare to another datetime
-        '''
-        utc = 'Z' if isinstance(self._tzinfo, str) else ShefParser.UTC
-        return self.astimezone(utc)._dt < other.astimezone(utc)._dt
-
-    def __le__(self, other: "ShefDateTime") -> bool :
-        '''
-        Compare to another datetime
-        '''
-        utc = 'Z' if isinstance(self._tzinfo, str) else ShefParser.UTC
-        return self.astimezone(utc)._dt <= other.astimezone(utc)._dt
-
-    def __eq__(self, other: object) -> bool :
-        '''
-        Compare to another datetime
-        '''
-        if not isinstance(other, ShefDateTime) :
-            raise ShefParserException(f"Expected object type to be ShefDateTime, got {other.__class__.__name__}")
-        utc = 'Z' if isinstance(self._tzinfo, str) else ShefParser.UTC
-        return self.astimezone(utc)._dt == other.astimezone(utc)._dt
-
-    def __ge__(self, other: "ShefDateTime") -> bool :
-        '''
-        Compare to another datetime
-        '''
-        utc = 'Z' if isinstance(self._tzinfo, str) else ShefParser.UTC
-        return self.astimezone(utc)._dt >= other.astimezone(utc)._dt
-
-    def __gt__(self, other: "ShefDateTime") -> bool :
-        '''
-        Compare to another datetime
-        '''
-        utc = 'Z' if isinstance(self._tzinfo, str) else ShefParser.UTC
-        return self.astimezone(utc)._dt > other.astimezone(utc)._dt
-
-    def __repr__(self) -> str :
-        '''
-        Get a string representation
-        '''
-        dt = self._dt
-        if dt.hour == dt.minute == dt.second == 0 :
-            s = (dt - timedelta(hours=1)).__repr__()
-            return s[:11] + "24" + s[13:] + f" tzinfo={self._tzinfo}"
-        return self._dt.__repr__() + f" tzinfo={self._tzinfo}"
-
-    def __getattribute__(self, name: str) -> Any :
-        '''
-
-        '''
-        if name in ("_dt", "_adjusted", "is_dst", "to_timezone", "add_months", "replace", "_tzinfo", "__class__") :
-            return super().__getattribute__(name)
-        elif name == "year" :
-            if self._adjusted :
-                y, h, n, s = self._dt.year, self._dt.hour, self._dt.minute, self._dt.second
-                if h == n == s == 0 :
-                    return (self._dt - timedelta(hours=1)).year
-                return y
-            else :
-                return self._dt.year
-        elif name == "month" :
-            if self._adjusted :
-                m, h, n, s = self._dt.month, self._dt.hour, self._dt.minute, self._dt.second
-                if h == n == s == 0 :
-                    return (self._dt - timedelta(hours=1)).month
-                return m
-            else :
-                return self._dt.month
-        elif name == "day" :
-            if self._adjusted :
-                d, h, n, s = self._dt.day, self._dt.hour, self._dt.minute, self._dt.second
-                if h == n == s == 0 :
-                    return (self._dt - timedelta(hours=1)).day
-                return d
-            else :
-                return self._dt.day
-        elif name == "hour" :
-            if self._adjusted :
-                h, n, s = self._dt.hour, self._dt.minute, self._dt.second
-                if h == n == s == 0 :
-                    return 24
-                return h
-            else :
-                return self._dt.hour
-        elif name == "tzinfo" :
-            return self._tzinfo
-        elif name == "astimezone" :
-            return self.to_timezone
-        else :
-            return super().__getattribute__("_dt").__getattribute__(name)
-
-class OutputRecord :
-    '''
-    Parsed value, ready for output in various formats
-    '''
-    SHEFIT_TEXT_V1 = "SHEFIT-TEXT1"
-    SHEFIT_TEXT_V2 = "SHEFIT-TEXT2"
-
-    OUTPUT_FORMATS = [SHEFIT_TEXT_V1, SHEFIT_TEXT_V2]
-
-    def __init__(
-            self,
-            parser:              "ShefParser",
-            location:            str,
-            parameter_code:      str,
-            orig_parameter_code: str,
-            obstime:             ShefDateTime,
-            create_time:         Union[None, ShefDateTime, str] = None,
-            en_value:            float = -9999.,
-            qualifier:           str = 'Z',
-            revised:             bool = False,
-            duration_unit:       str  = 'Z',
-            duration_value:      Optional[int]  = None,
-            message_source:      Optional[str] = None,
-            time_series_code:    int = 0,
-            comment:             Optional[str] = None) -> None :
-        '''
-        OutputRecord constuctor
-        '''
-        if not location :
-            raise ShefParserException("Location must not be empty")
-        if not 3 <= len(location) <= 8 :
-            raise ShefParserException(f"Location [{location}] must be 3 to 8 characters in length")
-        if not parameter_code :
-            raise ShefParserException("Parameter code must not be empty")
-        if len(parameter_code) != 7 :
-            raise ShefParserException(f"Parameter code [{parameter_code}] must be 7 characters in length")
-        if not obstime :
-            raise ShefParserException("Observed time must not be empty")
-
-        self._parser               = parser
-        self._location             = location
-        self._observation_time     = obstime
-        self._parameter_code       = parameter_code
-        self._orig_parameter_code  = orig_parameter_code
-        self._value                = en_value
-        self._qualifier            = qualifier
-        self._revised              = revised
-        self._duration_unit        = duration_unit
-        self._duration_value       = duration_value
-        self._message_source       = message_source
-        self._time_series_code     = time_series_code
-        self._comment              = comment
-
-        self._creation_time: Union[None, ShefDateTime] = None
-        if create_time and isinstance(create_time, str) :
-            self._creation_time = parser.get_creation_time(obstime, create_time)
-        elif isinstance(create_time, ShefDateTime) :
-            self._creation_time = create_time
-        self._observation_time = self._observation_time.astimezone('Z' if parser.shefit_times else ShefParser.UTC)
-        if self._creation_time :
-            self._creation_time = self._creation_time.astimezone('Z' if parser.shefit_times else ShefParser.UTC)
-
-    def format(self, fmt: str) -> str :
-        '''
-        Generate the output in the specified format
-        '''
-        if fmt == OutputRecord.SHEFIT_TEXT_V1 :
-            #----------------------------#
-            # shefit -1 format (default) #
-            #----------------------------#
-            buf = StringIO()
-            buf.write(self.location.ljust(10))
-            buf.write(f"{self.obstime.year:4d}-")
-            buf.write(f"{self.obstime.month:02d}-")
-            buf.write(f"{self.obstime.day:02d} ")
-            buf.write(f"{self.obstime.hour:02d}:")
-            buf.write(f"{self.obstime.minute:02d}:")
-            buf.write(f"{self.obstime.second:02d}  ")
-            if self.create_time :
-                buf.write(f"{self.create_time.year:4d}-")
-                buf.write(f"{self.create_time.month:02d}-")
-                buf.write(f"{self.create_time.day:02d} ")
-                buf.write(f"{self.create_time.hour:02d}:")
-                buf.write(f"{self.create_time.minute:02d}:")
-                buf.write(f"{self.create_time.second:02d}  ")
-            else :
-                buf.write("0000-00-00 00:00:00  ")
-            if len(self.orig_parameter_code) == 7 :
-                if self.orig_parameter_code[3] == 'Z' :
-                    # replace Z type code
-                    buf.write(f"{self.orig_parameter_code[:3]}R{self._orig_parameter_code[4:]}")
-                else :
-                    buf.write(self.orig_parameter_code)
-            else :
-                output_full_parameter = False
-                if len(self.orig_parameter_code) == 7 :
-                    output_full_parameter = True
-                else :
-                    pe_code = self.orig_parameter_code[:2]
-                    try :
-                        param_code = self.parser._send_codes[pe_code][0]
-                        output_full_parameter = len(param_code) == 7
-                    except KeyError :
-                        pass
-                    if output_full_parameter :
-                        buf.write(self.parameter_code)
-                    else :
-                        buf.write(f"{self.parameter_code[:-1]} ")
-            buf.write(f"{self.value:15.4f}")
-            buf.write(f" {self.qualifier}")
-            buf.write(f"{self.probability_code_number:9.3f}  ")
-            buf.write(f"{self.duration_code_number:04d}")
-            buf.write(f"{self.revised:2d}")
-            buf.write(f"{self.time_series_code:2d}")
-            buf.write("  ")
-            buf.write(self.message_source.ljust(8) if self.message_source else "        ")
-            buf.write("  ")
-            if self.comment :
-                buf.write(f'"{self.comment[1:-1]}"')
-            else :
-                buf.write('' '')
-            rec = buf.getvalue()
-            buf.close()
-        elif fmt == OutputRecord.SHEFIT_TEXT_V2 :
-            #------------------#
-            # shefit -2 output #
-            #------------------#
-            buf = StringIO()
-            buf.write(self.location.ljust(8))
-            buf.write(f"{self.obstime.year:4d}")
-            buf.write(f"{self.obstime.month:2d}")
-            buf.write(f"{self.obstime.day:2d}")
-            buf.write(f"{self.obstime.hour:2d}")
-            buf.write(f"{self.obstime.minute:2d}")
-            buf.write(f"{self.obstime.second:2d}")
-            buf.write(' ')
-            if self.create_time :
-                buf.write(f"{self.create_time.year:4d}")
-                buf.write(f"{self.create_time.month:2d}")
-                buf.write(f"{self.create_time.day:2d}")
-                buf.write(f"{self.create_time.hour:2d}")
-                buf.write(f"{self.create_time.minute:2d}")
-                buf.write(f"{self.create_time.second:2d}")
-            else :
-                buf.write("   0 0 0 0 0 0")
-            buf.write(self.physical_element_code.rjust(3))
-            buf.write(self.type_code.rjust(2))
-            buf.write(self.source_code)
-            buf.write(self.extremum_code)
-            buf.write(f"{self.value:10.3f}")
-            buf.write(self.qualifier.rjust(2))
-            buf.write(f"{self.probability_code_number:6.2f}")
-            buf.write(f"{self.duration_code_number:5d}")
-            buf.write(f"{self.revised:2d}")
-            buf.write(' ')
-            buf.write(self.message_source.ljust(8) if self.message_source else "        ")
-            buf.write(f"{self.time_series_code}")
-            if self.comment :
-                buf.write(f'\n        "{self.comment[1:-1]}"')
-            rec = buf.getvalue()
-            buf.close()
-        else :
-            raise ShefParserException(f'Invalid output format: "[{fmt}]"')
-        return rec
-
-    @property
-    def parser(self) -> "ShefParser" :
-        '''
-        Get the ShefParser object that created this record
-        '''
-        return self._parser
-
-    @property
-    def location(self) -> str:
-        '''
-        Get the location
-        '''
-        return self._location
-
-    @property
-    def obstime(self) -> "ShefDateTime" :
-        '''
-        Get the observation time
-        '''
-        return self._observation_time
-
-    @property
-    def create_time(self) -> Union[None, "ShefDateTime"] :
-        '''
-        Get the creation time
-        '''
-        return self._creation_time
-
-    @property
-    def physical_element_code(self) -> str :
-        '''
-        Get the physical element code
-        '''
-        return self._parameter_code[:2]
-
-    @property
-    def duration_code(self) -> str :
-        '''
-        Get the parameter code
-        '''
-        return self._parameter_code[2]
-
-    @property
-    def duration_code_number(self) -> int :
-        '''
-        Get the numeric value of the duration code
-        '''
-        if self.duration_code == 'V' :
-            if self._duration_unit and self._duration_value is not None and self._duration_unit != 'Z' :
-                return ShefParser.DURATION_VARIABLE_CODES[self._duration_unit] + self._duration_value
-            raise ShefParserException(f"No duration specified for parameter code [{self.parameter_code}]")
-        else :
-            if self.duration_code == 'Z' :
-                if self.physical_element_code in ShefParser.DEFAULT_DURATION_CODES :
-                    return ShefParser.DURATION_CODES[ShefParser.DEFAULT_DURATION_CODES[self.physical_element_code]]
-                else :
-                    return ShefParser.DURATION_CODES[self.duration_code]
-            else :
-                return ShefParser.DURATION_CODES[self.duration_code]
-
-    @property
-    def parameter_code(self) -> str :
-        '''
-        Get the parameter code
-        '''
-        return self._parameter_code
-
-    @property
-    def type_code(self) -> str :
-        '''
-        Get the type code (1st char of type & source code)
-        '''
-        return self._parameter_code[3]
-
-    @property
-    def source_code(self) -> str :
-        '''
-        Get the source code (2nd char of the type & source code)
-        '''
-        return self._parameter_code[4]
-
-    @property
-    def extremum_code(self) -> str :
-        '''
-        Get the extremum code
-        '''
-        return self._parameter_code[5]
-
-    @property
-    def probability_code(self) -> str :
-        '''
-        Get the probability code
-        '''
-        return self._parameter_code[6]
-
-    @property
-    def probability_code_number(self) -> float :
-        '''
-        Get the numeric value of the probability code
-        '''
-        return float(ShefParser.PROBABILITY_CODES[self._parameter_code[6]])
-
-    @property
-    def orig_parameter_code(self) -> str :
-        '''
-        Get the parameter code as specified in the message
-        '''
-        return self._orig_parameter_code
-
-    @property
-    def value(self) -> float :
-        '''
-        Get the value
-        '''
-        return self._value
-
-    @property
-    def qualifier(self) -> str :
-        '''
-        Get the data qualifier (default or otherwise)
-        '''
-        return self._qualifier
-
-    @property
-    def revised(self) -> bool :
-        '''
-        Is the revision flag set?
-        '''
-        return self._revised
-
-    @property
-    def message_source(self) -> Union[None, str] :
-        '''
-        Get the source of the .B message
-        '''
-        return self._message_source
-
-    @property
-    def time_series_code(self) -> int :
-        '''
-        Get the time series code (0=not time series, 1=first value, 2=other value)
-        '''
-        return self._time_series_code
-
-    @property
-    def comment(self) -> Union[None, str] :
-        '''
-        Get the retained comment
-        '''
-        return self._comment
 
 class ShefParser :
     '''
@@ -920,7 +241,7 @@ class ShefParser :
 
     DURATION_VARIABLE_CODES = {
         #
-        # May not be modified by SHEFPARM file
+        # Not modified by SHEFPARM file
         #
         # Base numeric duration values for durtions specified with DVnxx
         #
@@ -928,7 +249,7 @@ class ShefParser :
 
     TZ_NAMES = {
         #
-        # May not be modified by SHEFPARM file
+        # Not modified by SHEFPARM file
         #
         'J'  : "PRC",                              # China
 
@@ -976,20 +297,444 @@ class ShefParser :
 
     UTC = ZoneInfo("UTC")
 
+    class Exception(__builtins__.Exception) :
+        '''
+        Base class for ShefParser exceptions
+        '''
+        pass
+
+    class InputException(Exception) :
+        '''
+        Exceptions related to data input
+        '''
+        pass
+
+    class OutputException(Exception) :
+        '''
+        Exceptions related to data output
+        '''
+        pass
+
+    class ParseException(Exception) :
+        '''
+        Exceptions related to parsing
+        '''
+        pass
+
+    class DateTimeException(Exception) :
+        '''
+        Exceptions in ShefParser.DateTime class
+        '''
+        pass
+
+    class DateTime :
+        '''
+        Datetime class for use with SHEF
+        * accepts and produces 2400 for midnight
+        * can be incremented by MonthsDelta
+        * can replicate time zone adjustments in NWS program shefit (when time zone is a string)
+        '''
+
+        DST_DATES = (
+            #
+            # DOM of transition for winter->summer and summer->winter for years 1976-2040.
+            # Before 2007, months are April/October, afterward months are March/November
+            # Used only when time zone is a string.
+            #
+            (26,31), (24,30), (30,29), (29,28), (27,26), (26,25),
+            (25,31), (24,30), (29,28), (28,27), (27,26), ( 5,25),
+            ( 3,30), ( 2,29), ( 1,28), ( 7,27), ( 5,25), ( 4,31),
+            ( 3,30), ( 2,29), ( 7,27), ( 6,26), ( 5,25), ( 4,31),
+            ( 2,29), ( 1,28), ( 7,27), ( 6,26), ( 4,31), ( 3,30),
+            ( 2,29), (11, 4), ( 9, 2), ( 8, 1), (14, 7), (13, 6),
+            (11, 4), (10, 3), ( 9, 2), ( 8, 1), (13, 6), (12, 5),
+            (11, 4), (10, 3), ( 8, 1), (14, 7), (13, 6), (12, 5),
+            (10, 3), ( 9, 2), ( 8, 1), (14, 7), (12, 5), (11, 4),
+            (10, 3), ( 9, 2), (14, 7), (13, 6), (12, 5), (11, 4),
+            ( 9, 2), ( 8, 1), (14, 7), (13, 6), (11, 4))
+
+        TZ_OFFSETS = {
+            #
+            # Time zone offsets in minutes from UTC.
+            # Used only when time zone is a string.
+            #
+            'Z' :  0,
+            'N' :  210, "NS" : 210, "ND" : 210,
+            'A' :  240, "AS" : 240, "AD" : 180,
+            'E' :  300, "ES" : 300, "ED" : 240,
+            'C' :  360, "CS" : 360, "CD" : 300,
+            'M' :  420, "MS" : 420, "MD" : 360,
+            'P' :  480, "PS" : 480, "PD" : 420,
+            'Y' :  540, "YS" : 540, "YD" : 480,
+            'L' :  540, "LS" : 540, "LD" : 480,
+            'H' :  600, "HS" : 600, "HD" : 600,
+            'B' :  660, "BS" : 660, "BD" : 600,
+            'J' : -480}
+
+        @staticmethod
+        def is_leap(y: int) -> bool :
+            '''
+            Is year a leap year?
+            '''
+            return (not bool(y % 4) and bool(y % 100)) or (not bool(y % 400))
+
+        @staticmethod
+        def last_day(y: int, m: int) -> int :
+            '''
+            Get last day of month (year required for February)
+            '''
+            return 31 if m in (1,3,5,7,8,10,12) else 30 if m in (4,6,9,11) else 29 if ShefParser.DateTime.is_leap(y) else 28
+
+        @staticmethod
+        def is_shef_summer_time(y: int, m: int, d: int, h: int, n: int) -> bool :
+            '''
+            Shefit algorithm for determining whether a date/time is in daylight savings (summer) time.
+            Used only when time zone is a string.
+            '''
+            summer_time = False
+            y = max(min(y, 2040), 1976)
+            if 1976 <= y <= 2040 and 3 <= m <= 10 :
+                dom = ShefParser.DateTime.DST_DATES[y-1976]
+                if y < 2007 :
+                    months = (4, 10)
+                else :
+                    months = (3, 11)
+                if months[0] < m < months[1] :
+                    summer_time = True
+                elif m == months[0] and (d > dom[0] or (d == dom[0] and h > 2) or (d == dom[0] and h == 2 and n > 0)) :
+                    summer_time = True
+                elif m == months[1] and (d < dom[1] or (d == dom[1] and h < 2) or (d == dom[1] and h == 2 and n == 0)) :
+                    summer_time = True
+            return summer_time
+
+        @staticmethod
+        def now(tz: Union[timezone, ZoneInfo, str]) -> "ShefParser.DateTime" :
+            '''
+            Get current time in specified time zone
+            '''
+            t = datetime.now()
+            return ShefParser.DateTime(t.year, t.month, t.day, t.hour, t.minute, t.second, tzinfo=tz)
+
+        @staticmethod
+        def clone(other: "ShefParser.DateTime") -> "ShefParser.DateTime" :
+            '''
+            Create a copy
+            '''
+            y, m, d, h, n, s, z = other.year, other.month, other.day, other.hour, other.minute, other.second, other.tzinfo
+            if isinstance(other._tzinfo, str) :
+                z = other._tzinfo
+            return ShefParser.DateTime(y, m, d, h, n, s, tzinfo=z)
+
+        def __init__(self, *args: Any, **kwargs: Any) -> None :
+            '''
+            DateTime constructor
+            '''
+            args2   = args[:]
+            kwargs2 = copy.deepcopy(kwargs)
+            if "tzinfo" in kwargs2 :
+                tzinfo = kwargs2["tzinfo"]
+            else :
+                raise ShefParser.DateTimeException(f"Cannot instantiate {self.__class__.__name__} object without tzinfo")
+            #----------------#
+            # allow 24:00:00 #
+            #----------------#
+            adjust = False
+            length = len(args2)
+            if length > 3 :
+                if args2[3] == 24 :
+                    if length > 5 and args2[5] != 0 or length > 4 and args2[4] != 0 :
+                        raise ShefParser.DateTimeException(f"Non-zero minutes or seconds on hour = 24: [{''.join(args2[3:])}]")
+                    adjust = True
+                    args2 = args2[:3]+(23,)+args2[4:]
+            #------------------#
+            # handle time zone #
+            #------------------#
+            if isinstance(tzinfo, str) :
+                del kwargs2["tzinfo"]
+                tzinfo = tzinfo.upper()
+                if tzinfo not in ShefParser.DateTime.TZ_OFFSETS :
+                    raise ShefParser.DateTimeException(f"Invalid SHEF time zone: [{tzinfo}]")
+            elif isinstance(tzinfo, (timezone, ZoneInfo)) :
+                pass
+            else :
+                raise ShefParser.DateTimeException(f"Invalid type for tzinfo: [{tzinfo.__class__.__name__}]")
+            #-----------------#
+            # populate fields #
+            #-----------------#
+            self._dt       = datetime(*args2, **kwargs2)
+            self._tzinfo   = tzinfo
+            self._adjusted = adjust
+            if self._adjusted :
+                self._dt += timedelta(hours=1)
+            #------------------------------------------------------------------#
+            # test for invalid time (shefit allows 02:00:00 on DST transition) #
+            #------------------------------------------------------------------#
+            if isinstance(tzinfo, str) :
+                #--------------#
+                # shefit times #
+                #--------------#
+                if len(tzinfo) == 1 and tzinfo not in "ZNH" :
+                    y, m, d, h, n, s = self._dt.year, self._dt.month, self._dt.day, self._dt.hour, self._dt.minute, self._dt.second
+                    if 1976 <= y <= 2040 and m in (3,4) and h == 2 and (n != 0 or s != 0) :
+                        dom = ShefParser.DateTime.DST_DATES[y-1976]
+                        mo = 4 if y < 2007 else 3
+                        if m == mo and d == dom[0] :
+                            raise ShefParser.DateTimeException(f"Invalid time: [{self._dt}]. 02:00:01..02:59:59 is not allowed on date of transition to Daylight Saving with time zone [{tzinfo}]")
+            else :
+                #--------------#
+                # normal times #
+                #--------------#
+                if self._dt.hour == 2 and self._dt.astimezone(ShefParser.UTC).astimezone(tzinfo).hour == 3 :
+                    raise ShefParser.DateTimeException(f"Invalid time: [{self._dt}]. 02:00:00..02:59:59 is not allowed on date of transition to Daylight Saving with time zone [{tzinfo}]")
+
+        def is_dst(self) -> bool :
+            '''
+            Determine whether this object has a daylight saving offset applied
+            '''
+            dt = self._dt
+            if isinstance(self._tzinfo, str) :
+                if len(self._tzinfo) == 1 and self._tzinfo not in "ZNH" :
+                    return  ShefParser.DateTime.is_shef_summer_time(dt.year, dt.month, dt.day, dt.hour, dt.minute)
+                return False
+            else :
+                return dt.timetuple().tm_isdst == 1
+
+        def to_timezone(self, tz: Union[timezone, ZoneInfo, str]) -> "ShefParser.DateTime" :
+            '''
+            Create a new object translated to the specified time zone
+            '''
+            if not isinstance(tz, (timezone, ZoneInfo, str)) :
+                raise ShefParser.DateTimeException(f"Invalid time zone type: [{tz.__class__.__name__}]")
+            if isinstance(tz, str) :
+                tz = tz.upper()
+                if tz not in ShefParser.DateTime.TZ_OFFSETS :
+                    raise ShefParser.DateTimeException(f"Invalid SHEF time zone: [{tz}]")
+
+            if isinstance(self._tzinfo, (timezone, ZoneInfo)) and isinstance(tz, (timezone, ZoneInfo)) :
+                dt = self._dt.astimezone(tz)
+            elif isinstance(self._tzinfo, str) and isinstance(tz, str) :
+                dt = self._dt
+                if tz != self._tzinfo :
+                    if self.is_dst() :
+                        dt -= timedelta(hours=1)
+                    dt += timedelta(minutes=ShefParser.DateTime.TZ_OFFSETS[self._tzinfo])
+                    dt -= timedelta(minutes=ShefParser.DateTime.TZ_OFFSETS[tz])
+            else :
+                type1 = self._tzinfo.__class__.__name__
+                type2 = tz.__class__.__name__
+                raise ShefParser.DateTimeException(f"Cannot move a DateTime object with a [{type1}] time zone to a [{type2}] time zone")
+
+            rv = ShefParser.DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, tzinfo=tz)
+            return rv
+
+        def add_months(self, months: int, end_of_month: Optional[bool]=False) -> "ShefParser.DateTime" :
+            '''
+            Add a number of months this object and return result
+            '''
+            dt = self
+            y, m, d, h, n, s, z = dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, self._tzinfo
+            islastday = d == ShefParser.DateTime.last_day(y, m)
+            if end_of_month and not islastday :
+                raise ShefParser.DateTimeException(f"End-of-month interval specified on non-end-of-month date [{dt}]")
+            m += months
+            while m > 12 :
+                y += 1
+                m -= 12
+            while m < 1 :
+                y -= 1
+                m += 12
+            if islastday :
+                if end_of_month :
+                    #--------------------------#
+                    # set to last day of month #
+                    #--------------------------#
+                    dt = ShefParser.DateTime(y, m, ShefParser.DateTime.last_day(y, m), h, n, s, tzinfo=z)
+                else :
+                    #------------------------------------#
+                    # don't set beyond last day of month #
+                    #------------------------------------#
+                    dt = ShefParser.DateTime(y, m, min(d, ShefParser.DateTime.last_day(y, m)), h, n, s, tzinfo=z)
+            else :
+                dt = ShefParser.DateTime(y, m, d, h, n, s, tzinfo=z)
+            return dt
+
+        def replace(
+                self,
+                year:   Optional[int] = None,
+                month:  Optional[int] = None,
+                day:    Optional[int] = None,
+                hour:   Optional[int] = None,
+                minute: Optional[int] = None,
+                second: Optional[int] = None,
+                tzinfo: Optional[Union[timezone, ZoneInfo, str]] = None) -> "ShefParser.DateTime" :
+            '''
+            Replace component values
+            '''
+            y = year   if year   else self.year
+            m = month  if month  else self.month
+            d = day    if day    else self.day
+            h = hour   if hour   else self.hour
+            n = minute if minute else self.minute
+            s = second if second else self.second
+            z = tzinfo if tzinfo else self._tzinfo
+
+            adjust = False
+            if h == 24 :
+                if not (n == 0 and s == 0) :
+                    raise ShefParser.DateTimeException("Cannot set hour to 24 with non-zero minute or second")
+                adjust = True
+                h = 23
+
+            self._dt = self._dt.replace(year=y, month=m, day=d, hour=h, minute=n, second=s, tzinfo=None if isinstance(z, str) else z)
+            self._tzinfo = z
+            self._adjusted = adjust
+            if self._adjusted :
+                self._dt += timedelta(hours=1)
+            dt = self
+            return ShefParser.DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, tzinfo=self._tzinfo)
+
+        def __add__(self, other : Union[None, timedelta, MonthsDelta]) -> "ShefParser.DateTime" :
+            '''
+            Add a time increment (timedelta) or calendar increment (MonthsDelta)
+            '''
+            if not other :
+                dt = self._dt
+            elif isinstance(other, timedelta) :
+                dt = self._dt.__add__(other)
+            elif isinstance(other, MonthsDelta) :
+                dt = self.add_months(other.months, other.eom)._dt
+            else :
+                raise ShefParser.DateTimeException(f"Invalid type to add: [{other.__class__.__name__}]")
+            return ShefParser.DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, tzinfo=self._tzinfo)
+
+        def __sub__(self, other : Union[None, timedelta, MonthsDelta, "ShefParser.DateTime"]) -> Union[timedelta, "ShefParser.DateTime"] :
+            '''
+            Subtract a time increment (timedelta), calendar increment (MonthsDelta), or datetime (DateTime).
+            Returns a timedelta if subtracting a DateTime, otherwise returns a DateTime
+            '''
+            if not other :
+                dt = self._dt
+            elif isinstance(other, timedelta) :
+                dt = self._dt.__sub__(other)
+            elif isinstance(other, MonthsDelta) :
+                dt = self.add_months(-other.months, other.eom)._dt
+            elif isinstance(other, ShefParser.DateTime) :
+                dt1 = self.astimezone('Z' if isinstance(self._tzinfo, str) else ShefParser.UTC)
+                dt1 = datetime(dt1.year, dt1.month, dt1.day, dt1.hour, dt1.minute, dt1.second)
+                dt2 = other.astimezone('Z' if isinstance(self._tzinfo, str) else ShefParser.UTC)
+                dt2 = datetime(dt2.year, dt2.month, dt2.day, dt2.hour, dt2.minute, dt2.second)
+                return dt1 - dt2
+            else :
+                raise ShefParser.DateTimeException(f"Invalid type to add: [{other.__class__.__name__}]")
+            return ShefParser.DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, tzinfo=self._tzinfo)
+
+        def __lt__(self, other: "ShefParser.DateTime") -> bool :
+            '''
+            Compare to another datetime
+            '''
+            utc = 'Z' if isinstance(self._tzinfo, str) else ShefParser.UTC
+            return self.astimezone(utc)._dt < other.astimezone(utc)._dt
+
+        def __le__(self, other: "ShefParser.DateTime") -> bool :
+            '''
+            Compare to another datetime
+            '''
+            utc = 'Z' if isinstance(self._tzinfo, str) else ShefParser.UTC
+            return self.astimezone(utc)._dt <= other.astimezone(utc)._dt
+
+        def __eq__(self, other: object) -> bool :
+            '''
+            Compare to another datetime
+            '''
+            if not isinstance(other, ShefParser.DateTime) :
+                raise ShefParser.DateTimeException(f"Expected object type to be ShefParser.DateTime, got {other.__class__.__name__}")
+            utc = 'Z' if isinstance(self._tzinfo, str) else ShefParser.UTC
+            return self.astimezone(utc)._dt == other.astimezone(utc)._dt
+
+        def __ge__(self, other: "ShefParser.DateTime") -> bool :
+            '''
+            Compare to another datetime
+            '''
+            utc = 'Z' if isinstance(self._tzinfo, str) else ShefParser.UTC
+            return self.astimezone(utc)._dt >= other.astimezone(utc)._dt
+
+        def __gt__(self, other: "ShefParser.DateTime") -> bool :
+            '''
+            Compare to another datetime
+            '''
+            utc = 'Z' if isinstance(self._tzinfo, str) else ShefParser.UTC
+            return self.astimezone(utc)._dt > other.astimezone(utc)._dt
+
+        def __repr__(self) -> str :
+            '''
+            Get a string representation
+            '''
+            dt = self._dt.replace(tzinfo=None)
+            if dt.hour == dt.minute == dt.second == 0 :
+                # show 24:00:00 instead of 00:00:00
+                s = (dt - timedelta(hours=1)).__repr__()
+                return s[:11] + "24" + s[13:] + f" tzinfo={self._tzinfo}"
+            return dt.__repr__() + f" tzinfo={self._tzinfo}"
+
+        def __getattribute__(self, name: str) -> Any :
+            '''
+            Manage retrieval of members
+            '''
+            if name in ("_dt", "_adjusted", "is_dst", "to_timezone", "add_months", "replace", "_tzinfo", "__class__") :
+                return super().__getattribute__(name)
+            elif name == "year" :
+                if self._adjusted :
+                    y, h, n, s = self._dt.year, self._dt.hour, self._dt.minute, self._dt.second
+                    if h == n == s == 0 :
+                        return (self._dt - timedelta(hours=1)).year
+                    return y
+                else :
+                    return self._dt.year
+            elif name == "month" :
+                if self._adjusted :
+                    m, h, n, s = self._dt.month, self._dt.hour, self._dt.minute, self._dt.second
+                    if h == n == s == 0 :
+                        return (self._dt - timedelta(hours=1)).month
+                    return m
+                else :
+                    return self._dt.month
+            elif name == "day" :
+                if self._adjusted :
+                    d, h, n, s = self._dt.day, self._dt.hour, self._dt.minute, self._dt.second
+                    if h == n == s == 0 :
+                        return (self._dt - timedelta(hours=1)).day
+                    return d
+                else :
+                    return self._dt.day
+            elif name == "hour" :
+                if self._adjusted :
+                    h, n, s = self._dt.hour, self._dt.minute, self._dt.second
+                    if h == n == s == 0 :
+                        return 24
+                    return h
+                else :
+                    return self._dt.hour
+            elif name == "tzinfo" :
+                return self._tzinfo
+            elif name == "astimezone" :
+                return self.to_timezone
+            else :
+                return super().__getattribute__("_dt").__getattribute__(name)
+
     class DotBHeaderParameterInfo :
         '''
         Holds parameter info from the header of a .B message
         '''
         def __init__(
                 self,
-                parser:              'ShefParser',
+                parser:              "ShefParser",
                 parameter_code:      str,
                 orig_parameter_code: str,
-                obstime:             Union[None, ShefDateTime],
+                obstime:             Union[None, "ShefParser.DateTime"],
                 use_prev_7am:        bool,
                 relativetime:        Union[None, timedelta, MonthsDelta],
                 createtime_str:      Union[None, str],
-                createtime:          Union[None, ShefDateTime],
+                createtime:          Union[None, "ShefParser.DateTime"],
                 units:               str,
                 qualifier:           str,
                 duration_unit:       str,
@@ -999,21 +744,21 @@ class ShefParser :
             '''
 
             if not parameter_code or len(parameter_code) != 7 :
-                raise ShefParserException(f"Invalid parameter code: [{parameter_code}]")
+                raise ShefParser.ParseException(f"Invalid parameter code: [{parameter_code}]")
 
             if not obstime :
-                raise ShefParserException("Missing observation time")
+                raise ShefParser.ParseException("Missing observation time")
 
             if use_prev_7am :
                 if relativetime :
-                    raise ShefParserException("Cannot use relative date/time offsets with send codes QY, HY, or PY")
+                    raise ShefParser.ParseException("Cannot use relative date/time offsets with send codes QY, HY, or PY")
                 if obstime.tzinfo == ('Z' if parser.shefit_times else ShefParser.UTC) :
-                    raise ShefParserException("Cannot use Zulu/UTC time zone with send codes QY, HY, or PY")
+                    raise ShefParser.ParseException("Cannot use Zulu/UTC time zone with send codes QY, HY, or PY")
 
             self._parser              = parser
             self._parameter_code      = parameter_code
             self._orig_parameter_code = orig_parameter_code
-            self._obstime             = ShefDateTime.clone(obstime)
+            self._obstime             = ShefParser.DateTime.clone(obstime)
             self._use_prev_7am        = use_prev_7am
             self._relativetime        = copy.deepcopy(relativetime)
             self._createtime          = createtime
@@ -1057,7 +802,7 @@ class ShefParser :
             return self._orig_parameter_code
 
         @property
-        def obstime(self) -> "ShefDateTime" :
+        def obstime(self) -> "ShefParser.DateTime" :
             '''
             Get the observation time
             '''
@@ -1071,7 +816,7 @@ class ShefParser :
             return self._units
 
         @property
-        def createtime(self) -> Union[None, ShefDateTime] :
+        def createtime(self) -> Union[None, "ShefParser.DateTime"] :
             '''
             Get the creation time
             '''
@@ -1096,24 +841,24 @@ class ShefParser :
                 revised:                 bool,
                 msg_source:              str,
                 location:                str,
-                obstime_override:        ShefDateTime,
-                relativetime_override:   ShefDateTime,
+                obstime_override:        "ShefParser.DateTime",
+                relativetime_override:   "ShefParser.DateTime",
                 createtime_override_str: str,
                 units_override:          str,
                 duration_unit:           str,
                 duration_value:          int,
                 value:                   float,
                 qualifier:               str,
-                comment:                 str) -> 'OutputRecord' :
+                comment:                 str) -> "ShefParser.OutputRecord" :
             '''
             Create an OutputRecord from the positional info in the header and the info in the body
             '''
             parser = self._parser
             if self._use_prev_7am :
                 if obstime_override and obstime_override._tzinfo == ('Z' if parser.shefit_times else ShefParser.UTC) :
-                    raise ShefParserException("Cannot use Zulu/UTC time zone with send codes QY, HY, or PY")
+                    raise ShefParser.ParseException("Cannot use Zulu/UTC time zone with send codes QY, HY, or PY")
                 if relativetime_override :
-                    raise ShefParserException("Cannot use relative date/time offsets with send codes QY, HY, or PY")
+                    raise ShefParser.ParseException("Cannot use relative date/time offsets with send codes QY, HY, or PY")
 
             shift = relativetime_override if relativetime_override is not None else self.relativetime
             obst = obstime_override if obstime_override else self.obstime
@@ -1125,8 +870,8 @@ class ShefParser :
                 if obst.hour < 7 :
                     # mypy barfs on "use obst -= timedelta(days=1)"
                     new_obst = obst - timedelta(days=1)
-                    if not isinstance(new_obst, ShefDateTime) :
-                        raise ShefParserException(f"Expected ShefDateTime object, got {new_obst.__class__.__name__}")
+                    if not isinstance(new_obst, ShefParser.DateTime) :
+                        raise ShefParser.ParseException(f"Expected ShefParser.DateTime object, got {new_obst.__class__.__name__}")
                     obst = new_obst
                 obst = obst.replace(hour=7, minute=0, second=0)
             elif shift :
@@ -1139,7 +884,11 @@ class ShefParser :
             obst = obst.astimezone('Z' if parser.shefit_times else ShefParser.UTC)
             # 3 - adjust to shift hour, minutes, and seconds
             if shift is not None and isinstance(shift, timedelta):
-                # DON'T use shift.seconds!!! If shift is negative it will be incorrect.
+                # DON'T use shift.seconds!!! If shift is negative it will be incorrect as shown below.
+                # >>> timedelta(seconds=-3600).seconds
+                # 82800
+                # >>> timedelta(seconds=-3600).total_seconds()
+                # -3600.0
                 seconds = seconds=shift.total_seconds() % (86400 if shift.total_seconds() > 0 else -86400)
                 obst += timedelta(seconds=seconds)
             #----------------------------------#
@@ -1154,7 +903,7 @@ class ShefParser :
             if units_override == "SI" :
                 value = parser.get_english_unit_value(value, self._parameter_code)
 
-            return OutputRecord(
+            return ShefParser.OutputRecord(
                 parser,
                 location,
                 self.parameter_code,
@@ -1179,17 +928,417 @@ class ShefParser :
             else :
                 return f"{self._parameter_code} @ {self._obstime.astimezone('Z' if self.parser.shefit_times else ShefParser.UTC)}"
 
-    def __init__(self, output_format: int, shefparm_pathname: Union[None, str]=None, shefit_times: bool=False, no_tolerance: bool=False) :
+    class OutputRecord :
+        '''
+        Parsed value, ready for output in various formats
+        '''
+        SHEFIT_TEXT_V1 = "SHEFIT-TEXT1"
+        SHEFIT_TEXT_V2 = "SHEFIT-TEXT2"
+
+        OUTPUT_FORMATS = [SHEFIT_TEXT_V1, SHEFIT_TEXT_V2]
+
+        def __init__(
+                self,
+                parser:              "ShefParser",
+                location:            str,
+                parameter_code:      str,
+                orig_parameter_code: str,
+                obstime:             "ShefParser.DateTime",
+                create_time:         Union[None, "ShefParser.DateTime", str] = None,
+                en_value:            float = -9999.,
+                qualifier:           str = 'Z',
+                revised:             bool = False,
+                duration_unit:       str  = 'Z',
+                duration_value:      Optional[int]  = None,
+                message_source:      Optional[str] = None,
+                time_series_code:    int = 0,
+                comment:             Optional[str] = None) -> None :
+            '''
+            OutputRecord constuctor
+            '''
+            if not location :
+                raise ShefParser.OutputException("Location must not be empty")
+            if not 3 <= len(location) <= 8 :
+                raise ShefParser.OutputException(f"Location [{location}] must be 3 to 8 characters in length")
+            if not parameter_code :
+                raise ShefParser.OutputException("Parameter code must not be empty")
+            if len(parameter_code) != 7 :
+                raise ShefParser.OutputException(f"Parameter code [{parameter_code}] must be 7 characters in length")
+            if not obstime :
+                raise ShefParser.OutputException("Observed time must not be empty")
+
+            self._parser               = parser
+            self._location             = location
+            self._observation_time     = obstime
+            self._parameter_code       = parameter_code
+            self._orig_parameter_code  = orig_parameter_code
+            self._value                = en_value
+            self._qualifier            = qualifier
+            self._revised              = revised
+            self._duration_unit        = duration_unit
+            self._duration_value       = duration_value
+            self._message_source       = message_source
+            self._time_series_code     = time_series_code
+            self._comment              = comment
+
+            self._creation_time: Union[None, ShefParser.DateTime] = None
+            if create_time and isinstance(create_time, str) :
+                self._creation_time = parser.get_creation_time(obstime, create_time)
+            elif isinstance(create_time, ShefParser.DateTime) :
+                self._creation_time = create_time
+            self._observation_time = self._observation_time.astimezone('Z' if parser.shefit_times else ShefParser.UTC)
+            if self._creation_time :
+                self._creation_time = self._creation_time.astimezone('Z' if parser.shefit_times else ShefParser.UTC)
+
+        def format(self, fmt: str) -> str :
+            '''
+            Generate the output in the specified format
+            '''
+            if fmt == ShefParser.OutputRecord.SHEFIT_TEXT_V1 :
+                #----------------------------#
+                # shefit -1 format (default) #
+                #----------------------------#
+                buf = StringIO()
+                buf.write(self.location.ljust(10))
+                buf.write(f"{self.obstime.year:4d}-")
+                buf.write(f"{self.obstime.month:02d}-")
+                buf.write(f"{self.obstime.day:02d} ")
+                buf.write(f"{self.obstime.hour:02d}:")
+                buf.write(f"{self.obstime.minute:02d}:")
+                buf.write(f"{self.obstime.second:02d}  ")
+                if self.create_time :
+                    buf.write(f"{self.create_time.year:4d}-")
+                    buf.write(f"{self.create_time.month:02d}-")
+                    buf.write(f"{self.create_time.day:02d} ")
+                    buf.write(f"{self.create_time.hour:02d}:")
+                    buf.write(f"{self.create_time.minute:02d}:")
+                    buf.write(f"{self.create_time.second:02d}  ")
+                else :
+                    buf.write("0000-00-00 00:00:00  ")
+                if len(self.orig_parameter_code) == 7 :
+                    if self.orig_parameter_code[3] == 'Z' :
+                        # replace Z type code
+                        buf.write(f"{self.orig_parameter_code[:3]}R{self._orig_parameter_code[4:]}")
+                    else :
+                        buf.write(self.orig_parameter_code)
+                else :
+                    output_full_parameter = False
+                    if len(self.orig_parameter_code) == 7 :
+                        output_full_parameter = True
+                    else :
+                        pe_code = self.orig_parameter_code[:2]
+                        try :
+                            param_code = self.parser._send_codes[pe_code][0]
+                            output_full_parameter = len(param_code) == 7
+                        except KeyError :
+                            pass
+                        if output_full_parameter :
+                            buf.write(self.parameter_code)
+                        else :
+                            buf.write(f"{self.parameter_code[:-1]} ")
+                buf.write(f"{self.value:15.4f}")
+                buf.write(f" {self.qualifier}")
+                buf.write(f"{self.probability_code_number:9.3f}  ")
+                buf.write(f"{self.duration_code_number:04d}")
+                buf.write(f"{self.revised:2d}")
+                buf.write(f"{self.time_series_code:2d}")
+                buf.write("  ")
+                buf.write(self.message_source.ljust(8) if self.message_source else "        ")
+                buf.write("  ")
+                if self.comment :
+                    buf.write(f'"{self.comment[1:-1]}"')
+                else :
+                    buf.write('' '')
+                rec = buf.getvalue()
+                buf.close()
+            elif fmt == ShefParser.OutputRecord.SHEFIT_TEXT_V2 :
+                #------------------#
+                # shefit -2 output #
+                #------------------#
+                buf = StringIO()
+                buf.write(self.location.ljust(8))
+                buf.write(f"{self.obstime.year:4d}")
+                buf.write(f"{self.obstime.month:2d}")
+                buf.write(f"{self.obstime.day:2d}")
+                buf.write(f"{self.obstime.hour:2d}")
+                buf.write(f"{self.obstime.minute:2d}")
+                buf.write(f"{self.obstime.second:2d}")
+                buf.write(' ')
+                if self.create_time :
+                    buf.write(f"{self.create_time.year:4d}")
+                    buf.write(f"{self.create_time.month:2d}")
+                    buf.write(f"{self.create_time.day:2d}")
+                    buf.write(f"{self.create_time.hour:2d}")
+                    buf.write(f"{self.create_time.minute:2d}")
+                    buf.write(f"{self.create_time.second:2d}")
+                else :
+                    buf.write("   0 0 0 0 0 0")
+                buf.write(self.physical_element_code.rjust(3))
+                buf.write(self.type_code.rjust(2))
+                buf.write(self.source_code)
+                buf.write(self.extremum_code)
+                buf.write(f"{self.value:10.3f}")
+                buf.write(self.qualifier.rjust(2))
+                buf.write(f"{self.probability_code_number:6.2f}")
+                buf.write(f"{self.duration_code_number:5d}")
+                buf.write(f"{self.revised:2d}")
+                buf.write(' ')
+                buf.write(self.message_source.ljust(8) if self.message_source else "        ")
+                buf.write(f"{self.time_series_code}")
+                if self.comment :
+                    buf.write(f'\n        "{self.comment[1:-1]}"')
+                rec = buf.getvalue()
+                buf.close()
+            else :
+                raise ShefParser.OutputException(f'Invalid output format: "[{fmt}]"')
+            return rec
+
+        @property
+        def parser(self) -> "ShefParser" :
+            '''
+            Get the ShefParser object that created this record
+            '''
+            return self._parser
+
+        @property
+        def location(self) -> str:
+            '''
+            Get the location
+            '''
+            return self._location
+
+        @property
+        def obstime(self) -> "ShefParser.DateTime" :
+            '''
+            Get the observation time
+            '''
+            return self._observation_time
+
+        @property
+        def create_time(self) -> Union[None, "ShefParser.DateTime"] :
+            '''
+            Get the creation time
+            '''
+            return self._creation_time
+
+        @property
+        def physical_element_code(self) -> str :
+            '''
+            Get the physical element code
+            '''
+            return self._parameter_code[:2]
+
+        @property
+        def duration_code(self) -> str :
+            '''
+            Get the parameter code
+            '''
+            return self._parameter_code[2]
+
+        @property
+        def duration_code_number(self) -> int :
+            '''
+            Get the numeric value of the duration code
+            '''
+            if self.duration_code == 'V' :
+                if self._duration_unit and self._duration_value is not None and self._duration_unit != 'Z' :
+                    return ShefParser.DURATION_VARIABLE_CODES[self._duration_unit] + self._duration_value
+                raise ShefParser.OutputException(f"No duration specified for parameter code [{self.parameter_code}]")
+            else :
+                if self.duration_code == 'Z' :
+                    if self.physical_element_code in ShefParser.DEFAULT_DURATION_CODES :
+                        return ShefParser.DURATION_CODES[ShefParser.DEFAULT_DURATION_CODES[self.physical_element_code]]
+                    else :
+                        return ShefParser.DURATION_CODES[self.duration_code]
+                else :
+                    return ShefParser.DURATION_CODES[self.duration_code]
+
+        @property
+        def parameter_code(self) -> str :
+            '''
+            Get the parameter code
+            '''
+            return self._parameter_code
+
+        @property
+        def type_code(self) -> str :
+            '''
+            Get the type code (1st char of type & source code)
+            '''
+            return self._parameter_code[3]
+
+        @property
+        def source_code(self) -> str :
+            '''
+            Get the source code (2nd char of the type & source code)
+            '''
+            return self._parameter_code[4]
+
+        @property
+        def extremum_code(self) -> str :
+            '''
+            Get the extremum code
+            '''
+            return self._parameter_code[5]
+
+        @property
+        def probability_code(self) -> str :
+            '''
+            Get the probability code
+            '''
+            return self._parameter_code[6]
+
+        @property
+        def probability_code_number(self) -> float :
+            '''
+            Get the numeric value of the probability code
+            '''
+            return float(ShefParser.PROBABILITY_CODES[self._parameter_code[6]])
+
+        @property
+        def orig_parameter_code(self) -> str :
+            '''
+            Get the parameter code as specified in the message
+            '''
+            return self._orig_parameter_code
+
+        @property
+        def value(self) -> float :
+            '''
+            Get the value
+            '''
+            return self._value
+
+        @property
+        def qualifier(self) -> str :
+            '''
+            Get the data qualifier (default or otherwise)
+            '''
+            return self._qualifier
+
+        @property
+        def revised(self) -> bool :
+            '''
+            Is the revision flag set?
+            '''
+            return self._revised
+
+        @property
+        def message_source(self) -> Union[None, str] :
+            '''
+            Get the source of the .B message
+            '''
+            return self._message_source
+
+        @property
+        def time_series_code(self) -> int :
+            '''
+            Get the time series code (0=not time series, 1=first value, 2=other value)
+            '''
+            return self._time_series_code
+
+        @property
+        def comment(self) -> Union[None, str] :
+            '''
+            Get the retained comment
+            '''
+            return self._comment
+
+    @staticmethod
+    def write_shefparm_data(output_object: Union[TextIO, str]) -> None :
+        '''
+        Write SHEFPARM data to the specified output
+        '''
+        out = None
+        if isinstance(output_object, (BufferedRandom, TextIOWrapper)) :
+            out = output_object
+        elif isinstance(output_object, str) :
+            out = open(output_object, "w")
+        else :
+            raise ShefParser.OutputException(f"Expected BufferedRandom or str object, got [{output_object.__class__.__name__}]")
+        out.write(f"$\n$ This file generated on {str(datetime.now())[:-7]} by {progname} version {version} ({version_date})\n$\n")
+        out.write("SHEFPARM\n")
+        out.write("*1                      PE CODES AND CONVERSION FACTORS\n")
+        # get the non-send codes
+        conversions = dict(ShefParser.PE_CONVERSIONS)
+        # add in the send codes
+        for code in ShefParser.SEND_CODES :
+            conversions[code] = conversions[ShefParser.SEND_CODES[code][0][:2]]
+        for code in sorted(conversions) :
+            out.write(f"{code} {conversions[code]}\n")
+        out.write("*2                      DURATION CODES AND ASSOCIATED VALUES\n")
+        for code in sorted(ShefParser.DURATION_CODES) :
+            out.write(f"{code}   {ShefParser.DURATION_CODES[code]:04d}\n")
+        out.write("*3                      TS CODES\n")
+        for code in sorted(ShefParser.TS_CODES) :
+            out.write(f"{code}  1\n")
+        out.write("*4                      EXTREMUM CODES\n")
+        for code in sorted(ShefParser.EXTREMUM_CODES) :
+            out.write(f"{code}   1\n")
+        out.write("*5                      PROBILITY CODES AND ASSOCIATED VALUES\n")
+        for code in sorted(ShefParser.PROBABILITY_CODES) :
+            out.write(f"{code} {ShefParser.PROBABILITY_CODES[code]}\n")
+        out.write("*6                      SEND CODES OR DURATION DEFAULTS OTHER THAN I\n")
+        for code in sorted(ShefParser.SEND_CODES) :
+            out.write(f"{code} {ShefParser.SEND_CODES[code][0].ljust(7)}")
+            out.write("  1\n" if ShefParser.SEND_CODES[code][1] else "\n")
+        out.write("*7                      DATA QUALIFIER CODES\n")
+        for code in sorted(ShefParser.QUALIFIER_CODES) :
+            out.write(f"{code}\n")
+        out.write("**                      MAX NUMBER OF ERRORS (I4 FORMAT)\n 500\n**\n")
+        if isinstance(output_object, str) :
+            out.close()
+
+    @staticmethod
+    def hide_quoted_whitespace(s: str) -> str :
+        '''
+        Replaces whitespace chars (' ', '\t') in quotes with non-whitespace characters (NUL, SOH)
+        to allow split() to not break quotes.
+        '''
+        NUL, SOH = chr(0), chr(1)
+        quote = None
+        with StringIO() as buf :
+            for c in s :
+                if quote :
+                    if c == ' ' :
+                        buf.write(NUL)
+                    elif c == '\t' :
+                        buf.write(SOH)
+                    else :
+                        buf.write(c)
+                    if c == quote :
+                        quote = None
+                else :
+                    buf.write(c)
+                    if c in "'\"" : quote = c
+            return buf.getvalue()
+
+    @staticmethod
+    def unhide_quoted_whitespace(s: str) -> str :
+        '''
+        Restored replaced whitespace chars in quotes with original characters
+        '''
+        NUL, SOH = chr(0), chr(1)
+        with StringIO() as buf :
+            for c in s :
+                if c == NUL :
+                    buf.write(' ')
+                elif c == SOH :
+                    buf.write('\t')
+                else :
+                    buf.write(c)
+            return buf.getvalue()
+    def __init__(self, output_format: int, shefparm_pathname: Union[None, str]=None, shefit_times: bool=False, reject_problematic: bool=False) :
         '''
         ShefParser Constructor
         '''
         self._shefparm_pathname:    Union[None, str] = shefparm_pathname
-        self._output_format:        str              = OutputRecord.OUTPUT_FORMATS[output_format-1]
-        self._shefit_times:         bool             = shefit_times
-        self._no_tolerance:         bool             = no_tolerance
+        self._output_format:        str  = ShefParser.OutputRecord.OUTPUT_FORMATS[output_format-1]
+        self._shefit_times:         bool = shefit_times
+        self._reject_problematic:   bool = reject_problematic
         self._message:              Union[None, str] = None
         self._message_location:     Union[None, int] = None
-        self._log_line_len:         int              = 100
+        self._log_line_len:         int = 100
         self._previous_raw_message: Union[None, str] = None
         self._raw_message:          Union[None, str] = None
         #-----------------------------#
@@ -1216,10 +1365,10 @@ class ShefParser :
         self._default_probability_code    = 'Z' # May not be modified by SHEFPARM file
         self._input:                      Union[None, TextIOWrapper] = None
         self._input_name:                 Union[None, str] = None
-        self._line_number:                int = 0
+        self._line_number                 = 0
         self._output:                     Union[None, BufferedRandom, TextIOWrapper] = None
         self._output_name:                Union[None, str] = None
-        self._input_lines: deque          = deque()
+        self._input_lines:                deque = deque()
         self._msg_start_pattern           = re.compile(r"^\.[ABE]R?\s", re.I)
         self._msg_continue_patterns       = {'A' : (re.compile(r"^\.A\d{1,2}", re.I), re.compile(r"^\.AR?\d{1,2}", re.I)),
                                              'E' : (re.compile(r"^\.E\d{1,2}", re.I), re.compile(r"^\.ER?\d{1,2}", re.I)),
@@ -1287,51 +1436,11 @@ class ShefParser :
         '''
         return self._shefit_times
 
-    @staticmethod
-    def hide_quoted_whitespace(s: str) -> str :
-        '''
-        Replaces whitespace chars (' ', '\t') in quotes with non-whitespace characters (NUL, SOH)
-        to allow split() to not break quotes.
-        '''
-        NUL, SOH = chr(0), chr(1)
-        quote = None
-        with StringIO() as buf :
-            for c in s :
-                if quote :
-                    if c == ' ' :
-                        buf.write(NUL)
-                    elif c == '\t' :
-                        buf.write(SOH)
-                    else :
-                        buf.write(c)
-                    if c == quote :
-                        quote = None
-                else :
-                    buf.write(c)
-                    if c in "'\"" : quote = c
-            return buf.getvalue()
-
-    @staticmethod
-    def unhide_quoted_whitespace(s: str) -> str :
-        '''
-        Restored replaced whitespace chars in quotes with original characters
-        '''
-        NUL, SOH = chr(0), chr(1)
-        with StringIO() as buf :
-            for c in s :
-                if c == NUL :
-                    buf.write(' ')
-                elif c == SOH :
-                    buf.write('\t')
-                else :
-                    buf.write(c)
-            return buf.getvalue()
-
     def read_shefparm(self, shefparm_pathname: str) -> None :
         '''
         modify program defaults with content of SHEFPARM file
         '''
-       # SHEFPARM Section Marker Lines
+        # SHEFPARM Section Marker Lines
         #
         # *1                      PE CODES AND CONVERSION FACTORS
         # *2                      DURATION CODES AND ASSOCIATED VALUES
@@ -1592,11 +1701,11 @@ class ShefParser :
         value_at_prev_0700 = False
         send_code = None
         if len(partial_parameter_code.strip().split()) != 1 :
-            raise ShefParserException(f"Invalid parameter code: [{partial_parameter_code}]")
+            raise ShefParser.ParseException(f"Invalid parameter code: [{partial_parameter_code}]")
         try :
             code, value_at_prev_0700 = self._send_codes[partial_parameter_code[:2]]
             if len(partial_parameter_code) != 2 and partial_parameter_code[:2] not in self._pe_conversions :
-                raise ShefParserException(f"Invalid parameter code: [{partial_parameter_code}] - {partial_parameter_code[:2]} is send code for {code}")
+                raise ShefParser.ParseException(f"Invalid parameter code: [{partial_parameter_code}] - {partial_parameter_code[:2]} is send code for {code}")
             if len(partial_parameter_code) == 2 :
                 send_code = partial_parameter_code[:2]
             else :
@@ -1605,7 +1714,7 @@ class ShefParser :
             code = partial_parameter_code
         length = len(code)
         if not 2 <= length <= 7 :
-            raise ShefParserException(f"Parameter code [{partial_parameter_code}] must be 2-7 characters long")
+            raise ShefParser.ParseException(f"Parameter code [{partial_parameter_code}] must be 2-7 characters long")
         if length > 2 and code[2] == 'Z' and not send_code :
             #----------------------#
             # replace 'Z' duration #
@@ -1647,13 +1756,13 @@ class ShefParser :
         # validate portions #
         #-------------------#
         if code[2] not in self._duration_codes :
-            raise ShefParserException(f"Invalid duration code [{code[2]}] in parameter_code [{code}]")
+            raise ShefParser.ParseException(f"Invalid duration code [{code[2]}] in parameter_code [{code}]")
         if code[3:5] not in self._ts_codes :
-            raise ShefParserException(f"Invalid type and source code [{code[3:5]}] in parameter code [{code}]")
+            raise ShefParser.ParseException(f"Invalid type and source code [{code[3:5]}] in parameter code [{code}]")
         if code [5] not in self._extremum_codes :
-            raise ShefParserException(f"Invalid extremum code [{code[5]}] in parameter_code [{code}]")
+            raise ShefParser.ParseException(f"Invalid extremum code [{code[5]}] in parameter_code [{code}]")
         if code [6] not in self._probability_codes :
-            raise ShefParserException(f"Invalid probability code [{code[6]}] in parameter_code [{code}]")
+            raise ShefParser.ParseException(f"Invalid probability code [{code[6]}] in parameter_code [{code}]")
         return code, value_at_prev_0700
 
     def close_input(self) -> None :
@@ -1681,7 +1790,7 @@ class ShefParser :
             self._input = open(input_object)
             self._input_name = input_object
         else :
-            raise ShefParserException(f"Expected TextIOWrapper or str object, got [{input_object.__class__.__name__}]")
+            raise ShefParser.InputException(f"Expected TextIOWrapper or str object, got [{input_object.__class__.__name__}]")
         self._line_number = 0
         self.debug(f"Message input set to {self._input_name}")
 
@@ -1710,7 +1819,7 @@ class ShefParser :
             self._output = open(output_object, "w+b")
             self._output_name = output_object
         else :
-            raise ShefParserException(f"Expected BufferedRandom or str object, got [{output_object.__class__.__name__}]")
+            raise ShefParser.OutputException(f"Expected BufferedRandom or str object, got [{output_object.__class__.__name__}]")
         logger.debug(f"Data output set to {self._output_name}")
 
     def output(self, outrec : OutputRecord) -> None :
@@ -1719,14 +1828,14 @@ class ShefParser :
         '''
         if outrec :
             if not self._output :
-                raise ShefParserException("Cannot output record; output is closed or never opened")
+                raise ShefParser.OutputException("Cannot output record; output is closed or never opened")
             outstr = f"{outrec.format(self._output_format)}\n"
             if isinstance(self._output, TextIOWrapper) :
                 self._output.write(outstr)
             elif isinstance(self._output, BufferedRandom) :
                 self._output.write(outstr.encode("utf-8"))
             else :
-                raise ShefParserException(f"Unexpected output device type: {self._output.__class__.__name__}")
+                raise ShefParser.OutputException(f"Unexpected output device type: {self._output.__class__.__name__}")
 
     def remove_comment_fields(self, line: str) -> str :
         '''
@@ -1859,7 +1968,7 @@ class ShefParser :
 
     def parse_header_date(self, datestr : str, time_zone: Union[timezone, ZoneInfo, str], shefit_times: bool = False) -> tuple:
         '''
-        Parses the header observation date into a ShefDateTime object.
+        Parses the header observation date into a DateTime object.
         Returns a tuple of observation date and whether the century is specified in the date.
 
             datestr      = the observation date string from the header
@@ -1867,10 +1976,10 @@ class ShefParser :
             shefit_times = whether the parser is using shefit-style times
         '''
         century_specified = False
-        dt = ShefDateTime.now(time_zone)
+        dt = ShefParser.DateTime.now(time_zone)
         cy, cm, cd = dt.year, dt.month, dt.day
         length = len(datestr)
-        cur_date = ShefDateTime(cy, cm, cd, 0, 0, 0, tzinfo=time_zone)
+        cur_date = ShefParser.DateTime(cy, cm, cd, 0, 0, 0, tzinfo=time_zone)
         if length == 4 : # mmdd
             y, m, d = cy, int(datestr[0:2]), int(datestr[2:4])
         elif length == 6 : # yymmdd
@@ -1881,9 +1990,9 @@ class ShefParser :
             century_specified = True
             y, m, d = int(datestr[0:4]), int(datestr[4:6]), int(datestr[6:8])
         else :
-            raise ShefParserException(f"Bad date string: [{datestr}]")
-        if not 1700 <= y <= 2100 or not 1 <= m <= 12 or not 1 <= d <= ShefDateTime.last_day(y, m) :
-            raise ShefParserException(f"Bad date string: [{datestr}]")
+            raise ShefParser.ParseException(f"Bad date string: [{datestr}]")
+        if not 1700 <= y <= 2100 or not 1 <= m <= 12 or not 1 <= d <= ShefParser.DateTime.last_day(y, m) :
+            raise ShefParser.ParseException(f"Bad date string: [{datestr}]")
         try :
             if length == 4 :
                 # no year specified, use closeset date
@@ -1894,23 +2003,23 @@ class ShefParser :
                     elif month_diff  < -6            : y -= 1
                     elif month_diff == -6 and cd < d : y -= 1
                     elif month_diff ==  6 and cd > d : y += 1
-                    dateval = ShefDateTime(y, m, d, 0, 0, 0, tzinfo=time_zone)
+                    dateval = ShefParser.DateTime(y, m, d, 0, 0, 0, tzinfo=time_zone)
                 else :
-                    dateval = ShefDateTime(y, m, d, 0, 0, 0, tzinfo=time_zone)
+                    dateval = ShefParser.DateTime(y, m, d, 0, 0, 0, tzinfo=time_zone)
                     prev_year = dateval - MonthsDelta(12)
                     cur_diff = (dateval - cur_date)
                     prev_diff = (cur_date - prev_year)
                     if not isinstance(cur_diff, timedelta) or not isinstance(prev_diff, timedelta) :
-                        raise ShefParserException(f"Invalid comparison types: {prev_diff.__class__.__name__}, {cur_diff.__class__.__name__}")
+                        raise ShefParser.ParseException(f"Invalid comparison types: {prev_diff.__class__.__name__}, {cur_diff.__class__.__name__}")
                     if prev_diff < cur_diff :
-                        if not isinstance(prev_year, ShefDateTime) :
-                            raise ShefParserException(f"Expected ShefDateTime object, got {prev_year.__class__.__name__}")
+                        if not isinstance(prev_year, ShefParser.DateTime) :
+                            raise ShefParser.ParseException(f"Expected ShefParser.DateTime object, got {prev_year.__class__.__name__}")
                         dateval = prev_year
             else :
-                dateval = ShefDateTime(y, m, d, 0, 0, 0, tzinfo=time_zone)
+                dateval = ShefParser.DateTime(y, m, d, 0, 0, 0, tzinfo=time_zone)
             return dateval, century_specified
         except :
-            raise ShefParserException(f"Bad date string: [{datestr}]")
+            raise ShefParser.ParseException(f"Bad date string: [{datestr}]")
 
     def tokenize_a_e_data_string(self, datastr: str, message_type: str, is_revised: bool) -> list :
         '''
@@ -1963,7 +2072,7 @@ class ShefParser :
             tokens[i] = self._replacement_split_pattern.split(self._replacement_strip_pattern.sub("", tokens[i]))
         return tokens
 
-    def get_observation_time(self, base_time: ShefDateTime, token: str, century_specified: bool, dot_b: bool=False) -> tuple :
+    def get_observation_time(self, base_time: DateTime, token: str, century_specified: bool, dot_b: bool=False) -> tuple :
         '''
         Return the observation time from the base datetime as updated by the token. Only one of obstime and relative_time
         will be returned.
@@ -1981,61 +2090,61 @@ class ShefParser :
             century_specified = Whether the century was specified in the base_time or token
         '''
         bt = base_time
-        obstime: Union[None, ShefDateTime] = base_time
+        obstime: Union[None, ShefParser.DateTime] = base_time
         relativetime: Union[None, timedelta, MonthsDelta] = None
         subtokens = token.strip('@').split('@')
         if len(subtokens) > 1 and subtokens[0][1] == 'J' :
-            raise ShefParserException(f"Bad observation time: [{subtokens[0]}]/[{subtokens[1]}]")
+            raise ShefParser.ParseException(f"Bad observation time: [{subtokens[0]}]/[{subtokens[1]}]")
         for subtoken in subtokens :
             try :
-                cur_time = ShefDateTime.now('Z' if self.shefit_times else ShefParser.UTC)
+                cur_time = ShefParser.DateTime.now('Z' if self.shefit_times else ShefParser.UTC)
                 v = subtoken[2:]
                 length = len(v)
                 if subtoken[1] == 'S' :
                     if length == 2 : # DSss
-                        obstime = ShefDateTime(bt.year, bt.month, bt.day, bt.hour, bt.minute, int(v[0:2]), tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(bt.year, bt.month, bt.day, bt.hour, bt.minute, int(v[0:2]), tzinfo=bt.tzinfo)
                     else :
-                        raise ShefParserException(f"Bad observation time: [{subtoken}]")
+                        raise ShefParser.ParseException(f"Bad observation time: [{subtoken}]")
                 elif subtoken[1] == 'N' :
                     if length == 4 : # DNnnss
-                        obstime = ShefDateTime(bt.year, bt.month, bt.day, bt.hour, int(v[0:2]), int(v[2:4]), tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(bt.year, bt.month, bt.day, bt.hour, int(v[0:2]), int(v[2:4]), tzinfo=bt.tzinfo)
                     elif length == 2 : # DNnn
-                        obstime = ShefDateTime(bt.year, bt.month, bt.day, bt.hour, int(v[0:2]), bt.second, tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(bt.year, bt.month, bt.day, bt.hour, int(v[0:2]), bt.second, tzinfo=bt.tzinfo)
                     else :
-                        raise ShefParserException(f"Bad observation time: [{subtoken}]")
+                        raise ShefParser.ParseException(f"Bad observation time: [{subtoken}]")
                 elif subtoken[1] == 'H' :
                     if length == 6 : # DHhhnnss
-                        obstime = ShefDateTime(bt.year, bt.month, bt.day, int(v[0:2]), int(v[2:4]), int(v[4:6]), tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(bt.year, bt.month, bt.day, int(v[0:2]), int(v[2:4]), int(v[4:6]), tzinfo=bt.tzinfo)
                     elif length == 4 : # DHhhnn
-                        obstime = ShefDateTime(bt.year, bt.month, bt.day, int(v[0:2]), int(v[2:4]), bt.second, tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(bt.year, bt.month, bt.day, int(v[0:2]), int(v[2:4]), bt.second, tzinfo=bt.tzinfo)
                     elif length == 2 : # DHhh
-                        obstime = ShefDateTime(bt.year, bt.month, bt.day, int(v[0:2]), bt.minute, bt.second, tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(bt.year, bt.month, bt.day, int(v[0:2]), bt.minute, bt.second, tzinfo=bt.tzinfo)
                     else :
-                        raise ShefParserException(f"Bad observation time: [{subtoken}]")
+                        raise ShefParser.ParseException(f"Bad observation time: [{subtoken}]")
                 elif subtoken[1] == 'D' :
                     if length == 8 : # DDddhhnnss
-                        obstime = ShefDateTime(bt.year, bt.month, int(v[0:2]), int(v[2:4]), int(v[4:6]), int(v[6:8]), tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(bt.year, bt.month, int(v[0:2]), int(v[2:4]), int(v[4:6]), int(v[6:8]), tzinfo=bt.tzinfo)
                     elif length == 6 : # DDddhhnn
-                        obstime = ShefDateTime(bt.year, bt.month, int(v[0:2]), int(v[2:4]), int(v[4:6]), bt.second, tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(bt.year, bt.month, int(v[0:2]), int(v[2:4]), int(v[4:6]), bt.second, tzinfo=bt.tzinfo)
                     elif length == 4 : # DDddhh
-                        obstime = ShefDateTime(bt.year, bt.month, int(v[0:2]), int(v[2:4]), bt.hour, bt.second, tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(bt.year, bt.month, int(v[0:2]), int(v[2:4]), bt.hour, bt.second, tzinfo=bt.tzinfo)
                     elif length == 2 : # DDdd
-                        obstime = ShefDateTime(bt.year, bt.month, int(v[0:2]), bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(bt.year, bt.month, int(v[0:2]), bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo)
                     else :
-                        raise ShefParserException(f"Bad observation time: [{subtoken}]")
+                        raise ShefParser.ParseException(f"Bad observation time: [{subtoken}]")
                 elif subtoken[1] == 'M' :
                     if length == 10 : # DMmmddhhnnss
-                        obstime = ShefDateTime(bt.year, int(v[0:2]), int(v[2:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(bt.year, int(v[0:2]), int(v[2:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), tzinfo=bt.tzinfo)
                     elif length == 8 : # DMmmddhhnn
-                        obstime = ShefDateTime(bt.year, int(v[0:2]), int(v[2:4]), int(v[4:6]), int(v[6:8]), bt.second, tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(bt.year, int(v[0:2]), int(v[2:4]), int(v[4:6]), int(v[6:8]), bt.second, tzinfo=bt.tzinfo)
                     elif length == 6 : # DMmmddhh
-                        obstime = ShefDateTime(bt.year, int(v[0:2]), int(v[2:4]), int(v[4:6]), bt.minute, bt.second, tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(bt.year, int(v[0:2]), int(v[2:4]), int(v[4:6]), bt.minute, bt.second, tzinfo=bt.tzinfo)
                     elif length == 4 : # DMmmdd
-                        obstime = ShefDateTime(bt.year, int(v[0:2]), int(v[2:4]), bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(bt.year, int(v[0:2]), int(v[2:4]), bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo)
                     elif length == 2 : # DMmm
-                        obstime = ShefDateTime(bt.year, int(v[0:2]), bt.day, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(bt.year, int(v[0:2]), bt.day, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo)
                     else :
-                        raise ShefParserException(f"Bad observation time: [{subtoken}]")
+                        raise ShefParser.ParseException(f"Bad observation time: [{subtoken}]")
                 elif subtoken[1] == 'Y' :
                     if length > 1 :
                         if century_specified :
@@ -2044,66 +2153,66 @@ class ShefParser :
                             y = cur_time.year - cur_time.year % 100 + int(v[0:2])
                         if y - cur_time.year > 10 : y -= 100
                     else :
-                        raise ShefParserException(f"Bad observation time: [{subtoken}]")
+                        raise ShefParser.ParseException(f"Bad observation time: [{subtoken}]")
                     if length == 12 : # DYyymmddhhnnss
-                        obstime = ShefDateTime(y, int(v[2:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), int(v[10:12]), tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(y, int(v[2:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), int(v[10:12]), tzinfo=bt.tzinfo)
                     elif length == 10 : # DYyymmddhhnn - set date and time
-                        obstime = ShefDateTime(y, int(v[2:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), bt.second, tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(y, int(v[2:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), bt.second, tzinfo=bt.tzinfo)
                     elif length == 8 : # DYyymmddhh
-                        obstime = ShefDateTime(y, int(v[2:4]), int(v[4:6]), int(v[6:8]), bt.minute, bt.second, tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(y, int(v[2:4]), int(v[4:6]), int(v[6:8]), bt.minute, bt.second, tzinfo=bt.tzinfo)
                     elif length == 6 : # DYyymmdd
-                        obstime = ShefDateTime(y, int(v[2:4]), int(v[4:6]), bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(y, int(v[2:4]), int(v[4:6]), bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo)
                     elif length == 4 : # DYyymm
-                        obstime = ShefDateTime(y, int(v[2:4]), bt.day, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(y, int(v[2:4]), bt.day, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo)
                     elif length == 2 : # DYyy
-                        obstime = ShefDateTime(y, bt.month, bt.day, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(y, bt.month, bt.day, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo)
                     else :
-                        raise ShefParserException(f"Bad observation time: [{subtoken}]")
+                        raise ShefParser.ParseException(f"Bad observation time: [{subtoken}]")
                 elif subtoken[1] == 'T' :
                     if length == 14 : #DTccyymmddhhnnss
-                        obstime = ShefDateTime(int(v[0:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), int(v[10:12]), int(v[12:14]), tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(int(v[0:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), int(v[10:12]), int(v[12:14]), tzinfo=bt.tzinfo)
                     elif length == 12 : #DTccyymmddhhnn
-                        obstime = ShefDateTime(int(v[0:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), int(v[10:12]), 0, tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(int(v[0:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), int(v[10:12]), 0, tzinfo=bt.tzinfo)
                     elif length == 10 : #DTccyymmddhh
-                        obstime = ShefDateTime(int(v[0:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), 0, 0, tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(int(v[0:4]), int(v[4:6]), int(v[6:8]), int(v[8:10]), 0, 0, tzinfo=bt.tzinfo)
                     elif length == 8 : #DTccyymmdd
-                        obstime = ShefDateTime(int(v[0:4]), int(v[4:6]), int(v[6:8]), bt.hour, 0, 0, tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(int(v[0:4]), int(v[4:6]), int(v[6:8]), bt.hour, 0, 0, tzinfo=bt.tzinfo)
                     elif length == 6 : #DTccyymm
-                        obstime = ShefDateTime(int(v[0:4]), int(v[4:6]), bt.day, bt.hour, 0, 0, tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(int(v[0:4]), int(v[4:6]), bt.day, bt.hour, 0, 0, tzinfo=bt.tzinfo)
                     elif length == 4 : #DTccyy
-                        obstime = ShefDateTime(int(v[0:4]), bt.month, bt.day, bt.hour, 0, 0, tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(int(v[0:4]), bt.month, bt.day, bt.hour, 0, 0, tzinfo=bt.tzinfo)
                     elif length == 2 : #DTcc
-                        obstime = ShefDateTime(100*int(v[0:2])+bt.year%100, bt.month, bt.day, bt.hour, 0, 0, tzinfo=bt.tzinfo)
+                        obstime = ShefParser.DateTime(100*int(v[0:2])+bt.year%100, bt.month, bt.day, bt.hour, 0, 0, tzinfo=bt.tzinfo)
                     else :
-                        raise ShefParserException(f"Bad observation time: [{subtoken}]")
+                        raise ShefParser.ParseException(f"Bad observation time: [{subtoken}]")
                 elif subtoken[1] == 'J' :
                     if length == 7 : # DJccyyddd
                         y = int(v[0:4])
                         d = int(v[4:])
-                        if d > (366 if ShefDateTime.is_leap(y) else 365) :
-                            raise ShefParserException(f"Invalid day: [{subtoken}]")
-                        obstime = ShefDateTime(y, 1, 1, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo) + timedelta(days=int(v[4:7])-1)
+                        if d > (366 if ShefParser.DateTime.is_leap(y) else 365) :
+                            raise ShefParser.ParseException(f"Invalid day: [{subtoken}]")
+                        obstime = ShefParser.DateTime(y, 1, 1, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo) + timedelta(days=int(v[4:7])-1)
                     elif length == 5 : # DJyyddd
                         y = cur_time.year - cur_time.year % 100 + int(v[0:2])
                         if y - cur_time.year > 10 : y -= 100
                         d = int(v[2:])
-                        if d > (366 if ShefDateTime.is_leap(y) else 365) :
-                            raise ShefParserException(f"Invalid day: [{subtoken}]")
-                        obstime = ShefDateTime(y, 1, 1, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo) + timedelta(days=int(v[2:5])-1)
+                        if d > (366 if ShefParser.DateTime.is_leap(y) else 365) :
+                            raise ShefParser.ParseException(f"Invalid day: [{subtoken}]")
+                        obstime = ShefParser.DateTime(y, 1, 1, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo) + timedelta(days=int(v[2:5])-1)
                     elif length < 4 : # DJd[d[d]]
                         d = int(v)
-                        if d > (366 if ShefDateTime.is_leap(bt.year) else 365) :
-                            raise ShefParserException(f"Invalid day: [{subtoken}]")
-                        obstime = ShefDateTime(bt.year, 1, 1, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo) + timedelta(days=int(v[0:])-1)
+                        if d > (366 if ShefParser.DateTime.is_leap(bt.year) else 365) :
+                            raise ShefParser.ParseException(f"Invalid day: [{subtoken}]")
+                        obstime = ShefParser.DateTime(bt.year, 1, 1, bt.hour, bt.minute, bt.second, tzinfo=bt.tzinfo) + timedelta(days=int(v[0:])-1)
                     else :
-                        raise ShefParserException(f"Bad observation time: [{subtoken}]")
+                        raise ShefParser.ParseException(f"Bad observation time: [{subtoken}]")
                 elif subtoken[1] == 'R' :
                     # for .B messages the relative times are kept in the parameter info objects
                     obstime = None
                     v = subtoken[3:]
                     val = int(v)
                     if abs(val) > 99 :
-                        raise ShefParserException("Invalid relative time value")
+                        raise ShefParser.ParseException("Invalid relative time value")
                     if subtoken[2] == 'S' :
                         if dot_b :
                             relativetime = timedelta(seconds=val)
@@ -2140,66 +2249,66 @@ class ShefParser :
                         else :
                             obstime = bt + MonthsDelta(12*val)
                     else :
-                        raise ShefParserException(f"Bad observation time: [{subtoken}]")
-            except ShefParserException :
+                        raise ShefParser.ParseException(f"Bad observation time: [{subtoken}]")
+            except ShefParser.Exception :
                 raise
             except :
-                raise ShefParserException(f"Bad observation time: [{subtoken}]")
+                raise ShefParser.ParseException(f"Bad observation time: [{subtoken}]")
         return obstime, relativetime, century_specified
 
-    def get_creation_time(self, obstime: ShefDateTime, token: Union[None, str]) -> Union[None, ShefDateTime] :
+    def get_creation_time(self, obstime: DateTime, token: Union[None, str]) -> Union[None, DateTime] :
         '''
         Generate a creation time from an obsersation time and a token
         '''
         if not token:
             return None
-        curtime = ShefDateTime.now('Z' if self.shefit_times else ShefParser.UTC)
-        threshold = ShefDateTime(obstime.year, obstime.month, obstime.day, 0, 0, 0, tzinfo=obstime.tzinfo) + MonthsDelta(120)
+        curtime = ShefParser.DateTime.now('Z' if self.shefit_times else ShefParser.UTC)
+        threshold = ShefParser.DateTime(obstime.year, obstime.month, obstime.day, 0, 0, 0, tzinfo=obstime.tzinfo) + MonthsDelta(120)
         s = token
         length = len(s)
         try :
             if length == 12 :   # ccyymmddhhnn
                 y, m, d, h, n = int(s[0:4]), int(s[4:6]), int(s[6:8]), int(s[8:10]), int(s[10:12])
-                dt = ShefDateTime(y, m, d, h, n, 0, tzinfo=obstime.tzinfo)
+                dt = ShefParser.DateTime(y, m, d, h, n, 0, tzinfo=obstime.tzinfo)
             elif length == 10 : # yymmddhhnn
                 y = curtime.year - curtime.year % 100 + int(s[0:2])
                 m, d, h, n = int(s[2:4]), int(s[4:6]), int(s[6:8]), int(s[8:10])
-                dt = ShefDateTime(y, m, d, h, n, 0, tzinfo=obstime.tzinfo)
+                dt = ShefParser.DateTime(y, m, d, h, n, 0, tzinfo=obstime.tzinfo)
                 while dt > threshold :
                     dt2 = dt - MonthsDelta(1200)
-                    if not isinstance(dt2, ShefDateTime) :
-                        raise ShefParserException(f"Expected ShefDateTime object, got {dt2.__class__.__name__}")
+                    if not isinstance(dt2, ShefParser.DateTime) :
+                        raise ShefParser.ParseException(f"Expected ShefParser.DateTime object, got {dt2.__class__.__name__}")
                     dt = dt2
             elif length == 8 :  # mmddhhnn
                 y, m, d, h, n = obstime.year, int(s[0:2]), int(s[2:4]), int(s[4:6]), int(s[6:8])
-                dt = ShefDateTime(y, m, d, h, n, 0, tzinfo=obstime.tzinfo)
+                dt = ShefParser.DateTime(y, m, d, h, n, 0, tzinfo=obstime.tzinfo)
                 while dt > threshold :
                     dt2 = dt - MonthsDelta(1200)
-                    if not isinstance(dt2, ShefDateTime) :
-                        raise ShefParserException(f"Expected ShefDateTime object, got {dt2.__class__.__name__}")
+                    if not isinstance(dt2, ShefParser.DateTime) :
+                        raise ShefParser.ParseException(f"Expected ShefParser.DateTime object, got {dt2.__class__.__name__}")
                     dt = dt2
             elif length == 6 :  # mmddhh
                 y, m, d, h, n = obstime.year, int(s[0:2]), int(s[2:4]), int(s[4:6]), 0
-                dt = ShefDateTime(y, m, d, h, n, 0, tzinfo=obstime.tzinfo)
+                dt = ShefParser.DateTime(y, m, d, h, n, 0, tzinfo=obstime.tzinfo)
                 while dt > threshold :
                     dt2 = dt - MonthsDelta(1200)
-                    if not isinstance(dt2, ShefDateTime) :
-                        raise ShefParserException(f"Expected ShefDateTime object, got {dt2.__class__.__name__}")
+                    if not isinstance(dt2, ShefParser.DateTime) :
+                        raise ShefParser.ParseException(f"Expected ShefParser.DateTime object, got {dt2.__class__.__name__}")
                     dt = dt2
             elif length == 4 :  # mmdd
                 hour = 12 if obstime.tzinfo in ('Z', ShefParser.UTC) else 24
                 y, m, d, h, n = obstime.year, int(s[0:2]), int(s[2:4]), hour, 0
-                dt = ShefDateTime(y, m, d, h, n, 0, tzinfo=obstime.tzinfo)
+                dt = ShefParser.DateTime(y, m, d, h, n, 0, tzinfo=obstime.tzinfo)
                 while dt > threshold :
                     dt2 = dt - MonthsDelta(1200)
-                    if not isinstance(dt2, ShefDateTime) :
-                        raise ShefParserException(f"Expected ShefDateTime object, got {dt2.__class__.__name__}")
+                    if not isinstance(dt2, ShefParser.DateTime) :
+                        raise ShefParser.ParseException(f"Expected ShefParser.DateTime object, got {dt2.__class__.__name__}")
                     dt = dt2
             else :
-                raise ShefParserException(f"Bad creation time: [{token}]")
+                raise ShefParser.ParseException(f"Bad creation time: [{token}]")
             return dt
         except :
-            raise ShefParserException(f"Bad creation time: [{token}]")
+            raise ShefParser.ParseException(f"Bad creation time: [{token}]")
 
     def parse_value_token_alt(self, token: str) -> tuple :
         '''
@@ -2238,9 +2347,9 @@ class ShefParser :
                 break
         if error :
             if self._replacement_split_pattern.sub("", token).strip() :
-                raise ShefParserException(f"Invalid value: [{token}]")
+                raise ShefParser.ParseException(f"Invalid value: [{token}]")
             else :
-                raise ShefParserException("Missing value")
+                raise ShefParser.ParseException("Missing value")
         return value, qualifier
 
     def parse_value_token(self, token: str, pe_code: str, units: str) -> tuple :
@@ -2273,7 +2382,7 @@ class ShefParser :
             # Precipitation trace value #
             #---------------------------#
             if pe_code not in ("PC", "PP") :
-                raise ShefParserException(f"Value [{m.group(3)}] is not valid for pe_code [{pe_code}]")
+                raise ShefParser.ParseException(f"Value [{m.group(3)}] is not valid for pe_code [{pe_code}]")
             value = .001
         elif matched_groups == "FFT" :
             #-----------------------#
@@ -2287,7 +2396,7 @@ class ShefParser :
             #---------------------------------------#
             # invalid combination of matched groups #
             #---------------------------------------#
-            raise ShefParserException(f"Invalid data value: [{token}]")
+            raise ShefParser.ParseException(f"Invalid data value: [{token}]")
         if not qualifier :
             qualifier = m.group(5).upper()
         return value, qualifier
@@ -2306,7 +2415,7 @@ class ShefParser :
                 else :
                     return ZoneInfo(text)
             except :
-                raise ShefParserException(f"Cannot instantiate time zone [{name}]")
+                raise ShefParser.ParseException(f"Cannot instantiate time zone [{name}]")
 
     def get_english_unit_value(self, value: float, parameter: str) -> float :
         '''
@@ -2316,7 +2425,7 @@ class ShefParser :
         try :
             factor = self._pe_conversions[key]
         except KeyError :
-            raise ShefParserException(f"Cannot find conversion factor for phyical element [{key}]")
+            raise ShefParser.ParseException(f"Cannot find conversion factor for phyical element [{key}]")
         if factor == -1 :
             # C to F conversion
             value = value * 1.8 + 32
@@ -2383,7 +2492,7 @@ class ShefParser :
         length    = None
         m = self._positional_fields_pattern.search(message)
         if not m :
-            raise ShefParserException(f"Mal-formed positional fields: [{message}]")
+            raise ShefParser.ParseException(f"Mal-formed positional fields: [{message}]")
         #------------------------------#
         # process the positionl fields #
         #------------------------------#
@@ -2395,23 +2504,23 @@ class ShefParser :
         if not time_zone :
             time_zone = 'Z'
         zi = self.get_time_zone(time_zone)
-        dateval = ShefDateTime(dateval.year, dateval.month, dateval.day, tzinfo=zi)
+        dateval = ShefParser.DateTime(dateval.year, dateval.month, dateval.day, tzinfo=zi)
         datastr = message[length:].strip()
         tokens  = self.tokenize_a_e_data_string(datastr, 'A', revised)
         #-----------------------------#
         # set the default data values #
         #-----------------------------#
         if time_zone == 'Z' :
-            obstime = ShefDateTime(dateval.year, dateval.month, dateval.day, 12, 0, 0, tzinfo=zi)
+            obstime = ShefParser.DateTime(dateval.year, dateval.month, dateval.day, 12, 0, 0, tzinfo=zi)
         else :
-            obstime = ShefDateTime(dateval.year, dateval.month, dateval.day, 0, 0, 0, tzinfo=zi)
+            obstime = ShefParser.DateTime(dateval.year, dateval.month, dateval.day, 0, 0, 0, tzinfo=zi)
         last_explicit_time = obstime
         createtime_str     = None
         default_qualifier  = 'Z'
         units              = "EN"
         duration_unit      = 'Z'
         duration_value     = None
-        outrecs:list[OutputRecord] = []
+        outrecs:list[ShefParser.OutputRecord] = []
         #--------------------------------#
         # process the data string fields #
         #--------------------------------#
@@ -2438,12 +2547,12 @@ class ShefParser :
                                 last_explicit_time = obstime
                                 relative_specified = False
                             pos += m.end(1)+1
-                        except ShefParserException as spe :
+                        except ShefParser.ParseException as spe :
                             self.error(str(spe))
-                            return [] if self._no_tolerance else outrecs
+                            return [] if self._reject_problematic else outrecs
                     if token[pos:] :
                         self.error(f"Unexpected data string item: [{token}]")
-                        return [] if self._no_tolerance else outrecs
+                        return [] if self._reject_problematic else outrecs
                 elif self._create_time_pattern.match(token) :
                     #---------------------------------------------#
                     # set the creation time for subsequent values #
@@ -2461,7 +2570,7 @@ class ShefParser :
                     default_qualifier = token[2].upper()
                     if default_qualifier not in self._qualifier_codes :
                         self.error(f"Bad data qualifier: [{default_qualifier}]")
-                        return [] if self._no_tolerance else outrecs
+                        return [] if self._reject_problematic else outrecs
                 elif self._duration_code_pattern.match(token) :
                     #----------------------------------------------------------------#
                     # set the duration for subequent values with duration code = 'V' #
@@ -2472,7 +2581,7 @@ class ShefParser :
                     else :
                         duration_value = int(token[3:])
                         if duration_value > 99 :
-                            raise ShefParserException(f"Invalid duration code variable [{token}]")
+                            raise ShefParser.ParseException(f"Invalid duration code variable [{token}]")
                 elif not token :
                     #----------------------------------#
                     # ignore NULL fields in .A message #
@@ -2480,7 +2589,7 @@ class ShefParser :
                     pass
                 else :
                     self.error(f"Unexpected data string item: [{token}]")
-                    return [] if self._no_tolerance else outrecs
+                    return [] if self._reject_problematic else outrecs
             else :
                 #------------#
                 # data value #
@@ -2489,63 +2598,63 @@ class ShefParser :
                 try :
                     parameter_code, use_prev_7am = self.get_parameter_code(code)
                     orig_parameter_code = code
-                except ShefParserException as spe :
+                except ShefParser.ParseException as spe :
                     self.error(str(spe))
-                    if self._no_tolerance :
+                    if self._reject_problematic :
                         return []
                     continue
                 if use_prev_7am :
                     if relative_specified :
                         self.error("Cannot use relative date/time offsets with send codes QY, HY, or PY")
-                        if self._no_tolerance :
+                        if self._reject_problematic :
                             return []
                         continue
-                    if obstime.tzinfo == 'Z' if self.shefit_times else ShefParser.UTC :
+                    if obstime.tzinfo == ('Z' if parser.shefit_times else ShefParser.UTC) :
                         self.error("Cannot use Zulu/UTC time zone with send codes QY, HY, or PY")
-                        if self._no_tolerance :
+                        if self._reject_problematic :
                             return []
                         continue
-                    t = ShefDateTime(obstime.year, obstime.month, obstime.day, obstime.hour, obstime.minute, obstime.second, tzinfo=obstime.tzinfo)
+                    t = ShefParser.DateTime(obstime.year, obstime.month, obstime.day, obstime.hour, obstime.minute, obstime.second, tzinfo=obstime.tzinfo)
                     if t.hour < 7 :
                         t2 = t - timedelta(days=1)
-                        if not isinstance(t2, ShefDateTime) :
-                            raise ShefParserException(f"Expected ShefDateTime object, got [{t2.__class__.__name__}]")
+                        if not isinstance(t2, ShefParser.DateTime) :
+                            raise ShefParser.ParseException(f"Expected ShefParser.DateTime object, got [{t2.__class__.__name__}]")
                         t = t2
-                    obstime = ShefDateTime(t.year, t.month, t.day, 7, 0, 0, tzinfo=t.tzinfo)
+                    obstime = ShefParser.DateTime(t.year, t.month, t.day, 7, 0, 0, tzinfo=t.tzinfo)
                 if len(tokens[i]) == 1 :
                     continue # same as a NULL field - a parameter code with no value
                 try :
                     value_token = tokens[i][1].upper()
                     value, qualifier = self.parse_value_token(value_token, parameter_code[:2], units)
-                except ShefParserException as spe :
+                except ShefParser.ParseException as spe :
                     if self._obs_time_pattern2.match(value_token) :
                         self.error(f"Expected value for parameter [{parameter_code}], got, observation time [{value_token}]")
-                        if self._no_tolerance :
+                        if self._reject_problematic :
                             return []
                         break
                     elif self._create_time_pattern.match(value_token) :
                         self.error(f"Expected value for parameter [{parameter_code}], got, creation time [{value_token}]")
-                        if self._no_tolerance :
+                        if self._reject_problematic :
                             return []
                         break
                     elif self._unit_system_pattern.match(value_token) :
                         self.error(f"Expected value for parameter [{parameter_code}], got, unit system [{value_token}]")
-                        if self._no_tolerance :
+                        if self._reject_problematic :
                             return []
                         break
                     elif self._data_qualifier_pattern.match(value_token) :
                         self.error(f"Expected value for parameter [{parameter_code}], got, data qualifier [{value_token}]")
-                        if self._no_tolerance :
+                        if self._reject_problematic :
                             return []
                         break
                     elif self._duration_code_pattern.match(value_token) :
                         self.error(f"Expected value for parameter [{parameter_code}], got, duration code [{value_token}]")
-                        if self._no_tolerance :
+                        if self._reject_problematic :
                             return []
                         break
                     else :
                         self.error(str(spe))
-                        if self._no_tolerance :
+                        if self._reject_problematic :
                             return []
                     continue
                 if not qualifier :
@@ -2564,7 +2673,7 @@ class ShefParser :
                 if parameter_code[3] == 'F' and not createtime_str :
                     self.warning(f"Forecast parameter [{parameter_code}] value [{value}] does not have creation date")
 
-                outrecs.append(OutputRecord(
+                outrecs.append(ShefParser.OutputRecord(
                     self,
                     location,
                     parameter_code,
@@ -2601,12 +2710,11 @@ class ShefParser :
         #-----------------------------#
         revised   = None
         location  = None
-        date_time = None
         time_zone = None
         length    = None
         m = self._positional_fields_pattern.search(message)
         if not m :
-            raise ShefParserException(f"Mal-formed positional fields: [{message}]")
+            raise ShefParser.ParseException(f"Mal-formed positional fields: [{message}]")
         #-------------------------------#
         # process the positional fields #
         #-------------------------------#
@@ -2618,16 +2726,16 @@ class ShefParser :
         if not time_zone :
             time_zone = 'Z'
         zi = self.get_time_zone(time_zone)
-        dateval = ShefDateTime(dateval.year, dateval.month, dateval.day, tzinfo=zi)
+        dateval = ShefParser.DateTime(dateval.year, dateval.month, dateval.day, tzinfo=zi)
         datastr = message[length:].strip()
         tokens  = self.tokenize_a_e_data_string(datastr, 'E', revised)
         #-----------------------------#
         # set the default data values #
         #-----------------------------#
         if time_zone == 'Z' :
-            obstime = ShefDateTime(dateval.year, dateval.month, dateval.day, 12, 0, 0, tzinfo=zi)
+            obstime = ShefParser.DateTime(dateval.year, dateval.month, dateval.day, 12, 0, 0, tzinfo=zi)
         else :
-            obstime = ShefDateTime(dateval.year, dateval.month, dateval.day, 0, 0, 0, tzinfo=zi)
+            obstime = ShefParser.DateTime(dateval.year, dateval.month, dateval.day, 0, 0, 0, tzinfo=zi)
         parameter_code     = None
         original_obstime   = obstime
         last_explicit_time = obstime
@@ -2638,7 +2746,7 @@ class ShefParser :
         units              = "EN"
         duration_unit      = 'Z'
         duration_value     = None
-        outrecs: list[OutputRecord] = []
+        outrecs: list[ShefParser.OutputRecord] = []
         #--------------------------------#
         # process the data string fields #
         #--------------------------------#
@@ -2664,19 +2772,19 @@ class ShefParser :
                             if token[pos+1] == 'R' :
                                 relative_specified = True
                                 if use_prev_7am :
-                                    raise ShefParserException("Cannot use relative date/time offsets with send codes QY, HY, or PY")
+                                    raise ShefParser.ParseException("Cannot use relative date/time offsets with send codes QY, HY, or PY")
                         else :
                             obstime, relativetime, century_specified = self.get_observation_time(original_obstime, m.group(1).upper(), century_specified, dot_b=False)
                             last_explicit_time = obstime
-                    except ShefParserException as spe :
+                    except ShefParser.ParseException as spe :
                         self.error(str(spe))
-                        if self._no_tolerance :
+                        if self._reject_problematic :
                             return []
                         break
                     pos += m.end(1)+1
                 if token[pos:] :
                     self.error(f"Unexpected data string item: [{token}]")
-                    return [] if self._no_tolerance else outrecs
+                    return [] if self._reject_problematic else outrecs
                 time_series_code = 1
             elif self._create_time_pattern.match(token) :
                 #---------------------------------------------#
@@ -2697,7 +2805,7 @@ class ShefParser :
                 default_qualifier = token[2].upper()
                 if default_qualifier not in self._qualifier_codes :
                     self.error(f"Bad data qualifier: [{default_qualifier}]")
-                    return [] if self._no_tolerance else outrecs
+                    return [] if self._reject_problematic else outrecs
             elif self._duration_code_pattern.match(token) :
                 #----------------------------------------------------------------#
                 # set the duration for subequent values with duration code = 'V' #
@@ -2708,22 +2816,22 @@ class ShefParser :
                 else :
                     duration_value = int(token[3:])
                     if duration_value > 99 :
-                        raise ShefParserException(f"Invalid duration code variable [{token}]")
+                        raise ShefParser.ParseException(f"Invalid duration code variable [{token}]")
                 time_series_code = 1
             elif self._interval_pattern.match(token) :
                 #-----------------------------------------#
                 # set the intrerval for subsequent values #
                 #-----------------------------------------#
                 if use_prev_7am :
-                    raise ShefParserException("Cannot data interval with send codes QY, HY, or PY")
+                    raise ShefParser.ParseException(f"Cannot use data interval [{token}] with send codes QY, HY, or PY")
                 if interval :
                     self.error("Interval specified more than once")
-                    return [] if self._no_tolerance else outrecs
+                    return [] if self._reject_problematic else outrecs
                 time_series_code = 1
                 interval_unit = token[2].upper()
                 interval_value = int(token[3:])
                 if abs(interval_value) > 99 :
-                    raise ShefParserException(f"Invalid interval value: [{token}]")
+                    raise ShefParser.ParseException(f"Invalid interval value: [{token}]")
                 if interval_unit == 'S' :
                     interval = timedelta(seconds=interval_value)
                 elif interval_unit == 'N' :
@@ -2744,26 +2852,26 @@ class ShefParser :
                 #-------------------------------------------------#
                 if parameter_code :
                     self.error("Parameter code specified more than once")
-                    return [] if self._no_tolerance else outrecs
+                    return [] if self._reject_problematic else outrecs
                 code = token.upper()
                 if len(code) < 2 or (code[:2] not in self._send_codes and code[:2] not in self._pe_conversions) :
                     self.error(f"Invalid PE code: [{code[:min(2, len(code))]}]")
-                    return [] if self._no_tolerance else outrecs
+                    return [] if self._reject_problematic else outrecs
                 parameter_code, use_prev_7am = self.get_parameter_code(code)
                 orig_parameter_code = code
                 if use_prev_7am :
                     if relative_specified :
-                        raise ShefParserException("Cannot use relative date/time offsets with send codes QY, HY, or PY")
-                    if obstime.tzinfo == 'Z' if self.shefit_times else ShefParser.UTC :
-                        raise ShefParserException("Cannot use Zulu/UTC time zone with send codes QY, HY, or PY")
+                        raise ShefParser.ParseException("Cannot use relative date/time offsets with send codes QY, HY, or PY")
+                    if obstime.tzinfo == ('Z' if parser.shefit_times else ShefParser.UTC) :
+                        raise ShefParser.ParseException("Cannot use Zulu/UTC time zone with send codes QY, HY, or PY")
                     if interval :
-                        raise ShefParserException("Cannot data interval with send codes QY, HY, or PY")
+                        raise ShefParser.ParseException("Cannot data interval with send codes QY, HY, or PY")
             elif self._value_pattern.match(token) :
                 #------------#
                 # data value #
                 #------------#
                 if parameter_code is None :
-                    raise ShefParserException("Value encountered before parameter code")
+                    raise ShefParser.ParseException("Value encountered before parameter code")
                 value, qualifier = self.parse_value_token(token.upper(), parameter_code[:2], units)
                 if not qualifier :
                     qualifier = default_qualifier
@@ -2782,7 +2890,7 @@ class ShefParser :
                 # missing value if in list of values #
                 #------------------------------------#
                 if not (parameter_code and interval) :
-                    raise ShefParserException("Null field in data definition")
+                    raise ShefParser.ParseException("Null field in data definition")
                 obstime += interval
                 time_series_code = 2
             elif token[0] in "\"'" :
@@ -2791,25 +2899,25 @@ class ShefParser :
                 #------------------#
                 if value is None :
                     self.error("Comment encountered before value")
-                    if self._no_tolerance :
+                    if self._reject_problematic :
                         return []
             else :
                 self.error(f"Unexpected data string item: [{token}]")
-                if self._no_tolerance :
+                if self._reject_problematic :
                     return []
                 obstime += interval
                 continue
 
             if value is not None :
                 if not parameter_code :
-                    raise ShefParserException("Value encountered before parameter code")
+                    raise ShefParser.ParseException("Value encountered before parameter code")
                 if not interval :
-                    raise ShefParserException("Value encountered before interval")
+                    raise ShefParser.ParseException("Value encountered before interval")
 
                 if parameter_code[3] == 'F' and not createtime_str :
                     self.warning(f"Forecast parameter [{parameter_code}] value [{value}] does not have creation date")
 
-                outrec = OutputRecord(
+                outrec = ShefParser.OutputRecord(
                     self,
                     location,
                     parameter_code,
@@ -2828,9 +2936,9 @@ class ShefParser :
                 time_series_code = 2
                 try :
                     obstime += interval
-                except ShefParserException as spe :
+                except ShefParser.ParseException as spe :
                     self.error(str(spe))
-                    return [] if self._no_tolerance else outrecs
+                    return [] if self._reject_problematic else outrecs
         return outrecs
 
     def parse_dot_b_message(self, message: str) -> list:
@@ -2863,7 +2971,7 @@ class ShefParser :
         #------------------------------------------------------------------------------------#
         m = self._dot_b_header_lines_pattern.search(message)
         if not m :
-            raise ShefParserException(f"Invalid .B message: {message}")
+            raise ShefParser.ParseException(f"Invalid .B message: {message}")
         lines = m.group(0).strip().split('\n')
         lines[0] = lines[0].strip()
         for i in range(1, len(lines)) :
@@ -2880,7 +2988,7 @@ class ShefParser :
         time_zone  = None
         m = self._positional_fields_pattern.search(message)
         if not m :
-            raise ShefParserException(f"Mal-formed positional fields: [{message}]")
+            raise ShefParser.ParseException(f"Mal-formed positional fields: [{message}]")
         #--------------------------------------#
         # process the header positional fields #
         #--------------------------------------#
@@ -2890,19 +2998,19 @@ class ShefParser :
         dateval, century_specified = self.parse_header_date(m.group(2).upper(), time_zone, self.shefit_times)
         if not time_zone : time_zone = 'Z'
         zi      = self.get_time_zone(time_zone)
-        dateval = ShefDateTime(dateval.year, dateval.month, dateval.day, tzinfo=zi)
+        dateval = ShefParser.DateTime(dateval.year, dateval.month, dateval.day, tzinfo=zi)
         #-----------------------------#
         # set the default data values #
         #-----------------------------#
         if time_zone == 'Z' :
-            default_obstime = ShefDateTime(dateval.year, dateval.month, dateval.day, 12, 0, 0, tzinfo=zi)
+            default_obstime = ShefParser.DateTime(dateval.year, dateval.month, dateval.day, 12, 0, 0, tzinfo=zi)
         else :
-            default_obstime = ShefDateTime(dateval.year, dateval.month, dateval.day, 0, 0, 0, tzinfo=zi)
-        dateval = ShefDateTime(dateval.year, dateval.month, dateval.day, tzinfo=zi)
+            default_obstime = ShefParser.DateTime(dateval.year, dateval.month, dateval.day, 0, 0, 0, tzinfo=zi)
+        dateval = ShefParser.DateTime(dateval.year, dateval.month, dateval.day, tzinfo=zi)
         parameter_code     = None
         obstime_specified  = False
         obstime            = default_obstime
-        last_explicit_time: Union[None, ShefDateTime] = default_obstime
+        last_explicit_time: Union[None, ShefParser.DateTime] = default_obstime
         relativetime: Union[None, timedelta, MonthsDelta] = None
         createtime_str     = None
         createtime         = None
@@ -2914,7 +3022,7 @@ class ShefParser :
         use_prev_7am       = False
         hdr_param_info: list[Any] = []
         param_count        = 0
-        outrecs: list[OutputRecord] = []
+        outrecs: list[ShefParser.OutputRecord] = []
         #--------------------------------------#
         # process the parameter control fields #
         #--------------------------------------#
@@ -2934,13 +3042,13 @@ class ShefParser :
                     while True :
                         m = self._obs_time_pattern2.search(token[pos:])
                         if not m :
-                            if self._no_tolerance :
+                            if self._reject_problematic :
                                 self.error(f"Unexpected data string item: [{token.replace('@', '/')}]")
                                 return []
                             break
                         try :
                             obstime, relativetime, century_specified = self.get_observation_time(obstime, m.group(1).upper(), century_specified, dot_b=True)
-                        except ShefParserException as spe :
+                        except ShefParser.ParseException as spe :
                             obstime_error = str(spe)
                         if relativetime :
                             obstime_specified = False
@@ -2967,7 +3075,7 @@ class ShefParser :
                     #---------------------------------------------#
                     qualifier = token[2].upper()
                     if qualifier not in self._qualifier_codes :
-                        raise ShefParserException(f"Bad data qualifier: [{qualifier}]")
+                        raise ShefParser.ParseException(f"Bad data qualifier: [{qualifier}]")
                 elif self._duration_code_pattern.match(token) :
                     #--------------------------------------------------------------------#
                     # set the duration for subequent parameters with duration code = 'V' #
@@ -2978,18 +3086,18 @@ class ShefParser :
                     else :
                         duration_value = int(token[3:])
                         if duration_value > 99 :
-                            raise ShefParserException(f"Invalid duration code variable [{token}]")
+                            raise ShefParser.ParseException(f"Invalid duration code variable [{token}]")
                 elif self._parameter_code_pattern.match(token) :
                     #----------------------------------------------------------#
                     # create a new parameter control object for this parameter #
                     #----------------------------------------------------------#
                     code = token.upper()
                     if len(code) < 2 or (code[:2] not in self._send_codes and code[:2] not in self._pe_conversions) :
-                        raise ShefParserException(f"Invalid PE code: [{code[:min(2, len(code))]}]")
+                        raise ShefParser.ParseException(f"Invalid PE code: [{code[:min(2, len(code))]}]")
                     parameter_code, use_prev_7am = self.get_parameter_code(code)
                     orig_parameter_code = code
                     if obstime_error :
-                        raise ShefParserException(obstime_error)
+                        raise ShefParser.ParseException(obstime_error)
 
                     if createtime_str and not createtime :
                         hdr_param_info.append(ShefParser.DotBHeaderParameterInfo(
@@ -3035,9 +3143,9 @@ class ShefParser :
                 else :
                     self.error(f"Unexpected data string item: [{token}]")
                     return []
-            except ShefParserException as spe :
+            except ShefParser.ParseException as spe :
                 self.error(str(spe))
-                if self._no_tolerance :
+                if self._reject_problematic :
                     return []
                 hdr_param_info.append(None)
         #------------------#
@@ -3061,7 +3169,7 @@ class ShefParser :
             relativetime_overrides = len(hdr_param_info) * [None]
             if not self._dot_b_body_line_pattern.match(bodylines[i]) and bodylines[i].strip() :
                 self.error(f"Invalid item in body line or packed report: [{bodylines[i]}]")
-                if self._no_tolerance :
+                if self._reject_problematic :
                     return []
                 continue
             if not bodylines[i].strip() :
@@ -3098,7 +3206,7 @@ class ShefParser :
                             else :
                                 last_explicit_time = obstime_override
                                 time_overrides[p] = obstime_override
-                        except ShefParserException as spe :
+                        except ShefParser.ParseException as spe :
                             skip_parameter = True
                             raise
                     elif self._create_time_pattern.match(token) :
@@ -3132,7 +3240,7 @@ class ShefParser :
                         if hdr_param_info[p] :
                             try :
                                 value, qualifier = self.parse_value_token(token, hdr_param_info[p].pe_code, hdr_param_info[p].units)
-                            except ShefParserException as spe :
+                            except ShefParser.ParseException as spe :
                                 p += 1
                                 outrec_pos += 1
                                 raise
@@ -3146,7 +3254,7 @@ class ShefParser :
                             if comment :
                                 if comment[0] not in "'\"" :
                                     self.error(f"Invalid data value [{token}]")
-                                    if self._no_tolerance :
+                                    if self._reject_problematic :
                                         return []
                                     break
                             if p > 0 :
@@ -3182,7 +3290,7 @@ class ShefParser :
                         p += 1
                 except Exception as e :
                     self.error(str(e))
-                    if self._no_tolerance :
+                    if self._reject_problematic :
                         return []
             if outrec_pos < param_count :
                 self.warning(f"Value count ({outrec_pos}) is less than parameter count ({param_count}) for location [{location}]")
@@ -3194,7 +3302,6 @@ def main() -> None :
     '''
     global logger
     start_time = datetime.now()
-    progname = Path(sys.argv[0]).stem
     #--------------------#
     # parse command line #
     #--------------------#
@@ -3209,21 +3316,24 @@ def main() -> None :
         help="path of SHEFPARM file to use")
     argparser.add_argument(
         "-i",
-        "--infile",
+        "--in",
         action="store",
         default=sys.stdin,
+        metavar="input_filename",
         help="input file (defaults to <stdin>)")
     argparser.add_argument(
         "-o",
-        "--outfile",
+        "--out",
         action="store",
         default=sys.stdout,
+        metavar="output_filename",
         help="output file (defaults to <stdout>)")
     argparser.add_argument(
         "-l",
-        "--logfile",
+        "--log",
         action="store",
         default=sys.stderr,
+        metavar="log_filename",
         help="log file (defaults to <sterr>)")
     argparser.add_argument(
         "-f",
@@ -3253,14 +3363,26 @@ def main() -> None :
         action="store_true",
         help="use shefit date/time logic")
     argparser.add_argument(
-        "--no_tolerance",
+        "--reject_problematic",
         action="store_true",
-        help="messages with errors generate no output")
+        help="reject all values from messages that contain errors")
     argparser.add_argument(
         "--description",
         action="store_true",
         help="show a more detailed program description and exit")
+    argparser.add_argument(
+        "--make_shefparm",
+        action="store_true",
+        help="write SHEFPARM data to <stdout> and exit (exclusive to other arguments except -o/--out)")
     args = argparser.parse_args()
+
+    if args.make_shefparm :
+        if args.shefparm or getattr(args, "in") != sys.stdin or args.log != sys.stderr or args.format != 1 or args.loglevel != "INFO" \
+        or args.defaults or args.timestamps or args.reject_problematic or args.description :
+            print("\nArgument --make_shefparm may not be used with any other argument except -o/--out\n")
+            exit(-1)
+        ShefParser.write_shefparm_data(args.out)
+        exit(0)
 
     if args.description :
         print(f'''
@@ -3269,33 +3391,53 @@ def main() -> None :
 SHEFPARM file:
     Unlike shefit, {progname} doesn't require the use of a SHEFPARM file, although one may be used.
 
-    If -d (--defaults) is not specified, {progname} uses the same rules as shefit for locating the
+    If --defaults is not specified, {progname} uses the same rules as shefit for locating the
     SHEFPARM file:
         1. the current directory is searched first
         2. the directory specified by "rfs_sys_dir" environment variable is searched
-    However, unlike shefit, if no SHEFPARM file is found, {progname} will use program defaults.
 
-    Also unlike shefit, the location of the SHEFPARM file can be specified the using -s (--shefparm)
-    option, and doesn't need to be named SHEFPARM.
+    However, unlike shefit which exits if no SHEFPARM file is found, {progname} will use program
+    defaults instead. The program defaults have the same behavior as using the SHEFPARM file
+    bundled with the latest source code for shefit.
+
+    Also unlike shefit, the location of the SHEFPARM file can be specified the using -s/--shefparm
+    option, and doesn't need to be named SHEFPARM. Using -s/--shefparm overrides searching the
+    default locations for the file.
 
     If a SHEFPARM file is used, any modifications it makes to the program defaults are logged at
-    the INFO level.
+    the INFO level on program startup.
 
-    The -d (--defaults) option may be specified to force {progname} to use program defaults if a
+    The --defaults option may be specified to force {progname} to use program defaults if a
     SHEFPARM file exists in the current or $rfs_sys_dir directories.
 
-    The -d (--defaults) and -s (--shefparm) options are mutually exclusive.
+    The --defaults and -s/--shefparm options are mutually exclusive.
+
+    The --make_shefparm option may be used to output program defaults in SHEFPARM format. This may
+    be useful if it is necessary to override the program defaults. Either redirect <stdout> or
+    use the -o/--out option to capture the SHEFPARM data to a file in order to modify it for use.
 
 Output format:
-    Like shefit, the default output format is the shefit text version 1. The output formats -f 1
-    (--format 1) and -f 2 (--format 2) are equivalent to the shefit -1 and shefit -2 options,
-    respectively. There is no equivalent to the shefit -b option.
+    Like shefit, the default output format is the shefit text version 1. The output formats
+    -f/--format 1 and -f/--format 2 are equivalent to the shefit -1 and -2 options, respectively.
+    There is no equivalent to the shefit -b (binary output) option.
 
-TImes and timezone processing:
+Times and timezone processing:
     By default, {progname} uses modern date/time and time zone objects to process times and time
-    zones, which do not always agree with the logic used in shefit. Using the --shefit_times option
-    to force {progname} to use the same date/time logic as shefit is helpful when comparing
-    {progname} output to shefit output.
+    zones, which do not always produce the same results as the logic used in shefit. Use the
+    --shefit_times option to force {progname} to use the same date/time logic as shefit. This is
+    helpful when comparing {progname} output to shefit output for a common input.
+
+    Note that using --shefit_times causes {progname} to (like shefit) always generate incorrect UTC
+    times for SHEF time zones Y, YD, YS, and ND, and to generate incorrect UTC times for SHEF time
+    zone N during daylight saving time.
+
+Messages with errors:
+    In many circumstances {progname} is able to process valid portions of messages that occur
+    after an erroneous portion, where shefit normally stops further processing of a message when
+    it encounters an error. This usually results in parsing more valid values from problematic
+    messages than shefit. However, it can result treating invalid data as valid in certain messages
+    that are badly mangled. This behavior can be prevented by using the --reject_problematic option
+    which discards all data from messages with errors.
         ''')
         exit(0)
     #-----------------------------------------------------------------#
@@ -3322,26 +3464,28 @@ TImes and timezone processing:
         "ERROR"    : logging.ERROR,
         "CRITICAL" : logging.CRITICAL,
         "ALL"      : logging.NOTSET}[args.loglevel]
-    if isinstance(args.logfile, str) :
-        if os.path.exists(args.logfile) :
-            if not os.path.isfile(args.logfile) :
-                raise Exception(f"{args.logfile} is not a regular file")
-            os.remove(args.logfile)
-        logging.basicConfig(filename=args.logfile, format=format, datefmt=datefmt, level=level)
-        logfile_name = args.logfile
+    if isinstance(args.log, str) :
+        if os.path.exists(args.log) :
+            if not os.path.isfile(args.log) :
+                raise Exception(f"{args.log} is not a regular file")
+            os.remove(args.log)
+        logging.basicConfig(filename=args.log, format=format, datefmt=datefmt, level=level)
+        logfile_name = args.log
     else :
-        logging.basicConfig(stream=args.logfile, format=format, datefmt=datefmt, level=level)
-        logfile_name = args.logfile.name
+        logging.basicConfig(stream=args.log, format=format, datefmt=datefmt, level=level)
+        logfile_name = args.log.name
     logger  = logging.getLogger(progname)
     #------------------#
     # log startup info #
     #------------------#
+    infile_name = getattr(args, "in") if isinstance(getattr(args, "in"),  str) else getattr(args, "in").name
+    outfile_name = args.out if isinstance(args.out, str) else args.out.name
     if len(sys.argv) == 1 :
         logger.info("")
         logger.info(f"Use '{progname} -h' for help")
         logger.info("")
-    infile_name  = args.infile  if isinstance(args.infile,  str) else args.infile.name
-    outfile_name = args.outfile if isinstance(args.outfile, str) else args.outfile.name
+        logger.info(f"Reading from {infile_name}, press ^D (^Z+Enter on Windows) to exit")
+        logger.info("")
     logger.debug(f"Program {progname} version {version} ({version_date}) starting up")
     logger.debug(f"Input file set to {infile_name}")
     logger.debug(f"Output file set to {outfile_name}")
@@ -3354,9 +3498,9 @@ TImes and timezone processing:
     #-------------------#
     # create the parser #
     #-------------------#
-    parser = ShefParser(args.format, args.shefparm, shefit_times=args.shefit_times, no_tolerance=args.no_tolerance)
-    parser.set_input(args.infile)
-    parser.set_output(args.outfile)
+    parser = ShefParser(args.format, args.shefparm, shefit_times=args.shefit_times, reject_problematic=args.reject_problematic)
+    parser.set_input(getattr(args, "in"))
+    parser.set_output(args.out)
     if args.format == 1 and isinstance(parser._output, TextIOWrapper) and parser._output.isatty():
         parser._output.write("STATION   OBSERVATION-DATE/TM  CREATION-DATE/TIME   PARM-CD     DATA-VALUE Q  PROB-CD DURTN R T  GROUP-NM  QUOTE\n")
         parser._output.write('aaaaaaaa  yyyy mm dd hh nn ss  yyyy mm dd hh nn ss  pedtsep     rrrrr.dddd a  rrr.ddd iiiii i i  aaaaaaaa  "aa..."\n\n')
