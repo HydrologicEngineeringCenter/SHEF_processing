@@ -66,6 +66,8 @@ versions = '''
 +-------+-----------+-----+-------------------------------------------------------------------------+
 | 1.0.3 | 30May2024 | MDP | Bugfixs in info(), warning(), error(), and critcal() methods            |
 +-------+-----------+-----+-------------------------------------------------------------------------+
+| 1.0.4 | 30May2024 | MDP | More bugfixes after reorg and cleanup                                   |
++-------+-----------+-----+-------------------------------------------------------------------------+
 
 Authors:
     MDP  Mike Perryman, USACE IWR-HEC
@@ -104,8 +106,11 @@ class MonthsDelta :
         '''
         return self._eom
 
-    def __repr__(self) -> str :
+    def __str__(self) -> str :
         return f"months={self._months}, eom={self._eom}"
+
+    def __repr__(self) -> str :
+        return f"MonthsDelta({self.__str__()})"
 
 class ShefParser :
     '''
@@ -299,31 +304,31 @@ class ShefParser :
 
     UTC = ZoneInfo("UTC")
 
-    class Exception(__builtins__.Exception) :
+    class Exc(Exception) :
         '''
         Base class for ShefParser exceptions
         '''
         pass
 
-    class InputException(Exception) :
+    class InputException(Exc) :
         '''
         Exceptions related to data input
         '''
         pass
 
-    class OutputException(Exception) :
+    class OutputException(Exc) :
         '''
         Exceptions related to data output
         '''
         pass
 
-    class ParseException(Exception) :
+    class ParseException(Exc) :
         '''
         Exceptions related to parsing
         '''
         pass
 
-    class DateTimeException(Exception) :
+    class DateTimeException(Exc) :
         '''
         Exceptions in ShefParser.DateTime class
         '''
@@ -607,7 +612,10 @@ class ShefParser :
                 dt = self.add_months(other.months, other.eom)._dt
             else :
                 raise ShefParser.DateTimeException(f"Invalid type to add: [{other.__class__.__name__}]")
-            return ShefParser.DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, tzinfo=self._tzinfo)
+            rv = ShefParser.DateTime(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, tzinfo=self._tzinfo)
+            if self._adjusted and dt.hour == dt.minute == dt.second == 0 :
+                rv._adjusted = True
+            return rv
 
         def __sub__(self, other : Union[None, timedelta, MonthsDelta, "ShefParser.DateTime"]) -> Union[timedelta, "ShefParser.DateTime"] :
             '''
@@ -667,22 +675,28 @@ class ShefParser :
             utc = 'Z' if isinstance(self._tzinfo, str) else ShefParser.UTC
             return self.astimezone(utc)._dt > other.astimezone(utc)._dt
 
-        def __repr__(self) -> str :
+        def __str__(self) -> str :
             '''
             Get a string representation
             '''
             dt = self._dt.replace(tzinfo=None)
-            if dt.hour == dt.minute == dt.second == 0 :
+            if self._adjusted and dt.hour == dt.minute == dt.second == 0 :
                 # show 24:00:00 instead of 00:00:00
-                s = (dt - timedelta(hours=1)).__repr__()
+                s = str(dt - timedelta(hours=1))
                 return s[:11] + "24" + s[13:] + f" tzinfo={self._tzinfo}"
-            return dt.__repr__() + f" tzinfo={self._tzinfo}"
+            return dt.__str__() + f" tzinfo={self._tzinfo}"
+
+        def __repr__(self) -> str :
+            '''
+            Get a string representation
+            '''
+            return f"ShefParser.DateTime({self.__str__()})"
 
         def __getattribute__(self, name: str) -> Any :
             '''
             Manage retrieval of members
             '''
-            if name in ("_dt", "_adjusted", "is_dst", "to_timezone", "add_months", "replace", "_tzinfo", "__class__") :
+            if name in ("_dt", "_adjusted", "is_dst", "to_timezone", "add_months", "replace", "_tzinfo", "__class__", "__str__", "__repr__") :
                 return super().__getattribute__(name)
             elif name == "year" :
                 if self._adjusted :
@@ -870,17 +884,20 @@ class ShefParser :
             # 1 - adjust to 7am or shift year, month, day (in local time)
             if self._use_prev_7am :
                 if obst.hour < 7 :
-                    # mypy barfs on "use obst -= timedelta(days=1)"
-                    new_obst = obst - timedelta(days=1)
-                    if not isinstance(new_obst, ShefParser.DateTime) :
-                        raise ShefParser.ParseException(f"Expected ShefParser.DateTime object, got {new_obst.__class__.__name__}")
-                    obst = new_obst
+                    obst += timedelta(days=-1) # dont use "obst -1 timedelta(days=1)" - it causes mypy to complain
                 obst = obst.replace(hour=7, minute=0, second=0)
             elif shift :
                 if isinstance(shift, MonthsDelta) :
                     obst = obst.add_months(shift.months)
                 else :
-                    obst += timedelta(days=int(shift.total_seconds() / 86400))
+                    # DON'T use shift.days!!! If shift is negative it will be incorrect as shown below.
+                    # >>> timedelta(seconds=-3600).days
+                    # -1
+                    # >>> timedelta(seconds=-3600).total_seconds()
+                    # -3600.0
+                    seconds = shift.total_seconds()
+                    days = abs(seconds) // 86400 * (-1 if seconds < 0 else 1)
+                    obst += timedelta(days=days)
             # 2 - convert to UTC, but keep timezone for later use
             zi = obst.tzinfo
             obst = obst.astimezone('Z' if parser.shefit_times else ShefParser.UTC)
@@ -921,7 +938,7 @@ class ShefParser :
                 0,
                 comment)
 
-        def __repr__(self) -> str :
+        def __str__(self) -> str :
             '''
             Get a string representation of the DotBHeaderParameterInfo object
             '''
@@ -929,6 +946,12 @@ class ShefParser :
                 return f"{self._parameter_code} @ {self._obstime.astimezone('Z' if self.parser.shefit_times else ShefParser.UTC)} ({self._relativetime})"
             else :
                 return f"{self._parameter_code} @ {self._obstime.astimezone('Z' if self.parser.shefit_times else ShefParser.UTC)}"
+
+        def __repr__(self) -> str :
+            '''
+            Get a string representation of the DotBHeaderParameterInfo object
+            '''
+            return f"ShefParser.DotBParameterInfo({self.__str__()})"
 
     class OutputRecord :
         '''
@@ -1050,7 +1073,7 @@ class ShefParser :
                 if self.comment :
                     buf.write(f'"{self.comment[1:-1]}"')
                 else :
-                    buf.write('' '')
+                    buf.write('" "')
                 rec = buf.getvalue()
                 buf.close()
             elif fmt == ShefParser.OutputRecord.SHEFIT_TEXT_V2 :
@@ -1631,7 +1654,6 @@ class ShefParser :
             else :
                 lines = textwrap.wrap(f"{message_text} at {self._input_name}:{self._line_number}", width=self._log_line_len)
             logger.info("\n\t".join(lines))
-        self._warning_count += 1
 
     def warning(self, message_text: str) -> None :
         '''
@@ -2264,7 +2286,7 @@ class ShefParser :
                             obstime = bt + MonthsDelta(12*val)
                     else :
                         raise ShefParser.ParseException(f"Bad observation time: [{subtoken}]")
-            except ShefParser.Exception :
+            except ShefParser.Exc :
                 raise
             except :
                 raise ShefParser.ParseException(f"Bad observation time: [{subtoken}]")
@@ -2561,7 +2583,7 @@ class ShefParser :
                                 last_explicit_time = obstime
                                 relative_specified = False
                             pos += m.end(1)+1
-                        except ShefParser.ParseException as spe :
+                        except ShefParser.Exc as spe :
                             self.error(str(spe))
                             return [] if self._reject_problematic else outrecs
                     if token[pos:] :
@@ -2612,7 +2634,7 @@ class ShefParser :
                 try :
                     parameter_code, use_prev_7am = self.get_parameter_code(code)
                     orig_parameter_code = code
-                except ShefParser.ParseException as spe :
+                except ShefParser.Exc as spe :
                     self.error(str(spe))
                     if self._reject_problematic :
                         return []
@@ -2640,7 +2662,7 @@ class ShefParser :
                 try :
                     value_token = tokens[i][1].upper()
                     value, qualifier = self.parse_value_token(value_token, parameter_code[:2], units)
-                except ShefParser.ParseException as spe :
+                except ShefParser.Exc as spe :
                     if self._obs_time_pattern2.match(value_token) :
                         self.error(f"Expected value for parameter [{parameter_code}], got, observation time [{value_token}]")
                         if self._reject_problematic :
@@ -2790,7 +2812,7 @@ class ShefParser :
                         else :
                             obstime, relativetime, century_specified = self.get_observation_time(original_obstime, m.group(1).upper(), century_specified, dot_b=False)
                             last_explicit_time = obstime
-                    except ShefParser.ParseException as spe :
+                    except ShefParser.Exc as spe :
                         self.error(str(spe))
                         if self._reject_problematic :
                             return []
@@ -2950,7 +2972,7 @@ class ShefParser :
                 time_series_code = 2
                 try :
                     obstime += interval
-                except ShefParser.ParseException as spe :
+                except ShefParser.Exc as spe :
                     self.error(str(spe))
                     return [] if self._reject_problematic else outrecs
         return outrecs
@@ -3019,7 +3041,7 @@ class ShefParser :
         if time_zone == 'Z' :
             default_obstime = ShefParser.DateTime(dateval.year, dateval.month, dateval.day, 12, 0, 0, tzinfo=zi)
         else :
-            default_obstime = ShefParser.DateTime(dateval.year, dateval.month, dateval.day, 0, 0, 0, tzinfo=zi)
+            default_obstime = ShefParser.DateTime(dateval.year, dateval.month, dateval.day, 24, 0, 0, tzinfo=zi)
         dateval = ShefParser.DateTime(dateval.year, dateval.month, dateval.day, tzinfo=zi)
         parameter_code     = None
         obstime_specified  = False
@@ -3037,6 +3059,8 @@ class ShefParser :
         hdr_param_info: list[Any] = []
         param_count        = 0
         outrecs: list[ShefParser.OutputRecord] = []
+        if last_explicit_time is None :
+            raise ShefParser.ParseException("No message date time")
         #--------------------------------------#
         # process the parameter control fields #
         #--------------------------------------#
@@ -3056,23 +3080,22 @@ class ShefParser :
                     while True :
                         m = self._obs_time_pattern2.search(token[pos:])
                         if not m :
-                            if self._reject_problematic :
-                                self.error(f"Unexpected data string item: [{token.replace('@', '/')}]")
-                                return []
-                            break
+                            self.error(f"Unexpected data string item: [{token[pos:]}]")
+                            return []
                         try :
-                            obstime, relativetime, century_specified = self.get_observation_time(obstime, m.group(1).upper(), century_specified, dot_b=True)
-                        except ShefParser.ParseException as spe :
+                            obstime, relativetime, century_specified = self.get_observation_time(last_explicit_time, m.group(1).upper(), century_specified, dot_b=True)
+                            if relativetime is not None:
+                                obstime_specified = False
+                            else :
+                                if obstime is None :
+                                    raise ShefParser.ParseException("Bad absolute or relatieve time token: [{token}]")
+                                last_explicit_time = obstime
+                                obstime_specified = True
+                        except ShefParser.Exc as spe :
                             obstime_error = str(spe)
-                        if relativetime :
-                            obstime_specified = False
-                        else :
-                            last_explicit_time = obstime
-                            obstime_specified = True
-                        pos += m.end(1)+1
-                    if token[pos:] :
-                        self.error(f"Unexpected data string item: [{token.replace('@', '/')}]")
-                        return []
+                        pos += m.end()
+                        if pos >= len(token) :
+                            break
                 elif self._create_time_pattern.match(token) :
                     #-------------------------------------------------#
                     # set the creation time for subsequent parameters #
@@ -3131,7 +3154,7 @@ class ShefParser :
                     else :
                         if obstime_specified :
                             relativetime = None
-                        elif not relativetime and last is not None:
+                        elif relativetime is None and last is not None:
                             relativetime = hdr_param_info[last].relativetime
                         hdr_param_info.append(ShefParser.DotBHeaderParameterInfo(
                             self,
@@ -3150,14 +3173,12 @@ class ShefParser :
                     last = len(hdr_param_info) - 1
                     obstime_specified = False
                     relativetime = None
-                    duration_unit = 'Z'
-                    duration_value = None
                 elif not token :
                     pass
                 else :
                     self.error(f"Unexpected data string item: [{token}]")
                     return []
-            except ShefParser.ParseException as spe :
+            except ShefParser.Exc as spe :
                 self.error(str(spe))
                 if self._reject_problematic :
                     return []
@@ -3178,6 +3199,8 @@ class ShefParser :
             units_override = None
             last_explicit_time = None
             comment = None
+            duration_unit = 'Z'
+            duration_value = None
             skip_parameter = False
             time_overrides = len(hdr_param_info) * [None]
             relativetime_overrides = len(hdr_param_info) * [None]
@@ -3205,7 +3228,9 @@ class ShefParser :
                         # obs time override #
                         #-------------------#
                         try :
-                            t = last_explicit_time if last_explicit_time else obstime if obstime else default_obstime
+                            t = last_explicit_time if last_explicit_time else \
+                                obstime if obstime else \
+                                hdr_param_info[p].obstime
                             if token[1] == 'M' and len(token) > 6 :
                                 token = token.ljust(12, '0')
                             elif token[1] == 'D' and len(token) > 4 :
@@ -3220,7 +3245,7 @@ class ShefParser :
                             else :
                                 last_explicit_time = obstime_override
                                 time_overrides[p] = obstime_override
-                        except ShefParser.ParseException as spe :
+                        except ShefParser.Exc as spe :
                             skip_parameter = True
                             raise
                     elif self._create_time_pattern.match(token) :
@@ -3254,7 +3279,7 @@ class ShefParser :
                         if hdr_param_info[p] :
                             try :
                                 value, qualifier = self.parse_value_token(token, hdr_param_info[p].pe_code, hdr_param_info[p].units)
-                            except ShefParser.ParseException as spe :
+                            except ShefParser.Exc as spe :
                                 p += 1
                                 outrec_pos += 1
                                 raise
@@ -3289,8 +3314,8 @@ class ShefParser :
                                     relativetime_overrides[p],
                                     createtime_override_str,
                                     units_override,
-                                    duration_unit,
-                                    duration_value,
+                                    duration_unit if duration_unit != 'Z' else None,
+                                    duration_value if duration_unit != 'Z' else None,
                                     value,
                                     qualifier,
                                     comment))
@@ -3301,6 +3326,8 @@ class ShefParser :
                                 skip_parameter = False
                         value = None
                         comment = None
+                        duration_unit = 'Z'
+                        duration_value = None
                         p += 1
                 except Exception as e :
                     self.error(str(e))
