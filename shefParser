@@ -64,14 +64,16 @@ versions = '''
 +-------+-----------+-----+-------------------------------------------------------------------------+
 | 1.0.2 | 29May2024 | MDP | Reorg, clean up, improve comments, add --make_shefparm                  |
 +-------+-----------+-----+-------------------------------------------------------------------------+
+| 1.0.3 | 30May2024 | MDP | Bugfixs in info(), warning(), error(), and critcal() methods            |
++-------+-----------+-----+-------------------------------------------------------------------------+
 
 Authors:
     MDP  Mike Perryman, USACE IWR-HEC
 '''
 
 progname     = Path(sys.argv[0]).stem
-version      = "1.0.2"
-version_date = "29May2024"
+version      = "1.0.3"
+version_date = "30May2024"
 logger       = logging.getLogger() # make mypy complains if set to None
 
 class MonthsDelta :
@@ -1617,15 +1619,18 @@ class ShefParser :
         '''
         if self._raw_message is not None :
             lines = textwrap.wrap(f"{message_text} in message starting at {self._input_name}:{self._message_location}", width=self._log_line_len)
-            logger.warning("\n\t".join(lines))
+            logger.info("\n\t".join(lines))
             if self._raw_message != self._previous_raw_message :
                 logger.info("Warning is for message :\n\t{}".format("\n\t".join(self._raw_message.split('\n'))))
             else :
                 logger.info("Warning is for message logged above")
             self._previous_raw_message = self._raw_message
         else :
-            lines = textwrap.wrap(f"{message_text} at {self._input_name}:{self._line_number}", width=self._log_line_len)
-            logger.warning("\n\t".join(lines))
+            if self._input_name is None :
+                lines = textwrap.wrap(message_text, width=self._log_line_len)
+            else :
+                lines = textwrap.wrap(f"{message_text} at {self._input_name}:{self._line_number}", width=self._log_line_len)
+            logger.info("\n\t".join(lines))
         self._warning_count += 1
 
     def warning(self, message_text: str) -> None :
@@ -1641,7 +1646,10 @@ class ShefParser :
                 logger.info("Warning is for message logged above")
             self._previous_raw_message = self._raw_message
         else :
-            lines = textwrap.wrap(f"{message_text} at {self._input_name}:{self._line_number}", width=self._log_line_len)
+            if self._input_name is None :
+                lines = textwrap.wrap(message_text, width=self._log_line_len)
+            else :
+                lines = textwrap.wrap(f"{message_text} at {self._input_name}:{self._line_number}", width=self._log_line_len)
             logger.warning("\n\t".join(lines))
         self._warning_count += 1
         if self._message != self._last_message_with_warning :
@@ -1661,7 +1669,10 @@ class ShefParser :
                 logger.info("Error is in message logged above")
             self._previous_raw_message = self._raw_message
         else :
-            lines = textwrap.wrap(f"{message_text} at {self._input_name}:{self._line_number}", width=self._log_line_len)
+            if self._input_name is None :
+                lines = textwrap.wrap(message_text, width=self._log_line_len)
+            else :
+                lines = textwrap.wrap(f"{message_text} at {self._input_name}:{self._line_number}", width=self._log_line_len)
             logger.error("\n\t".join(lines))
         if count_error :
             self._error_count += 1
@@ -1686,7 +1697,10 @@ class ShefParser :
                 logger.info("Critcal error is in message logged above")
             self._previous_raw_message = self._raw_message
         else :
-            lines = textwrap.wrap(f"{message_text} at {self._input_name}:{self._line_number}, aborting parser", width=self._log_line_len)
+            if self._input_name is None :
+                lines = textwrap.wrap(message_text, width=self._log_line_len)
+            else :
+                lines = textwrap.wrap(f"{message_text} at {self._input_name}:{self._line_number}", width=self._log_line_len)
             logger.critical("\n\t".join(lines))
         self._error_count += 1
         exit(-1)
@@ -3405,7 +3419,7 @@ SHEFPARM file:
     default locations for the file.
 
     If a SHEFPARM file is used, any modifications it makes to the program defaults are logged at
-    the INFO level on program startup.
+    the INFO and/or WARNING levels on program startup.
 
     The --defaults option may be specified to force {progname} to use program defaults if a
     SHEFPARM file exists in the current or $rfs_sys_dir directories.
