@@ -74,7 +74,7 @@ Authors:
 '''
 
 progname     = Path(sys.argv[0]).stem
-version      = "1.0.3"
+version      = "1.0.4"
 version_date = "30May2024"
 logger       = logging.getLogger() # make mypy complains if set to None
 
