@@ -1,0 +1,549 @@
+#!/bin/python3
+import argparse, logging, os, re, sys
+from collections import namedtuple
+from datetime    import datetime
+from pathlib     import Path
+
+progname          = Path(sys.argv[0]).stem
+version           = "1.0.0"
+version_date      = "03Jun2024"
+
+shefdss_transform_pattern = re.compile(r"shefdss([.+?])([.+?])", re.i)
+
+ShefValue = namedtuple("ShefValue", [
+    "location",
+    "obs_date",
+    "obs_time",
+    "create_date",
+    "create_time",
+    "parameter_code",
+    "value",
+    "data_qualifier",
+    "revised_code",
+    "time_series_code",
+    "comment"])
+
+class InputException(Exception) :
+    pass
+
+class TransformException(Exception) :
+    pass
+
+class UndoableInput :
+    '''
+    Class to read lines from a file-like object, with the ability to undo the last read
+    '''
+    def __init__(self, input):
+        self.input = input
+        self.line = None
+        self.buffer = []
+
+    def readline(self):
+        if self.buffer:
+            return self.buffer.pop()
+        else:
+            self.line = self.input.readline().rstrip()
+            return self.line
+
+    def undo(self):
+        if self.buffer:
+            raise InputException("readline() not called since last undo()")
+        elif not self.line :
+            raise InputException("Nothing to undo")
+        else:
+            self.buffer = [self.line]
+            self.line = None
+
+class NullTransformer :
+    def __init__(self) -> None :
+        self._shefValue = None
+
+    def assertValueIsSet(self) -> None :
+        if not self._shefValue :
+            raise TransformException("setvalue() has not been called on transformer")
+
+    def assertUseValue(self) -> None :
+        if not self.useValue() :
+            raise TransformException(f"Transformer does not use value {self.getName()}")
+
+    def setValue(self, value: ShefValue) -> None :
+        self._shefValue = value
+
+    def useValue(self) -> bool :
+        self.assertValueIsSet()
+        return True
+
+    def getLocation(self) -> str :
+        self.assertValueIsSet()
+        return f"{self._shefValue.location}"
+
+    def getName(self) -> str :
+        self.assertValueIsSet()
+        return f"{self._shefValue.location}.{self._shefValue.parameter_code}"
+
+    def getTime(self) -> str :
+        self.assertValueIsSet()
+        return f"{self._shefValue.obs_date} {self._shefValue.obs_time}"
+
+    def getForecastTime(self) -> str :
+        self.assertValueIsSet()
+        return None  if self._shefValue.create_date == "0000-00-00" else f"{self._shefValue.create_date} {self._shefValue.create_time}"
+
+    def getParameter(self) -> str :
+        self.assertValueIsSet()
+        return f"{self._shefValue.parameter_code}"
+
+    def getValue(self) -> tuple :
+        self.assertValueIsSet()
+        return f"{self._shefValue.value}", []
+
+    def getQualifier(self) -> str :
+        self.assertValueIsSet()
+        return f"{self._shefValue.data_qualifier}"
+
+class ShefDssTransformer (NullTransformer) :
+    duration_units = {
+        'M' : "Minutes",
+        'H' : "Hours",
+        'D' : "Days",
+        'L' : "Months",
+        'Y' : "Years"}
+
+    valueUnitsPattern = re.compile("([0-9]+)([a-z]+)", re.I)
+
+    def __init__(self, sensorFilename: str, parameterFileName: str) -> None :
+        super().__init__()
+        self._sensors = {}
+        self._parameters = {}
+        if not os.path.exists(sensorFilename) or not os.path.isfile(sensorFilename) :
+            raise TransformException(f"Specified sensor file doesn't exist; [{sensorFilename}]")
+        if not os.path.exists(parameterFileName) or not os.path.isfile(parameterFileName) :
+            raise TransformException(f"Specified parameter file doesn't exist; [{parameterFileName}]")
+        #----------------------#
+        # load the sensor file #
+        #----------------------#
+        with open(sensorFilename) as f :
+            lines = f.read().strip().split("\n")
+        for i in range(len(lines)) :
+            line = lines[i]
+            if not line or line[0] == '*' or not line[:10].strip() :
+                continue
+            try :
+                location = line[:8].strip()
+                pe_code = line[8:10].strip()
+                sensor = f"{location}/{pe_code}"
+                duration_value = int(line[10:14].strip())
+                if duration_value == 0 :
+                    raise Exception("Invalid duration value: [0]")
+                duration_unit=ShefDssTransformer.duration_units[line[14].strip()]
+                if duration_value == 1 :
+                    duration_unit = duration_unit[:-1]
+                a_part = line[16:31].strip()
+                b_part = line[34:49].strip()
+                f_part = line[50:65].strip()
+                self._sensors[sensor] = {
+                    "duration" : f"{duration_value}{duration_unit}",
+                    "a_part"   : a_part,
+                    "b_part"   : b_part,
+                    "f_part"   : f_part
+                }
+            except Exception as e :
+                raise TransformException(f"{str(e)} on {sensorFilename}:{i+1}")
+        #-------------------------#
+        # load the parameter file #
+        #-------------------------#
+        with open(parameterFileName) as f :
+            lines = f.read().strip().split("\n")
+        for i in range(len(lines)) :
+            line = lines[i]
+            if not line or line[0] == '*' or not line[:2].strip() :
+                continue
+            try :
+                pe_code = line[:2].strip()
+                c_part = line[3:27].strip()
+                unit = line[29:36].strip()
+                data_type = line[38:45].strip()
+                factor = line[47:56].strip()
+                self._parameters[pe_code] = {
+                    "c_part" : c_part,
+                    "unit"   : unit,
+                    "type"   : data_type,
+                    "factor" : factor}
+            except Exception as e :
+                raise TransformException(f"{str(e)} on {parameterFileName}:{i+1}")
+        #--------------------------------------------------------------------#
+        # verify all the PE codes in the sensors have an entry in parameters #
+        #--------------------------------------------------------------------#
+        pe_codes = set()
+        for sensor in self._sensors :
+            pe_codes.add(sensor.split("/"[1]))
+        error_pe_codes = []
+        for pe_code in sorted(pe_codes) :
+            if not pe_code in self._parameters :
+                error_pe_codes.append(pe_code)
+        if error_pe_codes :
+            raise TransformException(
+                f"Sensor file [{sensorFilename}] has the following PE codes that are not in "
+                f"parameter file [{parameterFileName}]: [{','.join(error_pe_codes)}]")
+
+    def assertUseValue(self) -> None :
+        if not self.useValue() :
+            raise TransformException(f"Transformer does not use value {self.getName()}")
+
+    def getSensor(self) -> str :
+        self.assertValueIsSet()
+        return f"{self._shefValue.location}/{self._shefValue.parameter_code[:2]}"
+
+    def useValue(self) -> bool :
+        self.assertValueIsSet()
+        return self.getSensor() in self._sensors
+
+    def getLocation(self) -> str :
+        self.assertUseValue()
+        return self.getSensor["b_bpart"]
+
+    def getName(self) -> str :
+        self.assertUseValue()
+        sensor = self.getSensor()
+        a_part = sensor["a_part"]
+        b_part = sensor["b_part"]
+        c_part = self.getParameter()
+        e_part = sensor["duration"]
+        f_part = sensor["f_part"]
+        return f"/{a_part}/{b_part}/{c_part}//{e_part}/{f_part}/"
+
+    def getParameter(self) -> str :
+        self.assertUseValue()
+        return self._parameters[self._shefValue.parameter_code[:2]]["c_part"]
+
+    def getValue(self) -> float :
+        val = self._shefValue.value
+        pe_code = self._shefValue.parameter_code[:2]
+        factor = self._parameters[pe_code]["factor"]
+        warnings = []
+        if not factor :
+            return val
+        if factor == "hm2h" :
+            expected_pe_codes = ["AT", "AU", "AW"]
+            if pe_code not in expected_pe_codes :
+                warnings.append(f"Factor of {factor} used with unexpected PE code [{pe_code}] - normally only for {','.join(expected_pe_codes)}")
+            hours = val // 100
+            minutes = val % 100
+            if minutes < 60 :
+                val = hours + minutes / 60.
+            else :
+                warnings.append(f"Factor [{factor}] is not valid for value [{val}], used factor of 1.0")
+        elif factor == "dur2h" :
+            expected_pe_codes = ["VK", "VL", "VM", "VR"]
+            duration = self.getSensor()["duration"]
+            m = ShefDssTransformer.valueUnitsPattern.match(duration)
+            if not m :
+                raise TransformException(f"Unexpected error matching duration [{duration}]")
+            duration_value = int(m.group(1))
+            duration_unit  = m.group(2)
+            if duration_unit.startswith("Minute") :
+                factor2 = duration_value / 60
+            elif duration_unit.startswith("Hour") :
+                factor2 = duration_value
+            elif duration_unit.startswith("Day") :
+                factor2 = duration_value * 24
+            elif duration_unit.startswith("Month") :
+                factor2 = duration_value * 24 * 30
+            elif duration_unit.startswith("Year") :
+                factor2 = duration_value * 24 * 65
+            else :
+                raise TransformException(f"Unexpected duration unit [{duration_unit}]")
+            if pe_code not in expected_pe_codes :
+                warnings.append(f"Factor of {factor} used with unexpected PE code [{pe_code}] - normally only for {','.join(expected_pe_codes)}")
+            val *= factor2
+        else :
+            val *= float(factor)
+        return val, warnings
+
+DURATION_CODES    = {
+       0 : 'I',    1 : 'U',    5 : 'E',   10 : 'G',   15 : 'C',
+      30 : 'J', 1001 : 'H', 1002 : 'B', 1003 : 'T', 1004 : 'F',
+    1006 : 'Q', 1008 : 'A', 1012 : 'K', 1018 : 'L', 2001 : 'D',
+    2007 : 'W', 2015 : 'N', 3001 : 'M', 4001 : 'Y', 5000 : 'Z',
+    5001 : 'S', 5002 : 'R', 5003 : 'V', 5004 : 'P', 5005 : 'X'}
+
+PROBABILITY_CODES = {
+     .002 : 'A',  .004 : 'B',   .01 : 'C',   .02 : 'D',   .04 : 'E',   .05 : 'F',
+       .1 : '1',    .2 : '2',   .25 : 'G',    .3 : '3',    .4 : '4',    .5 : '5',
+       .6 : '6',    .7 : '7',   .75 : 'H',    .8 : '8',    .9 : '9',   .95 : 'T',
+      .96 : 'U',   .98 : 'V',   .99 : 'W',  .996 : 'X',  .998 : 'Y', .0013 : 'J',
+    .0228 : 'K', .1587 : 'L',  -0.5 : 'M', .8413 : 'N', .9772 : 'P', .9987 : 'Q',
+     -1.0 : 'Z'}
+
+format_1_pattern = re.compile(
+# groups:  1 - Location
+#          2 - Obs date
+#          3 - Obs time
+#          4 - Create date
+#          5 - Create time
+#          6 - PEDTSE
+#          7 - Value
+#          8 - Data qualifier
+#          9 - Probability code number
+#         10 - Reivsed code
+#         11 - Time series code
+#         12 - Message source (.B only)
+#         13 - Comment
+#     1       2                   3                    4                   5                   6
+    r"(\w+\s*)(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})  (\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})  ([A-Z]{3}[A-Z0-9]{3})." +\
+#                                                  1      1        1                1
+#     7               8      9                     0      1        2                3
+    r"([ 0-9.+-]{15}) ([A-Z])([ 0-9.+-]{9})  \d{4} ([01]) ([012])  ((?: |\w){8})  \"(.+)\"")
+format_2_pattern = re.compile(
+# groups:  1 - Location
+#          2 - Obs year
+#          3 - Obs month
+#          4 - Obs day
+#          5 - Obs hour
+#          6 - Obs minute
+#          7 - Obs second
+#          8 - Create year
+#          9 - Create month
+#         10 - Create day
+#         11 - Create hour
+#         12 - Create minute
+#         13 - Create second
+#         14 - PE code
+#         15 - TS code
+#         16 - Extremum code
+#         17 - Value
+#         18 - Data qualifier
+#         19 - Probability code number
+#         20 - Duration code number
+#         21 - Revised code
+#         22 - Message source (.B only)
+#         23 - Time series code
+#                                                                                             1         1         1         1
+#     1       2      3           4       5         6         7          8           9         0         1         2         3
+    r"(\w+\s*)(\d{4})( \d|\d\d)( \d|\d\d)( \d|\d\d)( \d|\d\d)( \d|\d\d) (   0|\d{4})( \d|\d\d)( \d|\d\d)( \d|\d\d)( \d|\d\d)( \d|\d\d)" +\
+#      1          1            1      1               1      1             2           2      2            2
+#      4          5            6      7               8      9             0           1      2            3
+    r" ([A-Z]{2}) ([A-Z0-9]{2})([A-Z])([ 0-9.+-]{10}) ([A-Z])([ 0-9.+-]{6})([ 0-9]{5}) ([01]) ((?: |\w){8})([012])")
+format_2_comment_pattern = re.compile(' {8}"(.+)"')
+
+def parse_match(input: "UndoableInput", m: re.Match, format: int) -> tuple :
+    if format == 1 :
+        try :
+            probability_code = PROBABILITY_CODES[float(m.group(9))]
+        except KeyError :
+            probability_code = 'Z'
+        if len(m.group(1)) != 10 :
+            raise ValueError(f"Expected length location group to be 10, got {len(m.group(1))}")
+        location = m.group(1).strip()
+        obs_date = m.group(2)
+        obs_time = m.group(3)
+        create_date = m.group(4)
+        create_time = m.group(5)
+        parameter_code = f"{m.group(6)}{probability_code}"
+        value = float(m.group(7))
+        data_qualifier = m.group(8)
+        revised_code = m.group(10)
+        time_series_code = m.group(11)
+        comment = m.group(13).strip()
+    elif format == 2 :
+        try :
+            probability_code = PROBABILITY_CODES[float(m.group(19))]
+        except KeyError :
+            probability_code = 'Z'
+        try :
+            duration_code = DURATION_CODES[int(m.group(20))]
+        except KeyError :
+            duration_code = 'V'
+        if len(m.group(1)) != 8 :
+            raise ValueError(f"Expected length of location group to be 8, got {len(m.group(1))}")
+        location = m.group(1).strip()
+        obs_date = f"{m.group(2)}-{int(m.group(3)):02d}-{int(m.group(4)):02d}"
+        obs_time = f"{int(m.group(5)):02d}:{int(m.group(6)):02d}:{int(m.group(7)):02d}"
+        create_date = f"{int(m.group(8)):04d}-{int(m.group(9)):02d}-{int(m.group(10)):02d}"
+        create_time = f"{int(m.group(11)):02d}:{int(m.group(12)):02d}:{int(m.group(13)):02d}"
+        parameter_code = f"{m.group(14)}{duration_code}{m.group(15)}{m.group(16)}{probability_code}"
+        value = float(m.group(17))
+        data_qualifier = m.group(18)
+        revised_code = m.group(21)
+        time_series_code = m.group(23)
+        line = input.readline()
+        m2 = format_2_comment_pattern.match(line)
+        if m2 :
+            comment = m2.group(1)
+        else :
+            comment = ""
+            input.undo()
+    else :
+        raise ValueError(f"Expected format of 1 or 2, got {format}")
+
+    return ShefValue(
+        location,
+        obs_date,
+        obs_time,
+        create_date,
+        create_time,
+        parameter_code,
+        value,
+        data_qualifier,
+        revised_code,
+        time_series_code,
+        comment)
+
+def main() -> None :
+    '''
+    Driver routine
+    '''
+    global logger
+    start_time = datetime.now()
+    #--------------------#
+    # parse command line #
+    #--------------------#
+    argparser = argparse.ArgumentParser(
+        formatter_class = argparse.RawDescriptionHelpFormatter,
+        description="Parses SHEF messages into different output formats")
+    argparser.add_argument(
+        "-i",
+        "--in",
+        action="store",
+        default=sys.stdin,
+        metavar="input_filename",
+        help="input file (defaults to <stdin>)")
+    argparser.add_argument(
+        "-o",
+        "--out",
+        action="store",
+        default=sys.stdout,
+        metavar="output_filename",
+        help="output file (defaults to <stdout>)")
+    argparser.add_argument(
+        "-l",
+        "--log",
+        action="store",
+        default=sys.stderr,
+        metavar="log_filename",
+        help="log file (defaults to <sterr>)")
+    argparser.add_argument(
+        "-t",
+        "--transform",
+        action="store",
+        default=None,
+        help="transformation specification")
+    argparser.add_argument(
+        "-v",
+        "--loglevel",
+        action="store",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        default="INFO",
+        help="verbosity/logging level (defaults to INFO)")
+    argparser.add_argument(
+        "--timestamps",
+        action="store_true",
+        help="timestamp log output")
+    args = argparser.parse_args()
+
+    datefmt = "%Y-%m-%d %H:%M:%S"
+    if args.timestamps :
+        format  = "%(asctime)s %(levelname)s: %(msg)s"
+    else :
+        format  = "%(levelname)s: %(msg)s"
+    level  = {
+        "DEBUG"    : logging.DEBUG,
+        "INFO"     : logging.INFO,
+        "WARNING"  : logging.WARNING,
+        "ERROR"    : logging.ERROR,
+        "CRITICAL" : logging.CRITICAL,
+        "ALL"      : logging.NOTSET}[args.loglevel]
+    if isinstance(args.log, str) :
+        if os.path.exists(args.log) :
+            if not os.path.isfile(args.log) :
+                raise Exception(f"{args.log} is not a regular file")
+            os.remove(args.log)
+        logging.basicConfig(filename=args.log, format=format, datefmt=datefmt, level=level)
+        logfile_name = args.log
+    else :
+        logging.basicConfig(stream=args.log, format=format, datefmt=datefmt, level=level)
+        logfile_name = args.log.name
+    logger  = logging.getLogger(progname)
+    if isinstance(getattr(args, "in"), str) :
+        infile_name = getattr(args, "in")
+        infile = open(infile_name)
+    else :
+        infile_name = getattr(args, "in").name
+        infile = getattr(args, "in")
+    if isinstance(args.out, str) :
+        outfile_name = args.out
+        outfile = open(args.out, 'w')
+    else :
+        outfile_name = args.out.name
+        outfile = args.out
+    if len(sys.argv) == 1 :
+        logger.info("")
+        logger.info(f"Use '{progname} -h' for help")
+        logger.info("")
+        logger.info(f"Reading from {infile_name}, press ^D (^Z+Enter on Windows) to exit")
+        logger.info("")
+    logger.debug(f"Program {progname} version {version} ({version_date}) starting up")
+    logger.debug(f"Input file set to {infile_name}")
+    logger.debug(f"Output file set to {outfile_name}")
+    logger.debug(f"Log file set to {logfile_name}")
+    if shefdss_transform_pattern.match(args.tranform) :
+        m = shefdss_transform_pattern.match(args.tranform)
+        transform = ShefDssTransformer(m.group(1), m.group(2))
+    else :
+        transform = NullTransformer()
+
+    line_number       = 0
+    time_series_count = 0
+    input_format      = None
+    #----------------------------------------#
+    # read the input and generate the output #
+    #----------------------------------------#
+    input = UndoableInput(infile)
+    line = input.readline()
+    while line :
+        line_number += 1
+        if input_format is None :
+            #---------------------------------#
+            # auto-determine the input format #
+            #---------------------------------#
+            m = format_1_pattern.match(line)
+            if not m :
+                m = format_2_pattern.match(line)
+                if not m :
+                    logger.critical(f"Unrecognized format on {infile_name}:{line_number} [{line}]")
+                    print(format_1_pattern.pattern)
+                    exit(-1)
+                input_format = 2
+            else :
+                input_format = 1
+            outfile.write(line)
+        elif input_format == 1 :
+            #------------------------------------#
+            # shefParser -f 1 (shefit -1) format #
+            #------------------------------------#
+            m = format_1_pattern.match(line)
+            if not m :
+                logger.critical(f"Format is not shefParser --format 1 on {infile_name}:{line_number} [{line}]")
+                exit(-1)
+        elif input_format == 2 :
+            #------------------------------------#
+            # shefParser -f 2 (shefit -2) format #
+            #------------------------------------#
+            m = format_2_pattern.match(line)
+            if not m :
+                logger.critical(f"Format is not shefParser --format 2 on {infile_name}:{line_number} [{line}]")
+                exit(-1)
+        shef_value = parse_match(input, m, input_format)
+        print(shef_value.location, shef_value.obs_date, shef_value.obs_time, shef_value.parameter_code, shef_value.value, shef_value.time_series_code, shef_value.comment)
+        line = input.readline()
+
+    logger.info("")
+    logger.info("--[Summary]-----------------------------------------------------------")
+    logger.info(f"Program    = {progname} version {version} ({version_date})")
+    logger.info(f"Start Time = {str(start_time)[:-7]}")
+    logger.info(f"Run Time   = {str(datetime.now() - start_time)[:-3]}")
+    logger.info(f"{line_number:6d} lines read from {infile_name}")
+    logger.info(f"{time_series_count:6d} time series output to {outfile_name}")
+
+if __name__ == "__main__" :
+    main()
