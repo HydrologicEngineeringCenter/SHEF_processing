@@ -68,14 +68,16 @@ versions = '''
 +-------+-----------+-----+-------------------------------------------------------------------------+
 | 1.0.4 | 30May2024 | MDP | More bugfixes after reorg and cleanup                                   |
 +-------+-----------+-----+-------------------------------------------------------------------------+
+| 1.0.5 | 05Jun2024 | MDP | Add --append_out and --append_log options                               |
++-------+-----------+-----+-------------------------------------------------------------------------+
 
 Authors:
     MDP  Mike Perryman, USACE IWR-HEC
 '''
 
 progname     = Path(sys.argv[0]).stem
-version      = "1.0.4"
-version_date = "30May2024"
+version      = "1.0.5"
+version_date = "05Jun2024"
 logger       = logging.getLogger() # make mypy complains if set to None
 
 class MonthsDelta :
@@ -1836,13 +1838,17 @@ class ShefParser :
         '''
         if self._output :
             self.debug(f"Closing output {self._output_name}")
+            if isinstance(self._output, TextIOWrapper) :
+                self._output.write("\n")
+            elif isinstance(self._output, BufferedRandom) :
+                self._output.write("\n".encode("utf-8"))
             if not self._output.isatty() :
                 self._output.close()
             self._output = None
         else :
             logger.debug("Output is already closed or was never set")
 
-    def set_output(self, output_object: Union[TextIO, str]) -> None :
+    def set_output(self, output_object: Union[TextIO, str], append: bool) -> None :
         '''
         Attach the data output device, opening if necessary
         '''
@@ -1852,7 +1858,7 @@ class ShefParser :
             self._output = output_object
             self._output_name = output_object.name
         elif isinstance(output_object, str) :
-            self._output = open(output_object, "w+b")
+            self._output = open(output_object, "a+b" if append else "w+b")
             self._output_name = output_object
         else :
             raise ShefParser.OutputException(f"Expected BufferedRandom or str object, got [{output_object.__class__.__name__}]")
@@ -3408,13 +3414,21 @@ def main() -> None :
         action="store_true",
         help="reject all values from messages that contain errors")
     argparser.add_argument(
-        "--description",
+        "--append_out",
         action="store_true",
-        help="show a more detailed program description and exit")
+        help="append to output file instead of overwriting")
+    argparser.add_argument(
+        "--append_log",
+        action="store_true",
+        help="append to log file instead of overwriting")
     argparser.add_argument(
         "--make_shefparm",
         action="store_true",
         help="write SHEFPARM data to <stdout> and exit (exclusive to other arguments except -o/--out)")
+    argparser.add_argument(
+        "--description",
+        action="store_true",
+        help="show a more detailed program description and exit")
     args = argparser.parse_args()
 
     if args.make_shefparm :
@@ -3509,7 +3523,8 @@ Messages with errors:
         if os.path.exists(args.log) :
             if not os.path.isfile(args.log) :
                 raise Exception(f"{args.log} is not a regular file")
-            os.remove(args.log)
+            if not args.append_log :
+                os.remove(args.log)
         logging.basicConfig(filename=args.log, format=format, datefmt=datefmt, level=level)
         logfile_name = args.log
     else :
@@ -3527,7 +3542,9 @@ Messages with errors:
         logger.info("")
         logger.info(f"Reading from {infile_name}, press ^D (^Z+Enter on Windows) to exit")
         logger.info("")
-    logger.debug(f"Program {progname} version {version} ({version_date}) starting up")
+    logger.info("----------------------------------------------------------------------")
+    logger.info(f"Program {progname} version {version} ({version_date}) starting up")
+    logger.info("----------------------------------------------------------------------")
     logger.debug(f"Input file set to {infile_name}")
     logger.debug(f"Output file set to {outfile_name}")
     logger.debug(f"Log file set to {logfile_name}")
@@ -3541,7 +3558,7 @@ Messages with errors:
     #-------------------#
     parser = ShefParser(args.format, args.shefparm, shefit_times=args.shefit_times, reject_problematic=args.reject_problematic)
     parser.set_input(getattr(args, "in"))
-    parser.set_output(args.out)
+    parser.set_output(args.out, args.append_out)
     if args.format == 1 and isinstance(parser._output, TextIOWrapper) and parser._output.isatty():
         parser._output.write("STATION   OBSERVATION-DATE/TM  CREATION-DATE/TIME   PARM-CD     DATA-VALUE Q  PROB-CD DURTN R T  GROUP-NM  QUOTE\n")
         parser._output.write('aaaaaaaa  yyyy mm dd hh nn ss  yyyy mm dd hh nn ss  pedtsep     rrrrr.dddd a  rrr.ddd iiiii i i  aaaaaaaa  "aa..."\n\n')
