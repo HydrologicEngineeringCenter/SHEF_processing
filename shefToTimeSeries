@@ -3,13 +3,15 @@ import argparse, logging, os, re, sys
 from collections import namedtuple
 from datetime    import datetime
 from datetime    import timedelta
+from io          import BufferedRandom
+from io          import TextIOWrapper
 from pathlib     import Path
 from typing      import TextIO
 from typing      import Union
 
 progname          = Path(sys.argv[0]).stem
 version           = "1.0.0"
-version_date      = "03Jun2024"
+version_date      = "06Jun2024"
 
 one_day = timedelta(days=1)
 month_interval = timedelta(days=30)
@@ -17,7 +19,7 @@ month_tolerance = (month_interval - 2 * one_day, month_interval + one_day)
 year_interval = timedelta(days=365)
 year_tolerance = (year_interval, year_interval + one_day)
 
-shefdss_transform_pattern = re.compile(r"shefdss\[(.+?)\]\[(.+?)\]", re.I)
+dssvue_transform_pattern = re.compile(r"dssvue\[(.+?)\]\[(.+?)\]", re.I)
 
 ShefValue = namedtuple("ShefValue", [
     "location",
@@ -43,26 +45,50 @@ class UndoableInput :
     Class to read lines from a file-like object, with the ability to undo the last read
     '''
     def __init__(self, input):
-        self.input = input
-        self.line = None
-        self.buffer = []
+        self._input = input
+        self._line = None
+        self._buffer = []
 
     def readline(self):
-        if self.buffer:
-            self.line = self.buffer.pop()
-            return self.line
+        if self._buffer:
+            self._line = self._buffer.pop()
+            return self._line
         else:
-            self.line = self.input.readline().rstrip()
-            return self.line
+            self._line = self._input.readline().rstrip()
+            return self._line
 
     def undo(self):
-        if self.buffer:
+        if self._buffer:
             raise InputException("readline() not called since last undo()")
-        elif not self.line :
+        elif not self._line :
             raise InputException("Nothing to undo")
         else:
-            self.buffer = [self.line]
-            self.line = None
+            self._buffer = [self._line]
+            self._line = None
+
+class Output :
+    def __init__(self, output_object: Union[TextIO, str], append: bool) -> str :
+        '''
+        Attach the data output device, opening if necessary
+        '''
+        if isinstance(output_object, (BufferedRandom, TextIOWrapper)) :
+            self._output = output_object
+            self._output_name = output_object.name
+        elif isinstance(output_object, str) :
+            self._output = open(output_object, "a+b" if append else "w+b")
+            self._output_name = output_object
+        else :
+            raise Exception(f"Expected BufferedRandom or str object, got [{output_object.__class__.__name__}]")
+        
+    @property
+    def name(self) :
+        return self._output_name
+
+    def write(self, s: str) -> None :
+        if isinstance(self._output, TextIOWrapper) :
+            self._output.write(s)
+        elif isinstance(self._output, BufferedRandom) :
+            self._output.write(s.encode("utf-8"))
 
 class NullTransformer :
     def __init__(self, logger: Union[None, logging.Logger]) -> None :
@@ -75,10 +101,14 @@ class NullTransformer :
 
     def assertUseValue(self) -> None :
         if not self.use_value() :
-            raise TransformException(f"Transformer does not use value {self.name()}")
+            raise TransformException(f"Transformer does not use value {self.value_name()}")
 
     def setShefValue(self, value: ShefValue) -> None :
         self._shefValue = value
+
+    @property
+    def transformer_name(self) :
+        return self.__class__.__name__
 
     @property
     def use_value(self) -> bool :
@@ -91,7 +121,7 @@ class NullTransformer :
         return f"{self._shefValue.location}"
 
     @property
-    def name(self) -> str :
+    def value_name(self) -> str :
         self.assertValueIsSet()
         return f"{self._shefValue.location}.{self._shefValue.parameter_code}"
 
@@ -143,8 +173,7 @@ class NullTransformer :
             intvl = timedelta(minutes = dv % 1000)
         return intvl
 
-
-class ShefDssTransformer (NullTransformer) :
+class DssVueTransformer (NullTransformer) :
     duration_units = {
         'M' : "Minutes",
         'H' : "Hours",
@@ -162,6 +191,8 @@ class ShefDssTransformer (NullTransformer) :
             raise TransformException(f"Specified sensor file doesn't exist; [{sensorFilename}]")
         if not os.path.exists(parameterFileName) or not os.path.isfile(parameterFileName) :
             raise TransformException(f"Specified parameter file doesn't exist; [{parameterFileName}]")
+        if logger :
+            logger.info(f"Using {self.transformer_name}\n\tsensor file    = {sensorFilename}\n\tparameter file = {parameterFileName}")
         #----------------------#
         # load the sensor file #
         #----------------------#
@@ -183,10 +214,12 @@ class ShefDssTransformer (NullTransformer) :
                     if duration_value == 0 :
                         duration = "IR-Month"
                     else :
-                        duration_unit=ShefDssTransformer.duration_units[line[14].strip()]
+                        duration_unit=DssVueTransformer.duration_units[line[14].strip()]
                         if duration_value == 1 :
                             duration_unit = duration_unit[:-1]
                         duration = f"{duration_value}{duration_unit}"
+                        if duration == "7Days" :
+                            duration = "1Week"
                 else :
                     duration = "IR-Month"
                 a_part = line[16:33].strip()
@@ -238,7 +271,7 @@ class ShefDssTransformer (NullTransformer) :
 
     def assertUseValue(self) -> None :
         if not self.use_value :
-            raise TransformException(f"Transformer does not use value {self.name()}")
+            raise TransformException(f"Transformer does not use value {self.value_name()}")
 
     @property
     def sensor(self) -> str :
@@ -256,7 +289,7 @@ class ShefDssTransformer (NullTransformer) :
         return self.sensor["b_bpart"]
 
     @property
-    def name(self) -> str :
+    def value_name(self) -> str :
         self.assertUseValue()
         sensor = self._sensors[self.sensor]
         a_part = sensor["a_part"]
@@ -303,7 +336,11 @@ class ShefDssTransformer (NullTransformer) :
     @property
     def parameter(self) -> str :
         self.assertUseValue()
-        return self._parameters[self._shefValue.parameter_code[:2]]["c_part"]
+        pe_code = self._shefValue.parameter_code[:2]
+        param = self._parameters[pe_code]["c_part"]
+        if not param :
+            raise TransformException(f"No C Pathname part specified for PE code {pe_code}")
+        return param
 
     @property
     def value(self) -> float :
@@ -341,7 +378,7 @@ class ShefDssTransformer (NullTransformer) :
             #-----------------------------#
             expected_pe_codes = ("VK", "VL", "VM", "VR")
             duration = self._sensors[self.sensor]["duration"]
-            m = ShefDssTransformer.valueUnitsPattern.match(duration)
+            m = DssVueTransformer.valueUnitsPattern.match(duration)
             if not m :
                 if self._logger :
                     self._logger.warning(
@@ -539,6 +576,9 @@ def output_values(logger: Union[None, logging.Logger], outfile: TextIO, name: st
         values.sort()
         if len(values) > 1 :
             if duration_interval :
+                #---------------------------------------------------#
+                # see if we the value times agree with the duration #
+                #---------------------------------------------------#
                 intervals = set()
                 for i in range(1, len(values)) :
                     intervals.add(get_datetime(values[i][0]) - get_datetime(values[i-1][0]))
@@ -554,15 +594,32 @@ def output_values(logger: Union[None, logging.Logger], outfile: TextIO, name: st
                                 f"\n\ton [{name}]\n\tWill attempt to load [{len(values)}] values individually")
                             load_individually = True
         if load_individually :
+            #------------------------------------------#
+            # load values one at a time, some may fail #
+            #------------------------------------------#
             for value in values :
                 outfile.write(f"{name}\n\t{info}\n")
                 outfile.write(f"\t{value}\n")
             time_series_count = len(values)
         else :
-            outfile.write(f"{name}\n\t{info}\n")
-            for value in values :
-                outfile.write(f"\t{value}\n")
-            time_series_count = 1
+            #---------------------------------------------#
+            # load values in one or more chunks, skipping #
+            # gaps to prevent overriting with missing     #
+            #---------------------------------------------#
+            slices = []
+            start = 0
+            if duration_interval :
+                for i in range(1, len(values)) :
+                    interval = get_datetime(values[i][0]) - get_datetime(values[i-1][0])
+                    if interval > duration_interval * 1.5 :
+                        slices.append(slice(start, i, 1))
+                        start = i
+            slices.append(slice(start, len(values), 1))
+            for i in range(len(slices)) :
+                outfile.write(f"{name}\n\t{info}\n")
+                for value in values[slices[i]] :
+                    outfile.write(f"\t{value}\n")
+            time_series_count = len(slices)
         value_count = len(values)
     else :
         logger.info(f"No values for [{name}]")
@@ -604,7 +661,7 @@ def main() -> None :
         help="log file (defaults to <sterr>)")
     argparser.add_argument(
         "-t",
-        "--transform",
+        "--transformer",
         action="store",
         default=None,
         help="transformation specification")
@@ -619,6 +676,14 @@ def main() -> None :
         "--timestamps",
         action="store_true",
         help="timestamp log output")
+    argparser.add_argument(
+        "--append_out",
+        action="store_true",
+        help="append to output file instead of overwriting")
+    argparser.add_argument(
+        "--append_log",
+        action="store_true",
+        help="append to log file instead of overwriting")
     args = argparser.parse_args()
 
     datefmt = "%Y-%m-%d %H:%M:%S"
@@ -637,7 +702,8 @@ def main() -> None :
         if os.path.exists(args.log) :
             if not os.path.isfile(args.log) :
                 raise Exception(f"{args.log} is not a regular file")
-            os.remove(args.log)
+            if not args.append_log :
+                os.remove(args.log)
         logging.basicConfig(filename=args.log, format=format, datefmt=datefmt, level=level)
         logfile_name = args.log
     else :
@@ -650,31 +716,27 @@ def main() -> None :
     else :
         infile_name = getattr(args, "in").name
         infile = getattr(args, "in")
-    if isinstance(args.out, str) :
-        outfile_name = args.out
-        outfile = open(args.out, 'w')
-    else :
-        outfile_name = args.out.name
-        outfile = args.out
+    outfile = Output(args.out, args.append_out)
+    outfile_name = outfile.name
     if len(sys.argv) == 1 :
         logger.info("")
         logger.info(f"Use '{progname} -h' for help")
         logger.info("")
         logger.info(f"Reading from {infile_name}, press ^D (^Z+Enter on Windows) to exit")
         logger.info("")
-    logger.debug(f"Program {progname} version {version} ({version_date}) starting up")
+    logger.info("----------------------------------------------------------------------")
+    logger.info(f"Program {progname} version {version} ({version_date}) starting up")
+    logger.info("----------------------------------------------------------------------")
     logger.debug(f"Input file set to {infile_name}")
     logger.debug(f"Output file set to {outfile_name}")
     logger.debug(f"Log file set to {logfile_name}")
-    if args.transform :
-        if shefdss_transform_pattern.match(args.transform) :
-            m = shefdss_transform_pattern.match(args.transform)
-            transform = ShefDssTransformer(logger, m.group(1), m.group(2))
-        else :
-            transform = NullTransformer(logger)
+    if args.transformer :
+        if dssvue_transform_pattern.match(args.transformer) :
+            m = dssvue_transform_pattern.match(args.transformer)
+            transformer = DssVueTransformer(logger, m.group(1), m.group(2))
     else :
-        transform = None
-
+        transformer = NullTransformer(logger)
+    
     line_number       = 0
     value_count       = 0
     time_series_count = 0
@@ -702,7 +764,6 @@ def main() -> None :
                 input_format = 2
             else :
                 input_format = 1
-            outfile.write(line)
         elif input_format == 1 :
             #------------------------------------#
             # shefParser -f 1 (shefit -1) format #
@@ -720,12 +781,12 @@ def main() -> None :
                 logger.critical(f"Format is not shefParser --format 2 on {infile_name}:{line_number} [{line}]")
                 exit(-1)
         v = get_next_value(input, m, input_format)
-        if transform :
-            transform.setShefValue(v)
-            if not transform.use_value :
-                logger.info(f"No sensor information for {v.location}/{v.parameter_code[:2]}")
-            else :
-                name = transform.name
+        transformer.setShefValue(v)
+        if not transformer.use_value :
+            logger.info(f"No sensor information for {v.location}/{v.parameter_code[:2]}")
+        else :
+            try :
+                name = transformer.value_name
                 if name != last_name :
                     try :
                         if last_name :
@@ -735,15 +796,14 @@ def main() -> None :
                     except TransformException as te :
                         logger.error(str(te))
                     values = []
-                    duration_interval = transform.duration_interval
-                    info = transform.loading_info
+                    duration_interval = transformer.duration_interval
+                    info = transformer.loading_info
                 last_name = name
                 last_info = info
                 last_duration_interval = duration_interval
-                try :
-                    values.append([transform.date_time, transform.value])
-                except TransformException as te :
-                    logger.error(str(te))
+                values.append([transformer.date_time, transformer.value])
+            except TransformException as te :
+                logger.error(str(te))
         line = input.readline()
     try :
         if values :
@@ -763,7 +823,7 @@ def main() -> None :
     logger.info(f"Start Time = {str(start_time)[:-7]}")
     logger.info(f"Run Time   = {str(datetime.now() - start_time)[:-3]}")
     logger.info(f"{line_number:6d} lines read from {infile_name}")
-    logger.info(f"{value_count:6d} values in {time_series_count} time series output to {outfile_name} using {transform.__class__.__name__}")
+    logger.info(f"{value_count:6d} values in {time_series_count} time series output to {outfile_name} using {transformer.__class__.__name__}")
 
 if __name__ == "__main__" :
     main()
