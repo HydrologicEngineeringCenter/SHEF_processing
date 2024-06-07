@@ -1,5 +1,5 @@
 #!/bin/python3
-import argparse, copy, logging, os, re, sys, textwrap, types
+import argparse, copy, logging, os, re, sys, textwrap, types, traceback
 from collections import deque
 from datetime    import datetime
 from datetime    import timedelta
@@ -13,6 +13,7 @@ from typing      import Optional
 from typing      import TextIO
 from typing      import Union
 from zoneinfo    import ZoneInfo
+
 
 '''
 COMMENTS FROM MOST RECENT SHEFPARM FILE FROM NOAA
@@ -70,15 +71,39 @@ versions = '''
 +-------+-----------+-----+-------------------------------------------------------------------------+
 | 1.0.5 | 05Jun2024 | MDP | Add --append_out and --append_log options                               |
 +-------+-----------+-----+-------------------------------------------------------------------------+
+| 1.1.0 | 06Jun2024 | MDP | Add --loader option to store time series                                |
++-------+-----------+-----+-------------------------------------------------------------------------+
+| 1.1.1 | 11Jun2024 | MDP | Add --unload option to have loader write SHEF text                      |
++-------+-----------+-----+-------------------------------------------------------------------------+
 
 Authors:
     MDP  Mike Perryman, USACE IWR-HEC
 '''
 
 progname     = Path(sys.argv[0]).stem
-version      = "1.0.5"
-version_date = "05Jun2024"
+version      = "1.1.1"
+version_date = "11Jun2024"
 logger       = logging.getLogger() # make mypy complains if set to None
+
+#---------------------------------------------------------#
+# catalog the SHEF data loaders in the shef_loader module #
+#---------------------------------------------------------#
+loaders = {}
+try :
+    import shef_loader
+    for loader in [item for item in dir(shef_loader) if eval(f"shef_loader.{item}.__class__.__name__") == "module"] :
+        exec(f"from shef_loader import {loader}")
+        try :
+            opts   = eval(f"{loader}.loader_options")
+            desc   = eval(f"{loader}.loader_description")
+            vers   = eval(f"{loader}.loader_version")
+            clazz  = eval(f"{loader}.loader_class")
+            unload = eval(f"{loader}.can_unload")
+            loaders[loader] = {"option_format" : opts, "description" : desc, "version" : vers, "class" : clazz, "can_unload" : unload}
+        except :
+            pass
+except :
+    pass
 
 class MonthsDelta :
     '''
@@ -1378,7 +1403,7 @@ class ShefParser :
         self._extremum_codes              = copy.deepcopy(ShefParser.EXTREMUM_CODES)
         self._probability_codes           = copy.deepcopy(ShefParser.PROBABILITY_CODES)
         self._qualifier_codes             = copy.deepcopy(ShefParser.QUALIFIER_CODES)
-        self._max_error_count:            int  = 500 # May be modified by SHEFPARM file
+        self._max_error_count:            int  = 1500 # May be modified by SHEFPARM file
         self._error_count:                int = 0
         self._warning_count:              int = 0
         self._messages_with_error_count:  int = 0
@@ -3397,6 +3422,11 @@ def main() -> None :
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         default="INFO",
         help="verbosity/logging level (defaults to INFO)")
+    argparser.add_argument(
+        "--loader",
+        metavar="<ts_loader>",
+        action="store",
+        help="allows loading time series to various data stores (more info in --description)")
     group.add_argument(
         "--defaults",
         action="store_true",
@@ -3421,6 +3451,10 @@ def main() -> None :
         "--append_log",
         action="store_true",
         help="append to log file instead of overwriting")
+    argparser.add_argument(
+        "--unload",
+        action="store_true",
+        help="use loader to unload from data store to SHEF text")
     argparser.add_argument(
         "--make_shefparm",
         action="store_true",
@@ -3493,8 +3527,24 @@ Messages with errors:
     messages than shefit. However, it can result treating invalid data as valid in certain messages
     that are badly mangled. This behavior can be prevented by using the --reject_problematic option
     which discards all data from messages with errors.
-        ''')
-        exit(0)
+
+Loading SHEF data to data stores:''')
+        if not loaders :
+            print("    The 'shef_loader' package was not found or it contained no valid loaders.")
+        else :
+            for loader in sorted(loaders) :
+                description = "\n                    ".join(loaders[loader]["description"].split(chr(10)))
+                options =     "\n                    ".join(loaders[loader]["option_format"].split(chr(10)))
+                print(f"    Loader        : {loader} v{loaders[loader]['version']}")
+                print(f"    Description   : {description}")
+                print(f"    Can unload    : {loaders[loader]['can_unload']}")
+                print(f"    Option Format : {options}")
+                print("")
+
+            exit(0)
+    if args.unload and not args.loader :
+        print("\nArgument --unload may only be used if argument --loader is also used")
+        exit(-1)
     #-----------------------------------------------------------------#
     # get default SHEFPARM file if exists and --default not specified #
     #-----------------------------------------------------------------#
@@ -3553,43 +3603,98 @@ Messages with errors:
         logger.debug(f"Will modify program defaults with content of file {args.shefparm}")
     else :
         logger.debug(f"Will use program defaults")
-    #-------------------#
-    # create the parser #
-    #-------------------#
-    parser = ShefParser(args.format, args.shefparm, shefit_times=args.shefit_times, reject_problematic=args.reject_problematic)
-    parser.set_input(getattr(args, "in"))
-    parser.set_output(args.out, args.append_out)
-    if args.format == 1 and isinstance(parser._output, TextIOWrapper) and parser._output.isatty():
-        parser._output.write("STATION   OBSERVATION-DATE/TM  CREATION-DATE/TIME   PARM-CD     DATA-VALUE Q  PROB-CD DURTN R T  GROUP-NM  QUOTE\n")
-        parser._output.write('aaaaaaaa  yyyy mm dd hh nn ss  yyyy mm dd hh nn ss  pedtsep     rrrrr.dddd a  rrr.ddd iiiii i i  aaaaaaaa  "aa..."\n\n')
-
-    message_count = 0
-    value_count   = 0
-    while True :
-        message = parser.get_next_message()
-        if not message : break
-        message_count += 1
-        outrecs = None
+    #--------------------------------#
+    # create the loader if specified #
+    #--------------------------------#
+    loader = None
+    if args.loader :
+        pos = args.loader.find('[')
+        if pos == -1 :
+            loader_name = args.loader
+            loader_args = ""
+        else :
+            loader_name = args.loader[:pos]
+            loader_args = args.loader[pos:]
+        if loader_name in loaders :
+            loader_info = loaders[loader_name]
+        elif f"{loader_name}_loader" in loaders :
+            loader_info = loaders[f"{loader_name}_loader"]
+        else :
+            logger.critical(f"No such loader: {loader_name}")
+            exit(-1)
         try :
-            outrecs = parser.parse_message()
-            value_count += len(outrecs)
-            if outrecs :
-                for outrec in outrecs :
-                    parser.output(outrec)
+            loader = loader_info["class"](logger, args.out, args.append_out)
+            loader.set_options(loader_args)
         except Exception as e :
-            parser.error(str(e))
-    parser.close_output()
-    logger.info("")
-    logger.info("--[Summary]-----------------------------------------------------------")
-    logger.info(f"Program    = {progname} version {version} ({version_date})")
-    logger.info(f"SHEFPARM   = {args.shefparm}")
-    logger.info(f"Start Time = {str(start_time)[:-7]}")
-    logger.info(f"Run Time   = {str(datetime.now() - start_time)[:-3]}")
-    logger.info(f"{parser._line_number:6d} lines read from {parser._input_name}")
-    logger.info(f"{message_count:6d} messages processed")
-    logger.info(f"{value_count:6d} values output to {parser._output_name}")
-    logger.info(f"{parser._warning_count:6d} warnings in {parser._messages_with_warning_count} messages")
-    logger.info(f"{parser._error_count:6d} errors in {parser._messages_with_error_count} messages")
+            logger.critical(str(e))
+            exit(-1)
+    if args.unload :
+        #-----------------#
+        # write SHEF text #
+        #-----------------#
+        try :
+            loader.set_input(getattr(args, "in"))
+            loader.unload()
+        except Exception as e :
+            logger.critical(str(e))
+            exit(-1)
+    else :
+        #----------------#
+        # read SHEF text #
+        #----------------#
+        #-------------------#
+        # create the parser #
+        #-------------------#
+        parser = ShefParser(args.format, args.shefparm, shefit_times=args.shefit_times, reject_problematic=args.reject_problematic)
+        parser.set_input(getattr(args, "in"))
+        if not loader :
+            parser.set_output(args.out, args.append_out)
+            if args.format == 1 and isinstance(parser._output, TextIOWrapper) and parser._output.isatty():
+                parser._output.write("STATION   OBSERVATION-DATE/TM  CREATION-DATE/TIME   PARM-CD     DATA-VALUE Q  PROB-CD DURTN R T  GROUP-NM  QUOTE\n")
+                parser._output.write('aaaaaaaa  yyyy mm dd hh nn ss  yyyy mm dd hh nn ss  pedtsep     rrrrr.dddd a  rrr.ddd iiiii i i  aaaaaaaa  "aa..."\n\n')
+        #--------------------------------------------------------------------------------#
+        # parse the messages on the input and either generate output or pass to a loader #
+        #--------------------------------------------------------------------------------#
+        message_count = 0
+        value_count   = 0
+        while True :
+            message = parser.get_next_message()
+            if not message : break
+            message_count += 1
+            outrecs = None
+            try :
+                outrecs = parser.parse_message()
+                value_count += len(outrecs)
+                if outrecs :
+                    for outrec in outrecs :
+                        if loader :
+                            format_1_str = outrec.format(ShefParser.OutputRecord.SHEFIT_TEXT_V1)
+                            loader.set_shef_value(format_1_str)
+                        else :
+                            parser.output(outrec)
+            except Exception as e :
+                parser.error(str(e))
+        #-------------------#    
+        # clean up and exit #
+        #-------------------#    
+        if loader :
+            loader.done()
+        else :
+            parser.close_output()
+            logger.info("")
+            logger.info("--[Summary]-----------------------------------------------------------")
+            logger.info(f"Program    = {progname} version {version} ({version_date})")
+            logger.info(f"SHEFPARM   = {args.shefparm}")
+            logger.info(f"Start Time = {str(start_time)[:-7]}")
+            logger.info(f"Run Time   = {str(datetime.now() - start_time)[:-3]}")
+            logger.info(f"{parser._line_number:6d} lines read from {parser._input_name}")
+            logger.info(f"{message_count:6d} messages processed")
+            if loader :
+                logger.info(f"{value_count:6d} values passed to {loader.loader_name}")
+            else :
+                logger.info(f"{value_count:6d} values output to {parser._output_name}")
+            logger.info(f"{parser._warning_count:6d} warnings in {parser._messages_with_warning_count} messages")
+            logger.info(f"{parser._error_count:6d} errors in {parser._messages_with_error_count} messages")
 
 if __name__ == "__main__" :
     main()
