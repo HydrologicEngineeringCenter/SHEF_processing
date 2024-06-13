@@ -1,4 +1,4 @@
-import os, re, sys
+import csv, os, re, sys
 from .        import dummy_loader
 from .        import shared
 from datetime import timedelta
@@ -25,7 +25,7 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
     month_tolerance = (month_interval - 2 * one_day, month_interval + one_day)
     year_interval = timedelta(days=365)
     year_tolerance = (year_interval, year_interval + one_day)
- 
+
     pathname_line_pattern = re.compile(r"^/(.*?)/(.+?)/(.+?)/(.*?)/(.+?)/(.*?)/$")
     load_info_line_pattern = re.compile(r"^\s+(\{.+?\})$")
     time_value_line_pattern = re.compile(r"^\s+\['(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})', ([+-]?\d*(\.(\d*))?)\]$")
@@ -47,11 +47,53 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
         self._sensor = None
         self._parameter = None
         self._forecast_time = None
+        self._message_count = 0
 
     def set_options(self, options_str: str) -> None :
         '''
         Set the sensor and parameter file names
         '''
+        def make_sensor(location, pe_code, duration_str, a_part, b_part, f_part) :
+            if not location :
+                raise shared.LoaderException("Empty Location")
+            if not pe_code :
+                raise shared.LoaderException("Empty PE Code")
+            if pe_code in shared.SEND_CODES :
+                pe_code = shared.SEND_CODES[pe_code][0][:2]
+            sensor = f"{location}/{pe_code}"
+            if duration_str :
+                duration_value = int(duration_str[:-1])
+                if duration_value == 0 :
+                    e_part = "IR-Month"
+                else :
+                    duration_unit=DSSVueLoader.duration_units[duration_str[-1]]
+                    if duration_value == 1 :
+                        duration_unit = duration_unit[:-1]
+                    e_part = f"{duration_value}{duration_unit}"
+                    if e_part == "7Days" :
+                        e_part = "1Week"
+            else :
+                e_part = "IR-Month"
+            if not b_part :
+                b_part = location
+            self._sensors[sensor] = {
+                "location" : location,
+                "a_part" : a_part,
+                "b_part" : b_part,
+                "e_part" : e_part,
+                "f_part" : f_part
+            }
+
+        def make_parameter(pe_code, c_part, unit, data_type, transform) :
+            if not pe_code.strip() :
+                raise shared.LoaderException("Empty PE Code")
+            self._parameters[pe_code] = {
+                "pe_code"   : pe_code.strip(), # for unload()
+                "c_part"    : c_part.strip(),
+                "unit"      : unit.strip(),
+                "type"      : data_type.strip(),
+                "transform" : transform.strip()}
+
         options = tuple(re.findall("\[(.*?)\]", options_str))
         if len(options) == 2 :
             sensorfile_name, parameterfile_name = options
@@ -61,76 +103,77 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
             raise shared.LoaderException(f"Sensor file [{sensorfile_name}] does not exist")
         if not os.path.exists(parameterfile_name) or not os.path.isfile(parameterfile_name):
             raise shared.LoaderException(f"Parameter file [{parameterfile_name}] does not exist")
+        if self._logger :
+            self._logger.info(f"{self.loader_name} v{self.loader_version} initialized with:\n\tsensor file    : {sensorfile_name}\n\tparameter file : {parameterfile_name}")
 
         #----------------------#
         # load the sensor file #
         #----------------------#
-        with open(sensorfile_name) as f :
-            lines = f.read().strip().split("\n")
-        for i in range(len(lines)) :
-            line = lines[i]
-            if not line or line[0] == '*' or not line[:10].strip() :
-                continue
-            try :
-                location = line[:8].strip()
-                pe_code = line[8:10].strip()
-                if pe_code in shared.SEND_CODES :
-                    pe_code = shared.SEND_CODES[pe_code][0][:2]
-                sensor = f"{location}/{pe_code}"
-                duration_str = line[10:15].strip()
-                if duration_str :
-                    duration_value = int(duration_str[:-1])
-                    if duration_value == 0 :
-                        e_part = "IR-Month"
-                    else :
-                        duration_unit=DSSVueLoader.duration_units[line[14].strip()]
-                        if duration_value == 1 :
-                            duration_unit = duration_unit[:-1]
-                        e_part = f"{duration_value}{duration_unit}"
-                        if e_part == "7Days" :
-                            e_part = "1Week"
+        try :
+            with open(sensorfile_name) as f :
+                line_number = 0
+                if sensorfile_name.endswith(".csv") :
+                    #------------------#
+                    # read as CSV file #
+                    #------------------#
+                    for fields in csv.reader(f) :
+                        line_number += 1
+                        for i in range(len(fields)) :
+                            fields[i] = fields[i].encode('ascii', errors='ignore').decode('ascii')
+                        if len(fields) != 6 or not fields[0] or fields[0][0] == '*' :
+                            continue
+                        make_sensor(*fields)
                 else :
-                    e_part = "IR-Month"
-                a_part = line[16:33].strip()
-                b_part = line[33:50].strip()
-                f_part = line[50:67].strip()
-                if not b_part :
-                    b_part = location
-                self._sensors[sensor] = {
-                    "location" : location,
-                    "a_part" : a_part,
-                    "b_part" : b_part,
-                    "e_part" : e_part,
-                    "f_part" : f_part
-                }
-            except Exception as e :
-                if self._logger :
-                    self._logger.error(f"{str(e)} on line [{i+1}] in {sensorfile_name}")
+                    #--------------------------------#
+                    # read as orininal column format #
+                    #--------------------------------#
+                    for line in f.readlines() :
+                        line_number += 1
+                        if not line or line[0] == '*' or not line[:10].strip() :
+                            continue
+                        location = line[:8].strip()
+                        pe_code = line[8:10].strip()
+                        duration_str = line[10:15].strip()
+                        a_part = line[16:33].strip()
+                        b_part = line[33:50].strip()
+                        f_part = line[50:67].strip()
+                        make_sensor(location, pe_code, duration_str, a_part, b_part, f_part)
+        except Exception as e :
+            if self._logger :
+                self._logger.error(f"{str(e)} on line [{line_number}] in {sensorfile_name}")
+                raise
         #-------------------------#
         # load the parameter file #
         #-------------------------#
-        with open(parameterfile_name) as f :
-            lines = f.read().strip().split("\n")
-        for i in range(len(lines)) :
-            line = lines[i]
-            if not line or line[0] == '*' or not line[:2].strip() :
-                continue
-            try :
-                pe_code = line[:2].strip()
-                c_part = line[3:27].strip()
-                unit = line[29:36].strip()
-                data_type = line[38:45].strip()
-                transform = line[47:56].strip()
-                if pe_code == "HG" :
-                    debug = True
-                self._parameters[pe_code] = {
-                    "pe_code"   : pe_code, # for unload()
-                    "c_part"    : c_part,
-                    "unit"      : unit,
-                    "type"      : data_type,
-                    "transform" : transform}
-            except Exception as e :
-                raise shared.LoaderException(f"{str(e)} on line [{i+1}] in [{parameterfile_name}]")
+        try :
+            with open(parameterfile_name) as f :
+                if parameterfile_name.endswith(".csv") :
+                    #------------------#
+                    # read as CSV file #
+                    #------------------#
+                    for fields in csv.reader(f) :
+                        line_number += 1
+                        for i in range(len(fields)) :
+                            fields[i] = fields[i].encode('ascii', errors='ignore').decode('ascii')
+                        if len(fields) != 5 or not fields[0] or fields[0][0] == '*' :
+                            continue
+                        make_parameter(*fields)
+                else :
+                    #--------------------------------#
+                    # read as orininal column format #
+                    #--------------------------------#
+                    line_number = 0
+                    for line in f.readlines() :
+                        if not line or line[0] == '*' or not line[:2].strip() :
+                            continue
+                        pe_code = line[:2].strip()
+                        c_part = line[3:27].strip()
+                        unit = line[29:36].strip()
+                        data_type = line[38:45].strip()
+                        transform = line[47:56].strip()
+                        make_parameter(pe_code, c_part, unit, data_type, transform)
+        except Exception as e :
+            raise shared.LoaderException(f"{str(e)} on line [{line_number}] in [{parameterfile_name}]")
         #--------------------------------------------------------------------#
         # verify all the PE codes in the sensors have an entry in parameters #
         #--------------------------------------------------------------------#
@@ -156,7 +199,7 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
             self._input = open(input_object)
         else :
             raise shared.LoaderException(f"Expected TextIOWrapper or str object, got [{input_object.__class__.__name__}]")
-            
+
     def output_shef_text(self) :
         '''
         Outputs an unloaded time series
@@ -269,6 +312,7 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
                                 val = "m"
                             message += f"/{val}"
                     self.output(f"{message}\n")
+                    self._message_count += 1
                     self._value_count += len(self._time_series)
                 else :
                     #-----------------------#
@@ -289,6 +333,7 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
                             message += f"DC{self._forecast_time}/"
                         message += f"{self._parameter['pe_code']} {val}"
                         self.output(f"{message}\n")
+                        self._message_count += 1
                     self._value_count += len(self._time_series)
                 self._time_series_count += 1
             except shared.LoaderException as e :
@@ -324,8 +369,6 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
             f_part = sensor["f_part"]
             self._unload_sensors[(a_part,b_part,e_part,f_part)] = self._sensors[sensor_name]
         for pe_code in self._parameters :
-            if pe_code == "HG" :
-                debug = True
             parameter = self._parameters[pe_code]
             c_part    = parameter["c_part"]
             data_type = parameter["type"]
@@ -397,8 +440,7 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
         self.output_shef_text()
         if self._logger :
             self._logger.info("--[Summary]-----------------------------------------------------------")
-            self._logger.info(f"{self._time_series_count} time series output")
-            self._logger.info(f"{self._value_count} vaules output")
+            self._logger.info(f"{self._value_count} values output in {self._message_count} messages from {self._time_series_count} time series")
 
     def load_time_series(self) :
         '''
@@ -474,6 +516,15 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
         self._value_count += value_count
         self._time_series_count += time_series_count
         self._time_series = []
+
+    def done(self) :
+        '''
+        Load any remaining time series and close the output if necessary
+        '''
+        super().done()
+        if self._logger :
+            self._logger.info("--[Summary]-----------------------------------------------------------")
+            self._logger.info(f"{self._value_count} values output in {self._time_series_count} time series")
 
     @property
     def loader_version(self) :
@@ -711,7 +762,8 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
 loader_options     = "--loader dssvue[sensor_file_path][parameter_file_path]\n" \
                      "sensor_file_path    = the name of the ShefDss-style sensor file to use \n" \
                      "parameter_file_path = the name of the ShefDss-style parameter file to use \n"
-loader_description = "Used by HEC-DSSVue to import/export SHEF data. Uses ShefDss-style configuration"
-loader_version     = "1.1"
+loader_description = "Used by HEC-DSSVue to import/export SHEF data. Uses ShefDss-style configuration.\n" \
+                     "As of v1.2 .csv sensor and parameter files can be used to handle long pathname parts."
+loader_version     = "1.2"
 loader_class       = DSSVueLoader
 can_unload         = True

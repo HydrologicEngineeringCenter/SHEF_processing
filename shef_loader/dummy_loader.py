@@ -38,7 +38,7 @@ class DummyLoader :
         else :
             raise shared.LoaderException(f"Unexpected object type for output device: [{output_object.__class__.__name__}]")
         if self._logger :
-            self._logger.info(f"{self.loader_name} v {self.loader_version} instatiated")
+            self._logger.info(f"{self.loader_name} v{self.loader_version} instatiated")
 
     def set_options(self, options_str: str) -> None :
         '''
