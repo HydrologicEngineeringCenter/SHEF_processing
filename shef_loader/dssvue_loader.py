@@ -1,5 +1,5 @@
 import csv, os, re, sys
-from .        import dummy_loader
+from .        import base_loader
 from .        import shared
 from datetime import timedelta
 from logging  import Logger
@@ -12,7 +12,7 @@ from typing   import Union
 
 UNDEFINED: float = -3.4028234663852886e+38
 
-class DSSVueLoader(dummy_loader.DummyLoader) :
+class DSSVueLoader(base_loader.BaseLoader) :
     '''
     Loader used by HEC-DSSVue.
     This loader uses ShefDss-style sensor and parameter files and outputs time series for HEC-DSSVue to read and store

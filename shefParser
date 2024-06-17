@@ -1,5 +1,5 @@
 #!/bin/python3
-import argparse, copy, logging, os, re, sys, textwrap, types, traceback
+import argparse, copy, logging, os, re, sys, textwrap, types
 from collections import deque
 from datetime    import datetime
 from datetime    import timedelta
@@ -3533,15 +3533,17 @@ Loading SHEF data to data stores:''')
             print("    The 'shef_loader' package was not found or it contained no valid loaders.")
         else :
             for loader_name in sorted(loaders) :
+                if loader_name == "base_loader" :
+                    continue
                 description = "\n                    ".join(loaders[loader_name]["description"].split(chr(10)))
                 options =     "\n                    ".join(loaders[loader_name]["option_format"].split(chr(10)))
-                print(f"    loader_name        : {loader_name} v{loaders[loader_name]['version']}")
+                print(f"    loader        : {loader_name} v{loaders[loader_name]['version']}")
                 print(f"    Description   : {description}")
                 print(f"    Can unload    : {loaders[loader_name]['can_unload']}")
                 print(f"    Option Format : {options}")
                 print("")
 
-            exit(0)
+        exit(0)
     if args.unload and not args.loader :
         print("\nArgument --unload may only be used if argument --loader is also used")
         exit(-1)
@@ -3608,21 +3610,23 @@ Loading SHEF data to data stores:''')
     #--------------------------------#
     loader = None
     if args.loader :
-        pos = args.loader.find('[')
-        if pos == -1 :
-            loader_name = args.loader
-            loader_args = None
-        else :
-            loader_name = args.loader[:pos]
-            loader_args = args.loader[pos:]
-        if loader_name in loaders :
-            loader_info = loaders[loader_name]
-        elif f"{loader_name}_loader" in loaders :
-            loader_info = loaders[f"{loader_name}_loader"]
-        else :
-            logger.critical(f"No such loader: {loader_name}")
-            exit(-1)
         try :
+            pos = args.loader.find('[')
+            if pos == -1 :
+                loader_name = args.loader
+                loader_args = None
+            else :
+                loader_name = args.loader[:pos]
+                loader_args = args.loader[pos:]
+            if loader_name in ["base", "base_loader"] :
+                raise ShefParser.ParseException("Cannot directly use the base loader")
+            if loader_name in loaders :
+                loader_info = loaders[loader_name]
+            elif f"{loader_name}_loader" in loaders :
+                loader_info = loaders[f"{loader_name}_loader"]
+            else :
+                logger.critical(f"No such loader: {loader_name}")
+                exit(-1)
             loader = loader_info["class"](logger, args.out, args.append_out)
             loader.set_options(loader_args)
         except Exception as e :
@@ -3699,4 +3703,7 @@ Loading SHEF data to data stores:''')
             logger.info(f"{parser._error_count:6d} errors in {parser._messages_with_error_count} messages")
 
 if __name__ == "__main__" :
-    main()
+    try :
+        main()
+    except Exception as e :
+        print(f"ERROR: {str(e)}")

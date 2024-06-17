@@ -9,6 +9,7 @@ This package includes modules to be used for loading (storing) SHEF data (as par
 - [Module Requirements](#module-requirements)
 - [The Shared Module](#the-shared-module)
 - [Base Class Members](#base-class-members)
+- [Example Usage](#example-usage)
 
 ## How It Works
 Normally, `shefLoader` parses SHEF text and outputs each value on a single line in one of two text formats also output by the NOAA/NWS `shefit` program. Specifying the `--loader` option to `shefParser` changes the behavior as follows:
@@ -27,14 +28,14 @@ Normally, `shefLoader` parses SHEF text and outputs each value on a single line 
 Specifying the `--unload` option to `shefParser` changes the behavior so that instead of items 3 and 4 above, `shefParser` calls the loader method `unload(self) -> None` once.
 
 ## Module Requirements
-Each loader module must have several module-level variables and one module-level class that extends class `dummy_loader.DummyLoader`.
+Each loader module must have several module-level variables and one module-level class that extends class `base_loader.BaseLoader`.
 
 |variable|description|
 |--|--|
 |`loader_options: str`|Specifies how the user specifies the module to `shefParser`. This should be `--loader <module_name><options>`. <*module_name*> may the the full module name or *xxx* if the module is named *xxx*_loader. <*options*> is loader-specific, but <*module_name*><*options*> must be passed as a single string. `loader_options` may be a multi-line string.|
 |`loader_description: str`|Describes the loader. May be a multi-line string.|
 |`loader_version: str`|The version identifier of the loader module.|
-|`loader_class: class`|The class in the module that extends `dummy_loader.DummyLoader`.|
+|`loader_class: class`|The class in the module that extends `base_loader.BaseLoader`.|
 |`can_unload: bool`|Specifies whether the loader class has an `unload()` method.|
 
 These variables are typically defined at the bottom of the module since the loader class must be defined before the `loader_class` variable.
@@ -70,7 +71,7 @@ The packages contains a module named `shared` which provides the following items
 
 ## Base Class Members
 
-The class `dummy_loader.DummyLoader` provides the following fields and methods:
+The class `base_loader.BaseLoader` provides the following fields and methods:
 
 #### Fields
 |field|description|
@@ -112,3 +113,12 @@ The class `dummy_loader.DummyLoader` provides the following fields and methods:
 |`value: float`|The data value of the current `ShefValue` object. Calls `assert_value_is_set()`. **Override if the loader requires anything other than the value in SHEF English units.**|
 |`data_qualifier: str`|The data value qualifier of the current `ShefValue` object. Calls `assert_value_is_set()`. **Override if the loader requires anything other than the SHEF data qualifier.**|
 |`duration_interval: datetime.timedelta`|The duration of the current `ShefValue` object as a `datetime.timedelta` object. Calls `assert_value_is_set()`. Calls `shared.durtion_interval()`. **Should not need to override.**|
+
+## Example Usage
+This example is based on the `dssvue_loader` module. As given in the output of `shefParser --description`, the option format is `--loader dssvue[sensor_file_path][parameter_file_path]`. The `options_str` format for this loader uses two positional parameters, *sensor_file_path* and *parameter_file_path*, each enclosed in square brackets and juxtapositioned without spaces. However, if either parameter contains spaces, the entire option string must be quoted.
+
+Since this loader is executed by a Java program (HEC-DSSVue) that controls the actual loading and unloading, this loader simply outputs formatted text (representing time series) for HEC-DSSVue to read and store. Likewise, HEC-DSSVue performs the unloading and outputs the same format of text for the loader to read for generation of SHEF text. Combining this information with that produced by the output of `shefLoader --help` the command line could look like the following:
+|operation|command|
+|--|--|
+|loading|`shefParser -i <shef_text_file> -o <time_seires_file> -l <log_file> --loader dssvue[<sensor_file_path>][<parameter_file_path>]`|
+|unloading|`shefParser -i <time_series_file> -o <shef_text_file> -l <log_file> --loader dssvue[<sensor_file_path>][<parameter_file_path>] --unload`|

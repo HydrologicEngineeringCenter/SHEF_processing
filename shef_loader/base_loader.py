@@ -9,7 +9,7 @@ from typing   import Optional
 from typing   import TextIO
 from typing   import Union
 
-class DummyLoader :
+class BaseLoader :
     '''
     Base class for all SHEF data loaders.
     This class simply writes the SHEF information to the output for "loading"
@@ -44,7 +44,7 @@ class DummyLoader :
 
     def set_options(self, options_str: Optional[str]) -> None :
         '''
-        Set the loader-specific options. This loader takes none, but other loaders should take option strings 
+        Set the loader-specific options. This loader takes none, but other loaders should take option strings
         in the format of [option_1][option_2]... with the options in square brackts. Use the parse_options
         method to extract the actual positional options. If key/value options are required, encode those into
         positional options (e.g., [key1=val2][key2=val2]) and the process into a dictionary
@@ -251,5 +251,5 @@ class DummyLoader :
 loader_options = "--loader dummy"
 loader_description = "Base class for other SHEF data loaders. Writes SHEF information to output"
 loader_version = "1.0"
-loader_class = DummyLoader
+loader_class = BaseLoader
 can_unload = False
