@@ -51,7 +51,7 @@ The packages contains a module named `shared` which provides the following items
 |--|--|
 |`DURATION_CODES: dict[int, str]`|SHEF duration character by numeric value|
 |`DURATION_VALUES: dict[str, int]`|SHEF duration numeric value by character|
-|`PROBABILITY_CODES: dict[float, str]`|SHEF probability character by numberic value|
+|`PROBABILITY_CODES: dict[float, str]`|SHEF probability character by numeric value|
 |`PROBABILITY_VALUES: dict[str, float]`|SHEF probability numeric value by character|
 |`SEND_CODES: dict[str, tuple[str, bool]]`|(<*parameter_code*>, <*value_time_is_prev_0700*>) by send code|
 |`VALUE_UNITS_PATTERN: re.Pattern`|matches pattern `([0-9]+)([a-z]+)` case insensitive|
