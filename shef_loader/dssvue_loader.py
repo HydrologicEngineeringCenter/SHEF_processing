@@ -5,8 +5,12 @@ from datetime import timedelta
 from logging  import Logger
 from io       import BufferedRandom
 from io       import TextIOWrapper
+from typing   import cast
+from typing   import Optional
 from typing   import TextIO
 from typing   import Union
+
+UNDEFINED: float = -3.4028234663852886e+38
 
 class DSSVueLoader(dummy_loader.DummyLoader) :
     '''
@@ -14,11 +18,11 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
     This loader uses ShefDss-style sensor and parameter files and outputs time series for HEC-DSSVue to read and store
     '''
     duration_units = {
-        'M' : "Minutes",
-        'H' : "Hours",
-        'D' : "Days",
-        'L' : "Months",
-        'Y' : "Years"}
+        'M' : "Minute",
+        'H' : "Hour",
+        'D' : "Day",
+        'L' : "Month",
+        'Y' : "Year"}
 
     one_day = timedelta(days=1)
     month_interval = timedelta(days=30)
@@ -31,29 +35,31 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
     time_value_line_pattern = re.compile(r"^\s+\['(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})', ([+-]?\d*(\.(\d*))?)\]$")
     forecast_time_pattern = re.compile("T:(\d{8})-(\d{4})\|")
 
-    def __init__(self, logger: Union[None, Logger], output_object: Union[TextIO, str] = None, append: bool = False) -> None :
+    def __init__(self, logger: Optional[Logger], output_object: Optional[Union[BufferedRandom, TextIO, str]] = None, append: bool = False) -> None :
         '''
         Constructor
         '''
         super().__init__(logger, output_object, append)
-        self._sensors = {}
-        self._parameters = {}
-        self._unload_sensors = {}
-        self._unload_parameters = {}
+        self._sensors: dict[str, dict[str, str]] = {}
+        self._parameters: dict[str, dict[str, str]] = {}
+        self._unload_sensors: dict[tuple[str, str, str, str], dict[str, str]] = {}
+        self._unload_parameters: dict[tuple[str, str, str], dict[str, str]] = {}
         self._time_series = []
         # following are for unload()
-        self._input = None
-        self._pathname = None
-        self._sensor = None
-        self._parameter = None
-        self._forecast_time = None
+        self._input: Optional[Union[BufferedRandom, TextIOWrapper]] = None
+        self._pathname: Optional[str] = None
+        self._sensor: Optional[dict[str, str]] = None
+        self._parameter: Optional[dict[str, str]] = None
+        self._forecast_time: Optional[str] = None
         self._message_count = 0
 
-    def set_options(self, options_str: str) -> None :
+    def set_options(self, options_str: Optional[str]) -> None :
         '''
         Set the sensor and parameter file names
         '''
-        def make_sensor(location, pe_code, duration_str, a_part, b_part, f_part) :
+        if not options_str :
+            raise shared.LoaderException(f"Empty options on {self.loader_name}.set_options()")
+        def make_sensor(location: str, pe_code: str, duration_str: str, a_part: str, b_part: str, f_part: str) -> None :
             if not location :
                 raise shared.LoaderException("Empty Location")
             if not pe_code :
@@ -67,10 +73,8 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
                     e_part = "IR-Month"
                 else :
                     duration_unit=DSSVueLoader.duration_units[duration_str[-1]]
-                    if duration_value == 1 :
-                        duration_unit = duration_unit[:-1]
                     e_part = f"{duration_value}{duration_unit}"
-                    if e_part == "7Days" :
+                    if e_part == "7Day" :
                         e_part = "1Week"
             else :
                 e_part = "IR-Month"
@@ -200,18 +204,20 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
         else :
             raise shared.LoaderException(f"Expected TextIOWrapper or str object, got [{input_object.__class__.__name__}]")
 
-    def output_shef_text(self) :
+    def output_shef_text(self) -> None :
         '''
         Outputs an unloaded time series
         '''
-        def h2hm(h) :
+        def h2hm(h: float) -> float :
             whole, fraction = divmod(h/100., 1.)
             return 100 * (whole + fraction * 0.6)
 
-        def h2dur(h) :
+        def h2dur(h: float) -> Optional[float] :
             val = None
+            if not self._sensor :
+                raise shared.LoaderException("Empty sensor in h2dur()")
             duration_str = self._sensor["e_part"].upper().replace("1WEEK", "7DAYS")
-            m = shared.valueUnitsPattern.match(duration_str)
+            m = shared.VALUE_UNITS_PATTERN.match(duration_str)
             if m :
                 if m.group(2).startswith("SEC") :
                     val = h * 86400
@@ -229,7 +235,7 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
                     val = h / (10 * 365 * 24)
             return val
 
-        def apply_transform(val, transform) :
+        def apply_transform(val: Optional[float], transform: str) -> float :
             if val is None :
                 raise shared.LoaderException(f"Value is None")
             if transform :
@@ -257,6 +263,11 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
                 self._logger.info(msg)
             self.output(f":     <{msg}>\n")
         else :
+            val: Optional[Union[float, str]]
+            if not self._sensor :
+                raise shared.LoaderException("Empty sensor in output_shef_text()")
+            if not self._parameter :
+                raise shared.LoaderException("Empty parameter in output_shef_text()")
             if self._sensor["e_part"].upper().startswith("IR-") or self._sensor["e_part"][0] == "~" :
                 #-----------------------#
                 # irregular time series #
@@ -272,7 +283,7 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
                     header += f"DC{self._forecast_time}/"
                 header += f"{self._parameter['pe_code']}"
                 duration_str = self._sensor["e_part"].upper().replace("1WEEK", "7DAYS")
-                m = shared.valueUnitsPattern.match(duration_str)
+                m = shared.VALUE_UNITS_PATTERN.match(duration_str)
                 if m :
                     if m.group(2).startswith("SEC") :
                         header += f"/DIS{int(m.group(1)):02d}"
@@ -304,7 +315,7 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
                     message = header
                     for tsv in self._time_series :
                         val = float(tsv[1])
-                        if val is None or val == shared.UNDEFINED :
+                        if val is None or val == UNDEFINED :
                             message += "/m"
                         else :
                             val = apply_transform(val, transform)
@@ -321,7 +332,7 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
                     for i in range(len(self._time_series)) :
                         tsv = self._time_series[i]
                         val = float(tsv[1])
-                        if val == shared.UNDEFINED :
+                        if val == UNDEFINED :
                             val = "m"
                         else :
                             val = apply_transform(val, transform)
@@ -350,7 +361,7 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
         self._parameter = None
         self._time_series = []
 
-    def unload(self) :
+    def unload(self) -> None :
         '''
         Read time series text from HEC-DSSVue and output SHEF
         '''
@@ -378,10 +389,15 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
         # read the input stream and output SHEF text #
         #--------------------------------------------#
         line_number = 0
-        line = self._input.readline()
+        line_or_bytes = self._input.readline()
+        if isinstance(line_or_bytes, bytes) :
+            line = line_or_bytes.decode("utf-8")
+        line = cast(str, line_or_bytes)
         while line :
             line_number += 1
             line = line[:-1]
+            if not line :
+                continue
             if DSSVueLoader.pathname_line_pattern.match(line) :
                 if all([self._pathname, self._sensor, self._parameter]) :
                     self.output_shef_text()
@@ -392,14 +408,19 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
                     A,B,C,E,F = 1,2,3,5,6
                     parts = self._pathname.split("/")
                     try :
-                        self._sensor = self._unload_sensors[(parts[A],parts[B],parts[E],"*" if parts[F].startswith("T:") else parts[F])]
+                        key = (parts[A],parts[B],parts[E],parts[F])
+                        self._sensor = self._unload_sensors[key]
                     except KeyError :
-                        msg = f"No sensor found for [{self._pathname}]"
-                        if self._logger :
-                            self._logger.info(msg)
-                        self.output(f":     <{msg}>\n")
-                        self._unload_sensor = None
-                        continue
+                        try :
+                            key = (parts[A],parts[B],parts[E],'*')
+                            self._sensor = self._unload_sensors[key]
+                        except KeyError :
+                            msg = f"No sensor found for [{self._pathname}]"
+                            if self._logger :
+                                self._logger.info(msg)
+                            self.output(f":     <{msg}>\n")
+                            self._unload_sensor = None
+                            continue
                     loadinfo = eval(line.strip())
                     try :
                         data_type = loadinfo["type"]
@@ -434,7 +455,10 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
                     continue
                 tsv = eval(line.strip())
                 self._time_series.append([tsv[0], tsv[1]])
-            line = self._input.readline()
+            line_or_bytes = self._input.readline()
+            if isinstance(line_or_bytes, bytes) :
+                line = line_or_bytes.decode("utf-8")
+            line = cast(str, line_or_bytes)
         if self._input.name != "<stdin>" :
             self._input.close()
         self.output_shef_text()
@@ -442,10 +466,12 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
             self._logger.info("--[Summary]-----------------------------------------------------------")
             self._logger.info(f"{self._value_count} values output in {self._message_count} messages from {self._time_series_count} time series")
 
-    def load_time_series(self) :
+    def load_time_series(self) -> None :
         '''
         Output the timeseries for HEC-DSSVue
         '''
+        self.assert_value_is_set()
+        sv = cast(shared.ShefValue, self._shef_value)
         value_count = time_series_count = 0
         if self._time_series :
             if self._logger :
@@ -462,7 +488,7 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
                 load_individually = False
                 dur_intvl = None
                 if len(time_series) > 1 :
-                    dur_intvl = shared.duration_interval(self._prev_shef_value.parameter_code)
+                    dur_intvl = shared.duration_interval(sv.parameter_code)
                     if dur_intvl :
                         #---------------------------------------------------#
                         # see if we the value times agree with the duration #
@@ -480,14 +506,14 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
                                     if self._logger :
                                         self._logger.warning(
                                             f"Data interval of [{str(intvl)}] does not agree with duration of [{str(dur_intvl)}]"
-                                            f"\n\ton [{self.prev_time_series_name}]\n\tWill attempt to load [{len(self._time_series)}] values individually")
+                                            f"\n\ton [{self.time_series_name}]\n\tWill attempt to load [{len(self._time_series)}] values individually")
                                     load_individually = True
                 if load_individually :
                     #------------------------------------------#
                     # load values one at a time, some may fail #
                     #------------------------------------------#
                     for tsv in time_series :
-                        self.output(f"{self.prev_time_series_name}\n\t{self.loading_info}\n")
+                        self.output(f"{self.time_series_name}\n\t{self.loading_info}\n")
                         self.output(f"\t{list([tsv[0],tsv[1]])}\n")
                     time_series_count = len(time_series)
                 else :
@@ -512,12 +538,12 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
                 value_count = len(time_series)
             else :
                 if self._logger :
-                    self._logger.info(f"No values for [{self.prev_time_series_name}]")
+                    self._logger.info(f"No values for [{self.time_series_name}]")
         self._value_count += value_count
         self._time_series_count += time_series_count
         self._time_series = []
 
-    def done(self) :
+    def done(self) -> None :
         '''
         Load any remaining time series and close the output if necessary
         '''
@@ -527,7 +553,7 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
             self._logger.info(f"{self._value_count} values output in {self._time_series_count} time series")
 
     @property
-    def loader_version(self) :
+    def loader_version(self) -> str :
         '''
         The class name of the current loader
         '''
@@ -540,14 +566,8 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
         The the senor name for the current SHEF value
         '''
         self.assert_value_is_set()
-        return f"{self._shef_value.location}/{self._shef_value.parameter_code[:2]}"
-
-    @property
-    def prev_sensor(self) -> str :
-        '''
-        The the senor name for the current SHEF value
-        '''
-        return None if self._prev_shef_value is None else f"{self._prev_shef_value.location}/{self._prev_shef_value.parameter_code[:2]}"
+        sv = cast(shared.ShefValue, self._shef_value)
+        return f"{sv.location}/{sv.parameter_code[:2]}"
 
     @property
     def parameter(self) -> str :
@@ -555,20 +575,8 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
         Get the C Pathname part
         '''
         self.assert_value_is_recognized()
-        pe_code = self._shef_value.parameter_code[:2]
-        param = self._parameters[pe_code]["c_part"]
-        if not param :
-            raise shared.LoaderException(f"No C Pathname part specified for PE code [{pe_code}]")
-        return param
-
-    @property
-    def prev_parameter(self) -> str :
-        '''
-        Get the C Pathname part
-        '''
-        if self._prev_shef_value is None :
-            return None
-        pe_code = self._prev_shef_value.parameter_code[:2]
+        sv = cast(shared.ShefValue, self._shef_value)
+        pe_code = sv.parameter_code[:2]
         param = self._parameters[pe_code]["c_part"]
         if not param :
             raise shared.LoaderException(f"No C Pathname part specified for PE code [{pe_code}]")
@@ -580,12 +588,15 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
         Get the loader-specific time series name for the current SHEF value
         '''
         self.assert_value_is_set()
-        return self.get_time_series_name(self._shef_value)
+        sv = cast(shared.ShefValue, self._shef_value)
+        return self.get_time_series_name(sv)
 
-    def get_time_series_name(self, shef_value: shared.ShefValue) -> str :
+    def get_time_series_name(self, shef_value: Optional[shared.ShefValue]) -> str :
         '''
         Get the loader-specific time series name for a specified SHEF value
         '''
+        if shef_value is None :
+            raise shared.LoaderException(f"Empty SHEF value in get_time_series_name()")
         pe_code = shef_value.parameter_code[:2]
         sensor_name = f"{shef_value.location}/{pe_code}"
         sensor = self._sensors[sensor_name]
@@ -598,35 +609,11 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
         e_part = sensor["e_part"]
         f_part = sensor["f_part"]
         if f_part == "*" :
-            create_date = self._shef_value.create_date
+            create_date = shef_value.create_date
             if create_date == "0000-00-00" :
                 f_part = ""
             else :
-                create_time = self._shef_value.create_time
-                y, m, d = create_date.split("-")
-                h, n, s = create_time.split(":")
-                f_part = f"T:{y}{m}{d}-{h}{n}|"
-        return f"/{a_part}/{b_part}/{c_part}//{e_part}/{f_part}/"
-
-    @property
-    def prev_time_series_name(self) -> str :
-        '''
-        Get the loader-specific time series name
-        '''
-        if self._prev_shef_value is None :
-            return None
-        sensor = self._sensors[self.prev_sensor]
-        a_part = sensor["a_part"]
-        b_part = sensor["b_part"]
-        c_part = self.prev_parameter
-        e_part = sensor["e_part"]
-        f_part = sensor["f_part"]
-        if f_part == "*" :
-            create_date = self._prev_shef_value.create_date
-            if create_date == "0000-00-00" :
-                f_part = ""
-            else :
-                create_time = self._prev_shef_value.create_time
+                create_time = shef_value.create_time
                 y, m, d = create_date.split("-")
                 h, n, s = create_time.split(":")
                 f_part = f"T:{y}{m}{d}-{h}{n}|"
@@ -641,19 +628,12 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
         return self.sensor in self._sensors
 
     @property
-    def use_prev_value(self) -> bool :
-        '''
-        Get whether the current ShefValue is recognized by the loader
-        '''
-        return self.prev_sensor in self._sensors
-
-    @property
     def location(self) -> str :
         '''
         Get the B Pathname part
         '''
         self.assert_value_is_set()
-        return self.sensor["b_bpart"]
+        return cast(dict[str, str], self._sensor)["b_bpart"]
 
     @property
     def loading_info(self) -> dict :
@@ -661,12 +641,13 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
         Get the unit and data type
         '''
         self.assert_value_is_set()
+        sv = cast(shared.ShefValue, self._shef_value)
         param = self._parameters[self.sensor.split("/")[1]]
         specified_type = param["type"]
-        pe_code = self._shef_value.parameter_code[:2]
-        duration_code = self._shef_value.parameter_code[2]
+        pe_code = sv.parameter_code[:2]
+        duration_code = sv.parameter_code[2]
         if specified_type == "*" :
-            parameter_code = self._shef_value.parameter_code
+            parameter_code = sv.parameter_code
             if duration_code == 'I' :
                 data_type = "INST-CUM" if pe_code == "PC" else "INST-VAL"
             else :
@@ -689,9 +670,11 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
         '''
         Get the loader-specific data value of the current ShefValue
         '''
+        expected_pe_codes: tuple[str, ...]
         self.assert_value_is_set()
-        val = self._shef_value.value
-        pe_code = self._shef_value.parameter_code[:2]
+        sv = cast(shared.ShefValue, self._shef_value)
+        val = sv.value
+        pe_code = sv.parameter_code[:2]
         transform = self._parameters[pe_code]["transform"]
         if not transform :
             #---------------------------------------------#
@@ -722,9 +705,10 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
             #-----------------------------#
             # duration to hours transform #
             #-----------------------------#
+            factor: float
             expected_pe_codes = ("VK", "VL", "VM", "VR")
             duration = self._sensors[self.sensor]["duration"]
-            m = shared.valueUnitsPattern.match(duration)
+            m = shared.VALUE_UNITS_PATTERN.match(duration)
             if not m :
                 if self._logger :
                     self._logger.warning(
@@ -732,7 +716,7 @@ class DSSVueLoader(dummy_loader.DummyLoader) :
                         f"\n\tUsing data value [{val}] as MWh")
                 factor = 1
             else :
-                duration_value = int(m.group(1))
+                duration_value = float(m.group(1))
                 duration_unit  = m.group(2)
                 if duration_unit.startswith("Minute") :
                     factor = duration_value / 60

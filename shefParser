@@ -3532,12 +3532,12 @@ Loading SHEF data to data stores:''')
         if not loaders :
             print("    The 'shef_loader' package was not found or it contained no valid loaders.")
         else :
-            for loader in sorted(loaders) :
-                description = "\n                    ".join(loaders[loader]["description"].split(chr(10)))
-                options =     "\n                    ".join(loaders[loader]["option_format"].split(chr(10)))
-                print(f"    Loader        : {loader} v{loaders[loader]['version']}")
+            for loader_name in sorted(loaders) :
+                description = "\n                    ".join(loaders[loader_name]["description"].split(chr(10)))
+                options =     "\n                    ".join(loaders[loader_name]["option_format"].split(chr(10)))
+                print(f"    loader_name        : {loader_name} v{loaders[loader_name]['version']}")
                 print(f"    Description   : {description}")
-                print(f"    Can unload    : {loaders[loader]['can_unload']}")
+                print(f"    Can unload    : {loaders[loader_name]['can_unload']}")
                 print(f"    Option Format : {options}")
                 print("")
 
@@ -3611,7 +3611,7 @@ Loading SHEF data to data stores:''')
         pos = args.loader.find('[')
         if pos == -1 :
             loader_name = args.loader
-            loader_args = ""
+            loader_args = None
         else :
             loader_name = args.loader[:pos]
             loader_args = args.loader[pos:]
@@ -3632,6 +3632,8 @@ Loading SHEF data to data stores:''')
         #-----------------#
         # write SHEF text #
         #-----------------#
+        if not loader :
+            raise Exception("Cannot call unload() without a valid loader")
         try :
             loader.set_input(getattr(args, "in"))
             loader.unload()
