@@ -1,0 +1,2148 @@
+
+SRUS83 KKRF 011430
+RR8KRF
+
+: US Army Corp of Engineers
+: Upper Missouri River Basin Plains
+: Snow and Soil Moisture Network
+
+: South Dakota Mesonet Data
+
+
+: Relative humidity (pct)
+.E ATRS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   85.80/   85.50/   88.10/   85.60/   85.70/   84.80
+.E1   86.10
+
+: Snow depth (in)
+.E ATRS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1    0.08/    0.08/    0.08/    0.12/    0.08/    0.08
+.E1    0.04
+
+: Wind direction (deg)
+.E ATRS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 339/ 338/ 328/ 336/ 345/ 1/ 358
+
+: Solar radiation (W/m2)
+.E ATRS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/  -98.95/ -103.33/  -98.16/  -97.40/  -98.35
+.E1  -99.14
+
+: Precipitation (in)
+.E ATRS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E ATRS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   13.90/   13.82/    8.65/   11.95/   11.25/    7.12
+.E1    8.34
+
+: Air temperature (F)
+.E ATRS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   19.94/   18.86/   17.22/   17.29/   16.52/   16.34
+.E1   15.66
+
+: Soil moisture (pct at 4 inch depth)
+.E ATRS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0109/ 4.0110/ 4.0110/ 4.0110/ 4.0110/ 4.0110/ 4.0110
+
+: Soil temperature (F at 4 inch depth)
+.E ATRS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0308/ 4.0308/ 4.0308/ 4.0308/ 4.0309/ 4.0309/ 4.0309
+
+: Soil moisture (pct at 40 inch depth)
+.E ATRS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 40.0152/ 40.0151/ 40.0152/ 40.0152/ 40.0152/ 40.0153
+.E1 40.0152
+
+: Soil temperature (F at 40 inch depth)
+.E ATRS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 40.0335/ 40.0335/ 40.0335/ 40.0336/ 40.0336/ 40.0336
+.E1 40.0336
+
+: Soil moisture (pct at 2 inch depth)
+.E ATRS2 230301 Z DH0800/MVIRZ/DIH1
+.E1 2.0108/ 2.0107/ 2.0107/ 2.0108
+
+: Soil temperature (F at 2 inch depth)
+.E ATRS2 230301 Z DH0800/DUE/TBIRZ/DIH1
+.E1 2.0312/ 2.0312/ 2.0313/ 2.0312
+
+: Soil moisture (pct at 8 inch depth)
+.E ATRS2 230301 Z DH0800/MVIRZ/DIH1
+.E1 8.0245/ 8.0245/ 8.0245/ 8.0245
+
+: Soil temperature (F at 8 inch depth)
+.E ATRS2 230301 Z DH0800/DUE/TBIRZ/DIH1
+.E1 8.0304/ 8.0305/ 8.0306/ 8.0306
+
+: Relative humidity (pct)
+.E BFMS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   91.40/   91.00/   92.30/   89.00/   77.96/   73.76
+.E1   71.62
+
+: Snow depth (in)
+.E BFMS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1   12.72/   12.72/   12.72/   12.68/   12.60/   12.60
+.E1   12.40
+
+: Wind direction (deg)
+.E BFMS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 158/ 156/ 156/ 186/ 222/ 236/ 268
+
+: Solar radiation (W/m2)
+.E BFMS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/  -12.46/  -25.28/  -36.85/  -32.56/  -32.30
+.E1  -20.54
+
+: Precipitation (in)
+.E BFMS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E BFMS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   12.16/   12.34/   10.31/   12.11/   15.23/   15.13
+.E1   24.37
+
+: Air temperature (F)
+.E BFMS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   30.56/   30.74/   29.26/   28.98/   32.09/   32.70
+.E1   34.38
+
+: Soil moisture (pct at 4 inch depth)
+.E BFMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0288/ 4.0288/ 4.0289/ 4.0288/ 4.0289/ 4.0288/ 4.0288
+
+: Soil temperature (F at 4 inch depth)
+.E BFMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0325/ 4.0325/ 4.0325/ 4.0325/ 4.0325/ 4.0325/ 4.0326
+
+: Soil moisture (pct at 20 inch depth)
+.E BFMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 20.0209/ 20.0210/ 20.0210/ 20.0211/ 20.0210/ 20.0210
+.E1 20.0210
+
+: Soil temperature (F at 20 inch depth)
+.E BFMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 20.0362/ 20.0362/ 20.0361/ 20.0362/ 20.0361/ 20.0362
+.E1 20.0362
+
+: Soil moisture (pct at 40 inch depth)
+.E BFMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 40.0251/ 40.0251/ 40.0251/ 40.0250/ 40.0250/ 40.0251
+.E1 40.0251
+
+: Soil temperature (F at 40 inch depth)
+.E BFMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 40.0390/ 40.0391/ 40.0390/ 40.0391/ 40.0391/ 40.0390
+.E1 40.0389
+
+: Relative humidity (pct)
+.E BKMS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   90.70/   89.80/   88.30/   85.10/   88.90/   90.90
+.E1   95.30
+
+: Snow depth (in)
+.E BKMS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1    8.54/    8.58/    8.66/    8.66/    8.66/    8.78
+.E1    8.74
+
+: Wind direction (deg)
+.E BKMS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 143/ 152/ 168/ 184/ 205/ 230/ 247
+
+: Solar radiation (W/m2)
+.E BKMS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/  -51.64/  -56.63/  -48.31/  -35.15/  -39.42
+.E1  -48.86
+
+: Precipitation (in)
+.E BKMS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E BKMS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   19.22/   24.48/   17.43/   14.90/   15.05/   15.84
+.E1   20.29
+
+: Air temperature (F)
+.E BKMS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   30.38/   30.20/   30.56/   31.41/   32.67/   31.53
+.E1   30.87
+
+: Soil moisture (pct at 2 inch depth)
+.E BKMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 2.0197/ 2.0198/ 2.0196/ 2.0198/ 2.0198/ 2.0198/ 2.0199
+
+: Soil temperature (F at 2 inch depth)
+.E BKMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 2.0322/ 2.0322/ 2.0323/ 2.0322/ 2.0322/ 2.0322/ 2.0322
+
+: Soil moisture (pct at 4 inch depth)
+.E BKMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0249/ 4.0248/ 4.0249/ 4.0249/ 4.0249/ 4.0250/ 4.0249
+
+: Soil temperature (F at 4 inch depth)
+.E BKMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0324/ 4.0324/ 4.0324/ 4.0324/ 4.0324/ 4.0324/ 4.0324
+
+: Soil moisture (pct at 8 inch depth)
+.E BKMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 8.0256/ 8.0256/ 8.0256/ 8.0256/ 8.0255/ 8.0255/ 8.0256
+
+: Soil temperature (F at 8 inch depth)
+.E BKMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 8.0331/ 8.0331/ 8.0331/ 8.0332/ 8.0331/ 8.0332/ 8.0332
+
+: Soil moisture (pct at 20 inch depth)
+.E BKMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 20.0270/ 20.0270/ 20.0269/ 20.0269/ 20.0270/ 20.0269
+.E1 20.0270
+
+: Soil temperature (F at 20 inch depth)
+.E BKMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 20.0346/ 20.0346/ 20.0346/ 20.0346/ 20.0346/ 20.0345
+.E1 20.0347
+
+: Soil moisture (pct at 40 inch depth)
+.E BKMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 40.0239/ 40.0239/ 40.0239/ 40.0239/ 40.0239/ 40.0239
+.E1 40.0239
+
+: Soil temperature (F at 40 inch depth)
+.E BKMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 40.0369/ 40.0369/ 40.0369/ 40.0369/ 40.0369/ 40.0369
+.E1 40.0369
+
+: Relative humidity (pct)
+.E BWLS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   93.90/   94.40/   94.50/   92.90/   91.50/   90.10
+.E1   89.40
+
+: Snow depth (in)
+.E BWLS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1    5.91/    5.83/    5.98/    6.22/    6.26/    6.38
+.E1    6.89
+
+: Wind direction (deg)
+.E BWLS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 63/ 59/ 40/ 28/ 18/ 6/ 346
+
+: Solar radiation (W/m2)
+.E BWLS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/ -363.04/ -372.08/ -374.40/ -356.11/ -338.09
+.E1 -307.26
+
+: Precipitation (in)
+.E BWLS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E BWLS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   26.58/   27.79/   17.82/   18.59/   17.42/   22.04
+.E1   19.31
+
+: Air temperature (F)
+.E BWLS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   23.27/   23.67/   23.90/   21.92/   19.24/   17.13
+.E1   14.34
+
+: Soil moisture (pct at 2 inch depth)
+.E BWLS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 2.0099/ 2.0099/ 2.0099/ 2.0099/ 2.0100/ 2.0099/ 2.0100
+
+: Soil temperature (F at 2 inch depth)
+.E BWLS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 2.0279/ 2.0280/ 2.0279/ 2.0280/ 2.0280/ 2.0280/ 2.0280
+
+: Soil moisture (pct at 4 inch depth)
+.E BWLS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0099/ 4.0099/ 4.0099/ 4.0099/ 4.0099/ 4.0099/ 4.0099
+
+: Soil temperature (F at 4 inch depth)
+.E BWLS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0280/ 4.0280/ 4.0280/ 4.0280/ 4.0280/ 4.0280/ 4.0280
+
+: Soil moisture (pct at 8 inch depth)
+.E BWLS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 8.0143/ 8.0142/ 8.0143/ 8.0143/ 8.0143/ 8.0142/ 8.0143
+
+: Soil temperature (F at 8 inch depth)
+.E BWLS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 8.0284/ 8.0284/ 8.0284/ 8.0285/ 8.0284/ 8.0285/ 8.0285
+
+: Soil moisture (pct at 20 inch depth)
+.E BWLS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 20.0196/ 20.0196/ 20.0196/ 20.0195/ 20.0196/ 20.0193
+.E1 20.0192
+
+: Soil temperature (F at 20 inch depth)
+.E BWLS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 20.0314/ 20.0314/ 20.0314/ 20.0314/ 20.0315/ 20.0314
+.E1 20.0314
+
+: Soil moisture (pct at 40 inch depth)
+.E BWLS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 40.0188/ 40.0187/ 40.0188/ 40.0187/ 40.0187/ 40.0187
+.E1 40.0188
+
+: Soil temperature (F at 40 inch depth)
+.E BWLS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 40.0348/ 40.0347/ 40.0348/ 40.0348/ 40.0347/ 40.0348
+.E1 40.0347
+
+: Relative humidity (pct)
+.E CPTS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   68.82/   75.99/   66.42/   85.10/   88.20/   87.60
+.E1   86.60
+
+: Snow depth (in)
+.E CPTS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1    4.41/    4.29/    4.41/    4.61/    4.61/    4.57
+.E1    4.57
+
+: Wind direction (deg)
+.E CPTS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 284/ 293/ 304/ 357/ 359/ 348/ 355
+
+: Solar radiation (W/m2)
+.E CPTS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/ -134.24/ -131.49/ -128.92/ -131.00/ -131.59
+.E1 -131.28
+
+: Precipitation (in)
+.E CPTS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E CPTS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1    6.22/    7.81/    8.98/   15.03/    8.96/    8.55
+.E1   11.34
+
+: Air temperature (F)
+.E CPTS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   27.59/   23.90/   27.28/   27.07/   25.68/   24.93
+.E1   24.39
+
+: Soil moisture (pct at 2 inch depth)
+.E CPTS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 2.0327/ 2.0327/ 2.0329/ 2.0327/ 2.0327/ 2.0328/ 2.0327
+
+: Soil temperature (F at 2 inch depth)
+.E CPTS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 2.0310/ 2.0310/ 2.0310/ 2.0310/ 2.0310/ 2.0311/ 2.0309
+
+: Soil moisture (pct at 4 inch depth)
+.E CPTS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0369/ 4.0370/ 4.0369/ 4.0368/ 4.0369/ 4.0369/ 4.0369
+
+: Soil temperature (F at 4 inch depth)
+.E CPTS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0313/ 4.0313/ 4.0313/ 4.0313/ 4.0313/ 4.0313/ 4.0313
+
+: Soil moisture (pct at 8 inch depth)
+.E CPTS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 8.0404/ 8.0404/ 8.0402/ 8.0404/ 8.0403/ 8.0406/ 8.0405
+
+: Soil temperature (F at 8 inch depth)
+.E CPTS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 8.0316/ 8.0316/ 8.0316/ 8.0316/ 8.0316/ 8.0317/ 8.0316
+
+: Soil moisture (pct at 20 inch depth)
+.E CPTS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 20.0314/ 20.0314/ 20.0314/ 20.0314/ 20.0314/ 20.0315
+.E1 20.0315
+
+: Soil temperature (F at 20 inch depth)
+.E CPTS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 20.0334/ 20.0333/ 20.0334/ 20.0334/ 20.0334/ 20.0334
+.E1 20.0334
+
+: Soil moisture (pct at 40 inch depth)
+.E CPTS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 40.0362/ 40.0362/ 40.0362/ 40.0362/ 40.0362/ 40.0362
+.E1 40.0362
+
+: Soil temperature (F at 40 inch depth)
+.E CPTS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 40.0367/ 40.0367/ 40.0367/ 40.0366/ 40.0368/ 40.0367
+.E1 40.0367
+
+: Relative humidity (pct)
+.E CTWS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   78.10/   82.10/   83.90/   81.90/   80.20/   82.40
+.E1   81.90
+
+: Snow depth (in)
+.E CTWS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1    7.56/    7.52/    7.44/    7.48/    7.56/    7.56
+.E1    7.56
+
+: Wind direction (deg)
+.E CTWS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 277/ 285/ 287/ 294/ 316/ 336/ 332
+
+: Solar radiation (W/m2)
+.E CTWS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/ -103.18/ -101.25/ -100.88/  -99.41/  -99.79
+.E1  -97.61
+
+: Precipitation (in)
+.E CTWS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E CTWS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   15.25/   13.00/   14.76/   14.47/   16.29/   12.07
+.E1    8.26
+
+: Air temperature (F)
+.E CTWS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   33.30/   31.46/   30.65/   28.22/   26.53/   21.79
+.E1   20.97
+
+: Soil moisture (pct at 2 inch depth)
+.E CTWS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 2.0318/ 2.0318/ 2.0318/ 2.0318/ 2.0318/ 2.0317/ 2.0316
+
+: Soil temperature (F at 2 inch depth)
+.E CTWS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 2.0318/ 2.0318/ 2.0318/ 2.0318/ 2.0318/ 2.0318/ 2.0319
+
+: Soil moisture (pct at 4 inch depth)
+.E CTWS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0289/ 4.0289/ 4.0289/ 4.0289/ 4.0289/ 4.0290/ 4.0290
+
+: Soil temperature (F at 4 inch depth)
+.E CTWS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0321/ 4.0322/ 4.0322/ 4.0322/ 4.0322/ 4.0322/ 4.0322
+
+: Soil moisture (pct at 8 inch depth)
+.E CTWS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 8.0284/ 8.0284/ 8.0284/ 8.0284/ 8.0284/ 8.0284/ 8.0284
+
+: Soil temperature (F at 8 inch depth)
+.E CTWS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 8.0325/ 8.0325/ 8.0325/ 8.0325/ 8.0325/ 8.0326/ 8.0325
+
+: Soil moisture (pct at 20 inch depth)
+.E CTWS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 20.0190/ 20.0192/ 20.0192/ 20.0191/ 20.0191/ 20.0191
+.E1 20.0190
+
+: Soil temperature (F at 20 inch depth)
+.E CTWS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 20.0352/ 20.0352/ 20.0352/ 20.0352/ 20.0352/ 20.0352
+.E1 20.0352
+
+: Soil moisture (pct at 40 inch depth)
+.E CTWS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 40.0187/ 40.0189/ 40.0187/ 40.0187/ 40.0188/ 40.0186
+.E1 40.0187
+
+: Soil temperature (F at 40 inch depth)
+.E CTWS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 40.0383/ 40.0383/ 40.0383/ 40.0383/ 40.0383/ 40.0383
+.E1 40.0383
+
+: Relative humidity (pct)
+.E EDTS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   71.74/   67.95/   61.26/   64.64/   65.35/   58.69
+.E1   77.19
+
+: Snow depth (in)
+.E EDTS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1   -0.16/   -0.24/   -0.12/   -0.16/   -0.08/   -0.12
+.E1   -0.16
+
+: Wind direction (deg)
+.E EDTS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 332/ 227/ 284/ 256/ 266/ 273/ 63
+
+: Solar radiation (W/m2)
+.E EDTS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/   27.59/    6.57/   -7.00/  -11.08/  -14.54
+.E1  -21.92
+
+: Precipitation (in)
+.E EDTS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E EDTS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   11.48/    4.26/    9.06/    9.70/    4.67/    3.71
+.E1    3.37
+
+: Air temperature (F)
+.E EDTS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   27.46/   25.43/   25.16/   22.80/   21.47/   22.41
+.E1   16.81
+
+: Soil moisture (pct at 2 inch depth)
+.E EDTS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 2.0211/ 2.0213/ 2.0212/ 2.0212/ 2.0212/ 2.0211/ 2.0209
+
+: Soil temperature (F at 2 inch depth)
+.E EDTS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 2.0315/ 2.0315/ 2.0315/ 2.0315/ 2.0315/ 2.0315/ 2.0315
+
+: Soil moisture (pct at 4 inch depth)
+.E EDTS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0178/ 4.0178/ 4.0178/ 4.0178/ 4.0178/ 4.0178/ 4.0178
+
+: Soil temperature (F at 4 inch depth)
+.E EDTS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0315/ 4.0315/ 4.0315/ 4.0315/ 4.0315/ 4.0315/ 4.0315
+
+: Soil moisture (pct at 8 inch depth)
+.E EDTS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 8.0202/ 8.0202/ 8.0204/ 8.0202/ 8.0205/ 8.0203/ 8.0204
+
+: Soil temperature (F at 8 inch depth)
+.E EDTS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 8.0318/ 8.0318/ 8.0318/ 8.0318/ 8.0318/ 8.0318/ 8.0318
+
+: Soil moisture (pct at 20 inch depth)
+.E EDTS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 20.0104/ 20.0105/ 20.0105/ 20.0105/ 20.0104/ 20.0104
+.E1 20.0105
+
+: Soil temperature (F at 20 inch depth)
+.E EDTS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 20.0339/ 20.0340/ 20.0339/ 20.0340/ 20.0340/ 20.0340
+.E1 20.0340
+
+: Relative humidity (pct)
+.E FLNS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   87.60/   89.80/   89.00/   85.00/   75.97/   85.40
+.E1   91.70
+
+: Snow depth (in)
+.E FLNS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1    0.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind direction (deg)
+.E FLNS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 150/ 159/ 183/ 188/ 200/ 236/ 254
+
+: Solar radiation (W/m2)
+.E FLNS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/  -77.36/  -80.92/  -86.95/  -54.73/  -44.12
+.E1  -68.01
+
+: Precipitation (in)
+.E FLNS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E FLNS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   18.15/   20.81/   18.77/   20.11/   20.70/   24.95
+.E1   35.69
+
+: Air temperature (F)
+.E FLNS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   31.12/   29.98/   30.52/   30.72/   33.53/   32.58
+.E1   29.88
+
+: Soil moisture (pct at 2 inch depth)
+.E FLNS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 2.0112/ 2.0112/ 2.0112/ 2.0112/ 2.0112/ 2.0112/ 2.0113
+
+: Soil temperature (F at 2 inch depth)
+.E FLNS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 2.0297/ 2.0296/ 2.0297/ 2.0296/ 2.0296/ 2.0295/ 2.0296
+
+: Soil moisture (pct at 4 inch depth)
+.E FLNS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0124/ 4.0123/ 4.0124/ 4.0123/ 4.0122/ 4.0124/ 4.0124
+
+: Soil temperature (F at 4 inch depth)
+.E FLNS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0293/ 4.0293/ 4.0293/ 4.0293/ 4.0293/ 4.0293/ 4.0293
+
+: Soil moisture (pct at 8 inch depth)
+.E FLNS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 8.0131/ 8.0131/ 8.0131/ 8.0131/ 8.0131/ 8.0131/ 8.0131
+
+: Soil temperature (F at 8 inch depth)
+.E FLNS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 8.0286/ 8.0286/ 8.0286/ 8.0286/ 8.0287/ 8.0288/ 8.0288
+
+: Soil moisture (pct at 20 inch depth)
+.E FLNS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 20.0117/ 20.0116/ 20.0116/ 20.0117/ 20.0117/ 20.0117
+.E1 20.0117
+
+: Soil temperature (F at 20 inch depth)
+.E FLNS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 20.0302/ 20.0302/ 20.0302/ 20.0303/ 20.0303/ 20.0303
+.E1 20.0303
+
+: Soil moisture (pct at 40 inch depth)
+.E FLNS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 40.0092/ 40.0092/ 40.0092/ 40.0092/ 40.0092/ 40.0092
+.E1 40.0092
+
+: Soil temperature (F at 40 inch depth)
+.E FLNS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 40.0338/ 40.0338/ 40.0338/ 40.0338/ 40.0339/ 40.0339
+.E1 40.0338
+
+: Relative humidity (pct)
+.E GOTS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   94.30/   96.00/   95.80/   95.50/   95.60/   95.30
+.E1   92.70
+
+: Snow depth (in)
+.E GOTS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1   26.77/   26.54/   26.50/   26.50/   26.06/   25.28
+.E1   25.24
+
+: Wind direction (deg)
+.E GOTS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 69/ 63/ 46/ 32/ 27/ 26/ 7
+
+: Solar radiation (W/m2)
+.E GOTS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/  -34.07/  -34.50/  -36.80/  -40.26/  -40.22
+.E1  -52.24
+
+: Precipitation (in)
+.E GOTS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.04/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E GOTS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   21.10/   21.73/   21.90/   29.65/   29.02/   29.76
+.E1   31.01
+
+: Air temperature (F)
+.E GOTS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   27.50/   27.10/   26.78/   25.88/   26.01/   25.57
+.E1   20.68
+
+: Soil moisture (pct at 2 inch depth)
+.E GOTS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 2.0139/ 2.0139/ 2.0139/ 2.0139/ 2.0139/ 2.0139/ 2.0139
+
+: Soil temperature (F at 2 inch depth)
+.E GOTS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 2.0304/ 2.0302/ 2.0303/ 2.0303/ 2.0303/ 2.0304/ 2.0304
+
+: Soil moisture (pct at 4 inch depth)
+.E GOTS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0153/ 4.0154/ 4.0154/ 4.0153/ 4.0153/ 4.0153/ 4.0154
+
+: Soil temperature (F at 4 inch depth)
+.E GOTS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0309/ 4.0310/ 4.0310/ 4.0310/ 4.0310/ 4.0310/ 4.0311
+
+: Soil moisture (pct at 8 inch depth)
+.E GOTS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 8.0224/ 8.0224/ 8.0224/ 8.0224/ 8.0224/ 8.0224/ 8.0225
+
+: Soil temperature (F at 8 inch depth)
+.E GOTS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 8.0325/ 8.0324/ 8.0325/ 8.0325/ 8.0325/ 8.0325/ 8.0325
+
+: Soil moisture (pct at 20 inch depth)
+.E GOTS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 20.0258/ 20.0258/ 20.0258/ 20.0258/ 20.0258/ 20.0258
+.E1 20.0258
+
+: Soil temperature (F at 20 inch depth)
+.E GOTS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 20.0348/ 20.0347/ 20.0347/ 20.0347/ 20.0347/ 20.0347
+.E1 20.0347
+
+: Relative humidity (pct)
+.E HAMS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   94.10/   88.50/   86.60/   86.00/   85.10/   85.50
+.E1   85.90
+
+: Snow depth (in)
+.E HAMS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1    6.46/    6.46/    6.38/    6.38/    6.42/    6.38
+.E1    6.46
+
+: Wind direction (deg)
+.E HAMS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 293/ 301/ 299/ 297/ 313/ 316/ 327
+
+: Solar radiation (W/m2)
+.E HAMS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/  -52.60/  -65.44/  -67.39/  -68.99/  -69.08
+.E1  -68.27
+
+: Precipitation (in)
+.E HAMS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E HAMS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   32.29/   33.34/   28.44/   25.48/   28.93/   26.40
+.E1   26.29
+
+: Air temperature (F)
+.E HAMS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   31.69/   28.71/   25.52/   22.35/   20.66/   19.22
+.E1   18.14
+
+: Soil moisture (pct at 2 inch depth)
+.E HAMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 2.0065/ 2.0065/ 2.0065/ 2.0065/ 2.0066/ 2.0066/ 2.0066
+
+: Soil temperature (F at 2 inch depth)
+.E HAMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 2.0313/ 2.0312/ 2.0312/ 2.0313/ 2.0313/ 2.0313/ 2.0313
+
+: Soil moisture (pct at 40 inch depth)
+.E HAMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 40.0314/ 40.0315/ 40.0314/ 40.0315/ 40.0315/ 40.0315
+.E1 40.0315
+
+: Soil temperature (F at 40 inch depth)
+.E HAMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 40.0373/ 40.0373/ 40.0373/ 40.0373/ 40.0373/ 40.0373
+.E1 40.0373
+
+: Relative humidity (pct)
+.E HIHS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   89.70/   96.00/   97.40/   96.40/   95.30/   95.00
+.E1   92.40
+
+: Snow depth (in)
+.E HIHS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1   19.61/   19.57/   19.57/   19.61/   19.65/   19.72
+.E1   19.72
+
+: Wind direction (deg)
+.E HIHS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 222/ 267/ 275/ 279/ 291/ 307/ 330
+
+: Solar radiation (W/m2)
+.E HIHS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/  -91.12/ -150.10/ -152.53/ -152.42/ -154.00
+.E1 -158.33
+
+: Precipitation (in)
+.E HIHS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E HIHS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   16.87/   29.56/   34.43/   31.61/   27.05/   18.64
+.E1   19.73
+
+: Air temperature (F)
+.E HIHS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   34.00/   32.09/   29.48/   27.23/   24.80/   24.94
+.E1   21.40
+
+: Soil moisture (pct at 2 inch depth)
+.E HIHS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 2.0115/ 2.0116/ 2.0116/ 2.0116/ 2.0116/ 2.0117
+
+: Soil temperature (F at 2 inch depth)
+.E HIHS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 2.0318/ 2.0318/ 2.0318/ 2.0318/ 2.0318/ 2.0318
+
+: Soil moisture (pct at 4 inch depth)
+.E HIHS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0142/ 4.0143/ 4.0145/ 4.0143/ 4.0144/ 4.0145/ 4.0144
+
+: Soil temperature (F at 4 inch depth)
+.E HIHS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0318/ 4.0319/ 4.0318/ 4.0318/ 4.0319/ 4.0318/ 4.0319
+
+: Soil moisture (pct at 8 inch depth)
+.E HIHS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 8.0095/ 8.0095/ 8.0095/ 8.0094/ 8.0095/ 8.0096/ 8.0095
+
+: Soil temperature (F at 8 inch depth)
+.E HIHS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 8.0337/ 8.0337/ 8.0337/ 8.0337/ 8.0337/ 8.0337/ 8.0338
+
+: Soil moisture (pct at 20 inch depth)
+.E HIHS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 20.0183/ 20.0183/ 20.0183/ 20.0183/ 20.0182/ 20.0183
+.E1 20.0183
+
+: Soil temperature (F at 20 inch depth)
+.E HIHS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 20.0366/ 20.0366/ 20.0366/ 20.0367/ 20.0366/ 20.0367
+.E1 20.0367
+
+: Soil moisture (pct at 40 inch depth)
+.E HIHS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 40.0143/ 40.0142/ 40.0143/ 40.0142/ 40.0142/ 40.0142
+.E1 40.0142
+
+: Soil temperature (F at 40 inch depth)
+.E HIHS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 40.0387/ 40.0387/ 40.0387/ 40.0387/ 40.0387/ 40.0387
+.E1 40.0387
+
+: Relative humidity (pct)
+.E HMLS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   67.30/   72.53/   73.08/   75.86/   75.82/   80.40
+.E1   83.70
+
+: Snow depth (in)
+.E HMLS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1    5.04/    5.04/    4.96/    4.92/    4.96/    5.04
+.E1    5.00
+
+: Wind direction (deg)
+.E HMLS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 257/ 250/ 264/ 283/ 291/ 292/ 294
+
+: Solar radiation (W/m2)
+.E HMLS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/  -37.88/  -51.84/  -60.31/  -85.83/  -93.99
+.E1  -90.96
+
+: Precipitation (in)
+.E HMLS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E HMLS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   34.48/   28.46/   29.27/   37.39/   33.61/   28.77
+.E1   27.12
+
+: Air temperature (F)
+.E HMLS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   36.86/   35.85/   34.79/   33.51/   30.15/   24.85
+.E1   22.03
+
+: Soil moisture (pct at 2 inch depth)
+.E HMLS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 2.0240/ 2.0239/ 2.0239/ 2.0240/ 2.0240/ 2.0241/ 2.0241
+
+: Soil temperature (F at 2 inch depth)
+.E HMLS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 2.0319/ 2.0319/ 2.0319/ 2.0319/ 2.0319/ 2.0319/ 2.0319
+
+: Soil moisture (pct at 4 inch depth)
+.E HMLS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0299/ 4.0300/ 4.0300/ 4.0301/ 4.0301/ 4.0301/ 4.0301
+
+: Soil temperature (F at 4 inch depth)
+.E HMLS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0324/ 4.0324/ 4.0324/ 4.0324/ 4.0324/ 4.0324/ 4.0324
+
+: Soil moisture (pct at 8 inch depth)
+.E HMLS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 8.0173/ 8.0174/ 8.0174/ 8.0175/ 8.0174/ 8.0175/ 8.0174
+
+: Soil temperature (F at 8 inch depth)
+.E HMLS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 8.0328/ 8.0328/ 8.0328/ 8.0328/ 8.0329/ 8.0328/ 8.0328
+
+: Soil moisture (pct at 20 inch depth)
+.E HMLS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 20.0093/ 20.0093/ 20.0093/ 20.0093/ 20.0094/ 20.0094
+.E1 20.0094
+
+: Soil temperature (F at 20 inch depth)
+.E HMLS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 20.0352/ 20.0352/ 20.0352/ 20.0353/ 20.0353/ 20.0352
+.E1 20.0353
+
+: Soil moisture (pct at 40 inch depth)
+.E HMLS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 40.0186/ 40.0185/ 40.0185/ 40.0185/ 40.0185/ 40.0185
+.E1 40.0185
+
+: Soil temperature (F at 40 inch depth)
+.E HMLS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 40.0392/ 40.0392/ 40.0392/ 40.0392/ 40.0392/ 40.0392
+.E1 40.0392
+
+: Relative humidity (pct)
+.E LCMS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   82.50/   76.97/   78.65/   75.02/   81.20/   79.40
+.E1   84.80
+
+: Snow depth (in)
+.E LCMS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1   12.36/   12.36/   12.24/   12.01/   11.89/   11.89
+.E1   11.93
+
+: Wind direction (deg)
+.E LCMS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 183/ 214/ 252/ 255/ 260/ 274/ 270
+
+: Solar radiation (W/m2)
+.E LCMS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/  -53.49/  -31.00/  -44.69/  -57.30/  -80.38
+.E1 -113.97
+
+: Precipitation (in)
+.E LCMS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E LCMS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   19.09/   18.37/   24.99/   32.93/   33.87/   31.10
+.E1   26.74
+
+: Air temperature (F)
+.E LCMS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   33.69/   37.15/   37.04/   36.18/   33.31/   30.76
+.E1   26.58
+
+: Soil moisture (pct at 2 inch depth)
+.E LCMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 2.0114/ 2.0114/ 2.0114/ 2.0114/ 2.0114/ 2.0114/ 2.0115
+
+: Soil temperature (F at 2 inch depth)
+.E LCMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 2.0313/ 2.0313/ 2.0312/ 2.0313/ 2.0313/ 2.0313/ 2.0312
+
+: Soil moisture (pct at 4 inch depth)
+.E LCMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0153/ 4.0151/ 4.0155/ 4.0155/ 4.0155/ 4.0154/ 4.0155
+
+: Soil temperature (F at 4 inch depth)
+.E LCMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0314/ 4.0315/ 4.0314/ 4.0314/ 4.0315/ 4.0315/ 4.0315
+
+: Soil moisture (pct at 8 inch depth)
+.E LCMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 8.0112/ 8.0112/ 8.0113/ 8.0112/ 8.0113/ 8.0113/ 8.0113
+
+: Soil temperature (F at 8 inch depth)
+.E LCMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 8.0319/ 8.0319/ 8.0319/ 8.0319/ 8.0320/ 8.0320/ 8.0320
+
+: Soil moisture (pct at 20 inch depth)
+.E LCMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 20.0115/ 20.0115/ 20.0116/ 20.0115/ 20.0116/ 20.0115
+.E1 20.0115
+
+: Soil temperature (F at 20 inch depth)
+.E LCMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 20.0340/ 20.0341/ 20.0340/ 20.0341/ 20.0341/ 20.0341
+.E1 20.0341
+
+: Soil moisture (pct at 40 inch depth)
+.E LCMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 40.0214/ 40.0214/ 40.0214/ 40.0214/ 40.0215/ 40.0214
+.E1 40.0215
+
+: Soil temperature (F at 40 inch depth)
+.E LCMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 40.0364/ 40.0364/ 40.0364/ 40.0364/ 40.0363/ 40.0364
+.E1 40.0364
+
+: Relative humidity (pct)
+.E LLAS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   95.30/   95.50/   94.80/   93.70/   92.20/   91.30
+.E1   90.40
+
+: Snow depth (in)
+.E LLAS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1   12.20/   12.80/   12.13/   11.34/   10.71/   11.50
+.E1   12.24
+
+: Wind direction (deg)
+.E LLAS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 59/ 49/ 42/ 36/ 17/ 13/ 13
+
+: Solar radiation (W/m2)
+.E LLAS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/  -98.21/  -99.40/  -99.29/  -98.47/  -95.36
+.E1  -92.72
+
+: Precipitation (in)
+.E LLAS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.02/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E LLAS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   20.76/   25.62/   25.53/   26.96/   28.68/   28.30
+.E1   27.23
+
+: Air temperature (F)
+.E LLAS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   24.26/   24.62/   23.36/   22.15/   18.95/   16.97
+.E1   14.77
+
+: Soil moisture (pct at 4 inch depth)
+.E LLAS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0135/ 4.0135/ 4.0135/ 4.0135/ 4.0136/ 4.0135/ 4.0136
+
+: Soil temperature (F at 4 inch depth)
+.E LLAS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0290/ 4.0291/ 4.0291/ 4.0291/ 4.0292/ 4.0292/ 4.0292
+
+: Soil moisture (pct at 8 inch depth)
+.E LLAS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 8.0177/ 8.0177/ 8.0176/ 8.0177/ 8.0177/ 8.0177/ 8.0177
+
+: Soil temperature (F at 8 inch depth)
+.E LLAS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 8.0298/ 8.0298/ 8.0299/ 8.0299/ 8.0299/ 8.0299/ 8.0300
+
+: Soil moisture (pct at 20 inch depth)
+.E LLAS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 20.0266/ 20.0266/ 20.0265/ 20.0265/ 20.0266/ 20.0266
+.E1 20.0265
+
+: Soil temperature (F at 20 inch depth)
+.E LLAS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 20.0325/ 20.0325/ 20.0325/ 20.0325/ 20.0325/ 20.0325
+.E1 20.0325
+
+: Relative humidity (pct)
+.E MVMS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   83.80/   84.90/   83.90/   82.50/   82.70/   83.40
+.E1   85.50
+
+: Snow depth (in)
+.E MVMS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1    0.12/    0.16/    0.20/    0.16/    0.20/    0.24
+.E1    0.24
+
+: Wind direction (deg)
+.E MVMS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 297/ 298/ 315/ 316/ 316/ 336/ 337
+
+: Solar radiation (W/m2)
+.E MVMS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/  -76.90/  -78.98/  -79.25/  -78.86/  -80.11
+.E1  -80.21
+
+: Precipitation (in)
+.E MVMS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E MVMS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   24.14/   19.06/   19.91/   20.16/   17.04/   16.80
+.E1   13.52
+
+: Air temperature (F)
+.E MVMS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   30.61/   27.97/   23.54/   20.70/   19.40/   18.97
+.E1   18.03
+
+: Soil moisture (pct at 2 inch depth)
+.E MVMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 2.0110/ 2.0110/ 2.0110/ 2.0110/ 2.0110/ 2.0111/ 2.0111
+
+: Soil temperature (F at 2 inch depth)
+.E MVMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 2.0315/ 2.0315/ 2.0315/ 2.0315/ 2.0316/ 2.0315/ 2.0315
+
+: Soil moisture (pct at 8 inch depth)
+.E MVMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 8.0218/ 8.0217/ 8.0217/ 8.0217/ 8.0217/ 8.0218/ 8.0218
+
+: Soil temperature (F at 8 inch depth)
+.E MVMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 8.0317/ 8.0318/ 8.0317/ 8.0318/ 8.0318/ 8.0318/ 8.0318
+
+: Soil moisture (pct at 20 inch depth)
+.E MVMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 20.0164/ 20.0164/ 20.0164/ 20.0164/ 20.0164/ 20.0164
+.E1 20.0164
+
+: Soil temperature (F at 20 inch depth)
+.E MVMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 20.0337/ 20.0337/ 20.0337/ 20.0337/ 20.0337/ 20.0337
+.E1 20.0337
+
+: Soil moisture (pct at 40 inch depth)
+.E MVMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 40.0040/ 40.0040/ 40.0041/ 40.0041/ 40.0041/ 40.0041
+.E1 40.0041
+
+: Soil temperature (F at 40 inch depth)
+.E MVMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 40.0361/ 40.0361/ 40.0362/ 40.0361/ 40.0361/ 40.0362
+.E1 40.0362
+
+: Soil moisture (pct at 4 inch depth)
+.E MVMS2 230301 Z DH0800/MVIRZ/DIH1
+.E1 4.0147/ 4.0151/ 4.0149/ 4.0153
+
+: Soil temperature (F at 4 inch depth)
+.E MVMS2 230301 Z DH0800/DUE/TBIRZ/DIH1
+.E1 4.0314/ 4.0315/ 4.0314/ 4.0314
+
+: Relative humidity (pct)
+.E NISS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   77.39/   84.40/   87.90/   87.70/   84.30/   84.40
+.E1   84.60
+
+: Snow depth (in)
+.E NISS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1    0.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind direction (deg)
+.E NISS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 299/ 310/ 309/ 330/ 283/ 250/ 27
+
+: Solar radiation (W/m2)
+.E NISS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/  -92.45/  -91.94/  -89.96/  -84.66/  -77.20
+.E1  -86.09
+
+: Precipitation (in)
+.E NISS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E NISS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   13.64/   11.72/   12.06/    5.97/   10.49/    7.20
+.E1    9.43
+
+: Air temperature (F)
+.E NISS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   28.76/   27.50/   26.55/   25.75/   27.86/   28.18
+.E1   20.80
+
+: Soil moisture (pct at 2 inch depth)
+.E NISS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 2.0181/ 2.0181/ 2.0181/ 2.0182/ 2.0181/ 2.0181/ 2.0181
+
+: Soil temperature (F at 2 inch depth)
+.E NISS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 2.0315/ 2.0315/ 2.0315/ 2.0315/ 2.0315/ 2.0315/ 2.0313
+
+: Soil moisture (pct at 4 inch depth)
+.E NISS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0162/ 4.0165/ 4.0165/ 4.0164/ 4.0165/ 4.0165/ 4.0167
+
+: Soil temperature (F at 4 inch depth)
+.E NISS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0318/ 4.0318/ 4.0318/ 4.0318/ 4.0318/ 4.0317/ 4.0318
+
+: Soil moisture (pct at 8 inch depth)
+.E NISS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 8.0119/ 8.0119/ 8.0119/ 8.0119/ 8.0119/ 8.0119/ 8.0119
+
+: Soil temperature (F at 8 inch depth)
+.E NISS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 8.0323/ 8.0322/ 8.0322/ 8.0322/ 8.0323/ 8.0323/ 8.0323
+
+: Soil moisture (pct at 20 inch depth)
+.E NISS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 20.0176/ 20.0177/ 20.0177/ 20.0177/ 20.0176/ 20.0176
+.E1 20.0176
+
+: Soil temperature (F at 20 inch depth)
+.E NISS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 20.0344/ 20.0343/ 20.0345/ 20.0344/ 20.0344/ 20.0345
+.E1 20.0344
+
+: Soil moisture (pct at 40 inch depth)
+.E NISS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 40.0184/ 40.0181/ 40.0183/ 40.0183/ 40.0184/ 40.0183
+.E1 40.0183
+
+: Soil temperature (F at 40 inch depth)
+.E NISS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 40.0378/ 40.0378/ 40.0378/ 40.0378/ 40.0378/ 40.0378
+.E1 40.0378
+
+: Relative humidity (pct)
+.E NOMS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   70.30/   67.90/   75.22/   80.20/   80.80/   82.40
+.E1   79.46
+
+: Snow depth (in)
+.E NOMS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1    0.39/    0.39/    0.43/    0.43/    0.43/    0.47
+.E1    0.47
+
+: Wind direction (deg)
+.E NOMS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 254/ 263/ 287/ 295/ 298/ 310/ 302
+
+: Solar radiation (W/m2)
+.E NOMS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/  -58.20/  -58.84/  -66.05/  -82.59/  -85.02
+.E1  -82.46
+
+: Precipitation (in)
+.E NOMS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E NOMS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   18.23/   17.58/   16.65/   18.62/   16.38/   18.84
+.E1   20.07
+
+: Air temperature (F)
+.E NOMS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   33.24/   33.08/   31.10/   31.03/   28.26/   25.72
+.E1   22.10
+
+: Soil moisture (pct at 2 inch depth)
+.E NOMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 2.0321/ 2.0320/ 2.0317/ 2.0316
+
+: Soil temperature (F at 2 inch depth)
+.E NOMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 2.0320/ 2.0320/ 2.0320/ 2.0320
+
+: Soil moisture (pct at 4 inch depth)
+.E NOMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0387/ 4.0386/ 4.0383/ 4.0381/ 4.0379/ 4.0377/ 4.0374
+
+: Soil temperature (F at 4 inch depth)
+.E NOMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0321/ 4.0321/ 4.0321/ 4.0321/ 4.0322/ 4.0322/ 4.0321
+
+: Soil moisture (pct at 40 inch depth)
+.E NOMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 40.0196/ 40.0196/ 40.0196/ 40.0196/ 40.0196/ 40.0196
+.E1 40.0195
+
+: Soil temperature (F at 40 inch depth)
+.E NOMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 40.0397/ 40.0397/ 40.0397/ 40.0397/ 40.0396/ 40.0397
+.E1 40.0396
+
+: Soil moisture (pct at 8 inch depth)
+.E NOMS2 230301 Z DH0800/MVIRZ/DIH1
+.E1 8.0426/ 8.0425/ 8.0424
+
+: Soil temperature (F at 8 inch depth)
+.E NOMS2 230301 Z DH0800/DUE/TBIRZ/DIH1
+.E1 8.0331/ 8.0332/ 8.0332
+
+: Soil moisture (pct at 20 inch depth)
+.E NOMS2 230301 Z DH0900/MVIRZ/DIH1
+.E1 20.0372/ 20.0373/ 20.0375
+
+: Soil temperature (F at 20 inch depth)
+.E NOMS2 230301 Z DH0900/DUE/TBIRZ/DIH1
+.E1 20.0356/ 20.0356/ 20.0356
+
+: Relative humidity (pct)
+.E OCMS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   71.22/   67.04/   69.72/   71.39/   79.11/   80.40
+.E1   80.80
+
+: Snow depth (in)
+.E OCMS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1   -0.24/   -0.43/   -0.35/   -0.39/   -0.31/   -0.28
+.E1   -0.24
+
+: Wind direction (deg)
+.E OCMS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 237/ 260/ 276/ 283/ 301/ 304/ 307
+
+: Solar radiation (W/m2)
+.E OCMS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/   -5.15/   -8.84/  -42.99/  -71.44/  -89.47
+.E1  -88.28
+
+: Precipitation (in)
+.E OCMS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E OCMS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   21.32/   34.70/   30.14/   26.83/   26.54/   21.41
+.E1   21.81
+
+: Air temperature (F)
+.E OCMS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   38.48/   38.93/   37.17/   33.62/   28.60/   25.63
+.E1   24.08
+
+: Soil moisture (pct at 4 inch depth)
+.E OCMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0172/ 4.0172/ 4.0172/ 4.0172/ 4.0172/ 4.0172/ 4.0172
+
+: Soil temperature (F at 4 inch depth)
+.E OCMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0311/ 4.0311/ 4.0311/ 4.0311/ 4.0311/ 4.0311/ 4.0312
+
+: Soil moisture (pct at 20 inch depth)
+.E OCMS2 230301 Z DH0800/MVIRZ/DIH1
+.E1 20.0110/ 20.0109/ 20.0109/ 20.0110/ 20.0110/ 20.0109
+
+: Soil temperature (F at 20 inch depth)
+.E OCMS2 230301 Z DH0800/DUE/TBIRZ/DIH1
+.E1 20.0331/ 20.0331/ 20.0331/ 20.0332/ 20.0332/ 20.0332
+
+: Relative humidity (pct)
+.E ONMS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   95.00/   96.80/   94.50/   92.00/   90.40/   90.10
+.E1   87.00
+
+: Snow depth (in)
+.E ONMS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1    2.76/    3.07/    3.03/    3.03/    3.03/    3.07
+.E1    3.03
+
+: Wind direction (deg)
+.E ONMS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 285/ 290/ 317/ 312/ 316/ 330/ 347
+
+: Solar radiation (W/m2)
+.E ONMS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/  -83.70/  -84.33/  -85.68/  -88.27/  -86.45
+.E1  -84.59
+
+: Precipitation (in)
+.E ONMS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.01/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E ONMS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   25.66/   29.20/   27.45/   25.78/   22.24/   22.22
+.E1   24.37
+
+: Air temperature (F)
+.E ONMS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   31.35/   29.30/   25.97/   23.07/   22.46/   22.68
+.E1   20.14
+
+: Soil moisture (pct at 2 inch depth)
+.E ONMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 2.0119/ 2.0119/ 2.0119/ 2.0120/ 2.0120/ 2.0120
+
+: Soil temperature (F at 2 inch depth)
+.E ONMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 2.0273/ 2.0274/ 2.0275/ 2.0275/ 2.0276/ 2.0275
+
+: Soil moisture (pct at 4 inch depth)
+.E ONMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0095/ 4.0096/ 4.0095/ 4.0096/ 4.0096/ 4.0096/ 4.0096
+
+: Soil temperature (F at 4 inch depth)
+.E ONMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0280/ 4.0280/ 4.0280/ 4.0281/ 4.0281/ 4.0284/ 4.0284
+
+: Soil moisture (pct at 8 inch depth)
+.E ONMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 8.0080/ 8.0080/ 8.0080/ 8.0080/ 8.0081/ 8.0080/ 8.0081
+
+: Soil temperature (F at 8 inch depth)
+.E ONMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 8.0275/ 8.0276/ 8.0277/ 8.0278/ 8.0279/ 8.0279/ 8.0279
+
+: Soil moisture (pct at 20 inch depth)
+.E ONMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 20.0166/ 20.0167/ 20.0166/ 20.0166/ 20.0166/ 20.0166
+.E1 20.0166
+
+: Soil temperature (F at 20 inch depth)
+.E ONMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 20.0300/ 20.0300/ 20.0300/ 20.0301/ 20.0301/ 20.0301
+.E1 20.0302
+
+: Soil moisture (pct at 40 inch depth)
+.E ONMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 40.0110/ 40.0111/ 40.0110/ 40.0110/ 40.0110/ 40.0110
+.E1 40.0105
+
+: Soil temperature (F at 40 inch depth)
+.E ONMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 40.0343/ 40.0343/ 40.0344/ 40.0343/ 40.0343/ 40.0343
+.E1 40.0343
+
+: Relative humidity (pct)
+.E PVMS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   63.75/   47.94/   51.21/   52.50/   57.93/   62.87
+.E1   66.08
+
+: Snow depth (in)
+.E PVMS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1    0.00/   -0.08/   -0.04/   -0.08/   -0.04/   -0.12
+.E1    0.00
+
+: Wind direction (deg)
+.E PVMS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 268/ 247/ 244/ 244/ 282/ 286/ 293
+
+: Solar radiation (W/m2)
+.E PVMS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/  -82.44/  -82.49/  -82.57/  -83.08/  -85.98
+.E1  -84.52
+
+: Precipitation (in)
+.E PVMS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E PVMS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1    9.48/   24.66/   20.61/   19.73/    9.69/    8.37
+.E1   11.50
+
+: Air temperature (F)
+.E PVMS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   26.28/   28.69/   27.18/   26.10/   24.21/   22.30
+.E1   20.62
+
+: Soil moisture (pct at 20 inch depth)
+.E PVMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 20.0239/ 20.0239/ 20.0239/ 20.0238/ 20.0239/ 20.0238
+.E1 20.0239
+
+: Soil temperature (F at 20 inch depth)
+.E PVMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 20.0331/ 20.0331/ 20.0330/ 20.0331/ 20.0330/ 20.0332
+.E1 20.0331
+
+: Soil moisture (pct at 40 inch depth)
+.E PVMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 40.0161/ 40.0160/ 40.0161/ 40.0160/ 40.0161/ 40.0160
+.E1 40.0161
+
+: Soil temperature (F at 40 inch depth)
+.E PVMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 40.0370/ 40.0370/ 40.0370/ 40.0370/ 40.0370/ 40.0370
+.E1 40.0370
+
+: Soil moisture (pct at 2 inch depth)
+.E PVMS2 230301 Z DH1300/MVIRZ/DIH1
+.E1 2.0270
+
+: Soil temperature (F at 2 inch depth)
+.E PVMS2 230301 Z DH1300/DUE/TBIRZ/DIH1
+.E1 2.0319
+
+: Soil moisture (pct at 8 inch depth)
+.E PVMS2 230301 Z DH1300/MVIRZ/DIH1
+.E1 8.0274
+
+: Soil temperature (F at 8 inch depth)
+.E PVMS2 230301 Z DH1300/DUE/TBIRZ/DIH1
+.E1 8.0317
+
+: Relative humidity (pct)
+.E RAMS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   88.60/   88.40/   88.30/   89.10/   87.60/   87.20
+.E1   87.60
+
+: Snow depth (in)
+.E RAMS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1    3.03/    2.99/    3.03/    3.03/    3.03/    3.03
+.E1    3.03
+
+: Wind direction (deg)
+.E RAMS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 350/ 346/ 337/ 347/ 347/ 355/ 28
+
+: Solar radiation (W/m2)
+.E RAMS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/  -98.41/ -100.36/  -97.81/  -95.41/  -94.81
+.E1  -95.66
+
+: Precipitation (in)
+.E RAMS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E RAMS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   14.20/   10.95/   10.41/   11.33/   10.48/    7.88
+.E1    6.33
+
+: Air temperature (F)
+.E RAMS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   17.31/   16.30/   13.93/   14.61/   14.32/   13.10
+.E1   12.56
+
+: Soil moisture (pct at 2 inch depth)
+.E RAMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 2.0122/ 2.0122/ 2.0121/ 2.0122/ 2.0121/ 2.0121/ 2.0121
+
+: Soil temperature (F at 2 inch depth)
+.E RAMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 2.0268/ 2.0267/ 2.0266/ 2.0267/ 2.0265/ 2.0265/ 2.0264
+
+: Soil moisture (pct at 4 inch depth)
+.E RAMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0115/ 4.0116/ 4.0115/ 4.0115/ 4.0115/ 4.0115/ 4.0115
+
+: Soil temperature (F at 4 inch depth)
+.E RAMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0269/ 4.0268/ 4.0268/ 4.0267/ 4.0267/ 4.0267/ 4.0266
+
+: Soil moisture (pct at 8 inch depth)
+.E RAMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 8.0186/ 8.0186/ 8.0186/ 8.0187/ 8.0187/ 8.0187/ 8.0187
+
+: Soil temperature (F at 8 inch depth)
+.E RAMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 8.0271/ 8.0271/ 8.0272/ 8.0272/ 8.0272/ 8.0272/ 8.0272
+
+: Soil moisture (pct at 20 inch depth)
+.E RAMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 20.0141/ 20.0140/ 20.0139/ 20.0142/ 20.0142/ 20.0142
+.E1 20.0142
+
+: Soil temperature (F at 20 inch depth)
+.E RAMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 20.0287/ 20.0287/ 20.0288/ 20.0286/ 20.0288/ 20.0288
+.E1 20.0287
+
+: Soil moisture (pct at 40 inch depth)
+.E RAMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 40.0066/ 40.0066/ 40.0066/ 40.0066/ 40.0066/ 40.0066
+.E1 40.0066
+
+: Soil temperature (F at 40 inch depth)
+.E RAMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 40.0329/ 40.0329/ 40.0328/ 40.0329/ 40.0329/ 40.0329
+.E1 40.0329
+
+: Relative humidity (pct)
+.E RBMS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   70.92/   71.18/   69.09/   67.80/   73.29/   87.60
+.E1   85.60
+
+: Snow depth (in)
+.E RBMS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1   21.14/   21.06/   21.10/   21.14/   21.26/   21.26
+.E1   21.30
+
+: Wind direction (deg)
+.E RBMS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 258/ 262/ 263/ 271/ 293/ 313/ 314
+
+: Solar radiation (W/m2)
+.E RBMS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/  -66.90/  -78.73/  -79.32/  -81.34/  -80.34
+.E1  -79.31
+
+: Precipitation (in)
+.E RBMS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E RBMS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   31.37/   29.53/   32.46/   23.81/   16.45/   17.44
+.E1   20.41
+
+: Air temperature (F)
+.E RBMS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   32.54/   31.95/   32.02/   31.39/   28.69/   26.26
+.E1   24.53
+
+: Soil moisture (pct at 2 inch depth)
+.E RBMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 2.0217/ 2.0217/ 2.0218/ 2.0218/ 2.0218/ 2.0218/ 2.0218
+
+: Soil temperature (F at 2 inch depth)
+.E RBMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 2.0331/ 2.0331/ 2.0331/ 2.0331/ 2.0331/ 2.0331/ 2.0331
+
+: Soil moisture (pct at 4 inch depth)
+.E RBMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0204/ 4.0204/ 4.0204/ 4.0198/ 4.0199/ 4.0204/ 4.0202
+
+: Soil temperature (F at 4 inch depth)
+.E RBMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0331/ 4.0331/ 4.0331/ 4.0331/ 4.0331/ 4.0331/ 4.0330
+
+: Soil moisture (pct at 8 inch depth)
+.E RBMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 8.0158/ 8.0158/ 8.0158/ 8.0158/ 8.0158/ 8.0158
+
+: Soil temperature (F at 8 inch depth)
+.E RBMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 8.0339/ 8.0339/ 8.0339/ 8.0338/ 8.0339/ 8.0338
+
+: Soil moisture (pct at 20 inch depth)
+.E RBMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 20.0279/ 20.0279/ 20.0283/ 20.0280/ 20.0281/ 20.0275
+.E1 20.0280
+
+: Soil temperature (F at 20 inch depth)
+.E RBMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 20.0353/ 20.0352/ 20.0353/ 20.0353/ 20.0352/ 20.0352
+.E1 20.0353
+
+: Soil moisture (pct at 40 inch depth)
+.E RBMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 40.0264/ 40.0265/ 40.0266/ 40.0265/ 40.0265/ 40.0265
+.E1 40.0265
+
+: Soil temperature (F at 40 inch depth)
+.E RBMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 40.0383/ 40.0384/ 40.0383/ 40.0384/ 40.0383/ 40.0384
+.E1 40.0384
+
+: Relative humidity (pct)
+.E SFSS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   89.80/   89.40/   83.70/   82.70/   77.13/   70.07
+.E1   73.01
+
+: Snow depth (in)
+.E SFSS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1    9.84/    9.92/    9.92/   10.04/   10.04/   10.00
+.E1    9.96
+
+: Wind direction (deg)
+.E SFSS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 136/ 168/ 207/ 200/ 215/ 245/ 257
+
+: Solar radiation (W/m2)
+.E SFSS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/  -69.38/  -72.12/  -72.65/  -73.55/  -59.76
+.E1  -53.35
+
+: Precipitation (in)
+.E SFSS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E SFSS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1    5.41/    6.86/   10.56/   10.94/   10.65/   15.59
+.E1   18.77
+
+: Air temperature (F)
+.E SFSS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   29.30/   30.74/   32.56/   31.82/   32.22/   34.77
+.E1   32.61
+
+: Soil moisture (pct at 2 inch depth)
+.E SFSS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 2.0321/ 2.0321/ 2.0322/ 2.0321/ 2.0322/ 2.0321/ 2.0321
+
+: Soil temperature (F at 2 inch depth)
+.E SFSS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 2.0329/ 2.0329/ 2.0329/ 2.0329/ 2.0329/ 2.0329/ 2.0329
+
+: Soil moisture (pct at 4 inch depth)
+.E SFSS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0329/ 4.0329/ 4.0329/ 4.0329/ 4.0329/ 4.0329/ 4.0329
+
+: Soil temperature (F at 4 inch depth)
+.E SFSS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0334/ 4.0334/ 4.0334/ 4.0334/ 4.0334/ 4.0334/ 4.0334
+
+: Soil moisture (pct at 8 inch depth)
+.E SFSS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 8.0321/ 8.0321/ 8.0321/ 8.0321/ 8.0321/ 8.0321/ 8.0321
+
+: Soil temperature (F at 8 inch depth)
+.E SFSS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 8.0341/ 8.0341/ 8.0340/ 8.0340/ 8.0341/ 8.0340/ 8.0341
+
+: Soil moisture (pct at 20 inch depth)
+.E SFSS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 20.0248/ 20.0248/ 20.0248/ 20.0249/ 20.0249/ 20.0249
+.E1 20.0249
+
+: Soil temperature (F at 20 inch depth)
+.E SFSS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 20.0358/ 20.0358/ 20.0358/ 20.0358/ 20.0358/ 20.0358
+.E1 20.0358
+
+: Soil moisture (pct at 40 inch depth)
+.E SFSS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 40.0299/ 40.0299/ 40.0300/ 40.0300/ 40.0300/ 40.0299
+.E1 40.0300
+
+: Soil temperature (F at 40 inch depth)
+.E SFSS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 40.0387/ 40.0387/ 40.0387/ 40.0387/ 40.0387/ 40.0387
+.E1 40.0387
+
+: Relative humidity (pct)
+.E SHSS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   97.40/   97.30/   97.00/   96.60/   97.30/   98.10
+.E1   97.90
+
+: Snow depth (in)
+.E SHSS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1   35.67/   35.71/   35.71/   35.67/   35.67/   35.51
+.E1   35.47
+
+: Wind direction (deg)
+.E SHSS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 100/ 105/ 115/ 137/ 133/ 62/ 23
+
+: Solar radiation (W/m2)
+.E SHSS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/  -37.52/  -33.09/  -34.49/  -34.91/  -33.71
+.E1  -34.82
+
+: Precipitation (in)
+.E SHSS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.00/    0.00/    0.01/    0.01/    0.02
+.E1    0.00
+
+: Wind speed (mph)
+.E SHSS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   22.89/   15.61/   14.88/   11.91/    8.43/    9.66
+.E1   11.65
+
+: Air temperature (F)
+.E SHSS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   28.22/   28.56/   29.66/   30.38/   30.56/   30.16
+.E1   29.19
+
+: Soil moisture (pct at 2 inch depth)
+.E SHSS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 2.0202/ 2.0202/ 2.0202/ 2.0202/ 2.0202/ 2.0202/ 2.0202
+
+: Soil temperature (F at 2 inch depth)
+.E SHSS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 2.0309/ 2.0309/ 2.0309/ 2.0310/ 2.0309/ 2.0309/ 2.0310
+
+: Soil moisture (pct at 4 inch depth)
+.E SHSS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0239/ 4.0239/ 4.0239/ 4.0238/ 4.0239/ 4.0239/ 4.0239
+
+: Soil temperature (F at 4 inch depth)
+.E SHSS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0314/ 4.0314/ 4.0313/ 4.0314/ 4.0315/ 4.0314/ 4.0314
+
+: Soil moisture (pct at 8 inch depth)
+.E SHSS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 8.0305/ 8.0305/ 8.0304/ 8.0304/ 8.0304/ 8.0304/ 8.0304
+
+: Soil temperature (F at 8 inch depth)
+.E SHSS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 8.0323/ 8.0323/ 8.0323/ 8.0322/ 8.0322/ 8.0323/ 8.0323
+
+: Soil moisture (pct at 20 inch depth)
+.E SHSS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 20.0287/ 20.0286/ 20.0288/ 20.0288/ 20.0288/ 20.0288
+.E1 20.0286
+
+: Soil temperature (F at 20 inch depth)
+.E SHSS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 20.0342/ 20.0342/ 20.0342/ 20.0342/ 20.0341/ 20.0341
+.E1 20.0341
+
+: Soil moisture (pct at 40 inch depth)
+.E SHSS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 40.0343/ 40.0343/ 40.0343/ 40.0343/ 40.0343/ 40.0343
+.E1 40.0343
+
+: Soil temperature (F at 40 inch depth)
+.E SHSS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 40.0366/ 40.0365/ 40.0365/ 40.0366/ 40.0366/ 40.0365
+.E1 40.0365
+
+: Relative humidity (pct)
+.E STMS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   65.67/   75.86/   85.80/   91.00/   90.40/   85.30
+.E1   84.30
+
+: Snow depth (in)
+.E STMS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1    1.93/    1.30/    0.91/    0.83/    0.83/    0.83
+.E1    1.02
+
+: Wind direction (deg)
+.E STMS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 290/ 314/ 318/ 297/ 295/ 295/ 298
+
+: Solar radiation (W/m2)
+.E STMS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/  -99.93/ -100.13/ -100.73/ -100.45/  -94.90
+.E1  -91.43
+
+: Precipitation (in)
+.E STMS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E STMS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   17.77/   14.49/   17.92/   11.74/   11.20/   11.59
+.E1   11.37
+
+: Air temperature (F)
+.E STMS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   30.09/   26.96/   26.42/   23.40/   21.78/   24.40
+.E1   26.96
+
+: Soil moisture (pct at 2 inch depth)
+.E STMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 2.0318/ 2.0316/ 2.0315/ 2.0315/ 2.0314/ 2.0313/ 2.0313
+
+: Soil temperature (F at 2 inch depth)
+.E STMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 2.0321/ 2.0322/ 2.0321/ 2.0321/ 2.0322/ 2.0322/ 2.0322
+
+: Soil moisture (pct at 4 inch depth)
+.E STMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0302/ 4.0303/ 4.0302/ 4.0303/ 4.0302/ 4.0302/ 4.0302
+
+: Soil temperature (F at 4 inch depth)
+.E STMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0322/ 4.0321/ 4.0321/ 4.0321/ 4.0321/ 4.0321/ 4.0321
+
+: Soil moisture (pct at 8 inch depth)
+.E STMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 8.0248/ 8.0249/ 8.0249/ 8.0250/ 8.0248/ 8.0247/ 8.0247
+
+: Soil temperature (F at 8 inch depth)
+.E STMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 8.0327/ 8.0326/ 8.0326/ 8.0328/ 8.0326/ 8.0326/ 8.0327
+
+: Soil moisture (pct at 20 inch depth)
+.E STMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 20.0328/ 20.0328/ 20.0328/ 20.0328/ 20.0329/ 20.0329
+.E1 20.0328
+
+: Soil temperature (F at 20 inch depth)
+.E STMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 20.0342/ 20.0342/ 20.0342/ 20.0342/ 20.0342/ 20.0341
+.E1 20.0342
+
+: Soil moisture (pct at 40 inch depth)
+.E STMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 40.0203/ 40.0203/ 40.0203/ 40.0203/ 40.0202/ 40.0204
+.E1 40.0203
+
+: Soil temperature (F at 40 inch depth)
+.E STMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 40.0365/ 40.0364/ 40.0365/ 40.0365/ 40.0365/ 40.0365
+.E1 40.0365
+
+: Relative humidity (pct)
+.E TIMS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   94.90/   93.00/   92.60/   92.60/   92.10/   90.80
+.E1   90.10
+
+: Snow depth (in)
+.E TIMS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1    5.28/    5.59/    4.84/    4.65/    4.61/    4.57
+.E1    4.53
+
+: Wind direction (deg)
+.E TIMS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 16/ 349/ 345/ 348/ 357/ 356/ 347
+
+: Solar radiation (W/m2)
+.E TIMS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/  -93.78/  -91.21/  -92.29/  -93.95/  -93.83
+.E1  -93.38
+
+: Precipitation (in)
+.E TIMS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.02/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E TIMS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   14.01/   20.45/   18.68/   18.95/   16.29/   18.21
+.E1   16.60
+
+: Air temperature (F)
+.E TIMS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   25.23/   21.34/   19.58/   19.62/   19.06/   16.90
+.E1   14.58
+
+: Soil moisture (pct at 2 inch depth)
+.E TIMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 2.0092/ 2.0091/ 2.0092/ 2.0091/ 2.0092/ 2.0092/ 2.0092
+
+: Soil temperature (F at 2 inch depth)
+.E TIMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 2.0288/ 2.0288/ 2.0289/ 2.0290/ 2.0289/ 2.0289/ 2.0289
+
+: Soil moisture (pct at 4 inch depth)
+.E TIMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0119/ 4.0119/ 4.0119/ 4.0119/ 4.0119/ 4.0119/ 4.0119
+
+: Soil temperature (F at 4 inch depth)
+.E TIMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0287/ 4.0286/ 4.0286/ 4.0287/ 4.0287/ 4.0288/ 4.0288
+
+: Soil moisture (pct at 8 inch depth)
+.E TIMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 8.0107/ 8.0107/ 8.0106/ 8.0106/ 8.0107/ 8.0106/ 8.0106
+
+: Soil temperature (F at 8 inch depth)
+.E TIMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 8.0288/ 8.0288/ 8.0288/ 8.0289/ 8.0290/ 8.0289/ 8.0289
+
+: Soil moisture (pct at 20 inch depth)
+.E TIMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 20.0055/ 20.0055/ 20.0055/ 20.0055/ 20.0055/ 20.0055
+.E1 20.0055
+
+: Soil temperature (F at 20 inch depth)
+.E TIMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 20.0302/ 20.0302/ 20.0302/ 20.0302/ 20.0302/ 20.0302
+.E1 20.0302
+
+: Soil moisture (pct at 40 inch depth)
+.E TIMS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 40.0077/ 40.0077/ 40.0077/ 40.0077/ 40.0077/ 40.0077
+.E1 40.0077
+
+: Soil temperature (F at 40 inch depth)
+.E TIMS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 40.0343/ 40.0343/ 40.0343/ 40.0344/ 40.0343/ 40.0343
+.E1 40.0343
+
+: Relative humidity (pct)
+.E UNIS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   91.10/   90.00/   89.50/   88.00/   87.00/   85.20
+.E1   87.40
+
+: Snow depth (in)
+.E UNIS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1   19.92/   20.00/   20.08/   20.16/   20.12/   20.08
+.E1   20.04
+
+: Wind direction (deg)
+.E UNIS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 317/ 322/ 328/ 339/ 348/ 359/ 355
+
+: Solar radiation (W/m2)
+.E UNIS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/ -116.17/ -112.97/ -112.86/ -103.48/ -106.62
+.E1 -108.37
+
+: Precipitation (in)
+.E UNIS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E UNIS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   17.86/   16.91/   19.33/   15.86/   17.24/   18.64
+.E1   14.73
+
+: Air temperature (F)
+.E UNIS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   26.31/   23.81/   22.17/   19.71/   20.12/   17.55
+.E1   16.52
+
+: Soil moisture (pct at 2 inch depth)
+.E UNIS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 2.0170/ 2.0171/ 2.0171/ 2.0172/ 2.0173/ 2.0173/ 2.0174
+
+: Soil temperature (F at 2 inch depth)
+.E UNIS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 2.0315/ 2.0315/ 2.0315/ 2.0315/ 2.0315/ 2.0315/ 2.0315
+
+: Soil moisture (pct at 4 inch depth)
+.E UNIS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0180/ 4.0181/ 4.0183/ 4.0184/ 4.0184/ 4.0187/ 4.0186
+
+: Soil temperature (F at 4 inch depth)
+.E UNIS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0317/ 4.0317/ 4.0317/ 4.0316/ 4.0316/ 4.0316/ 4.0317
+
+: Soil moisture (pct at 8 inch depth)
+.E UNIS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 8.0156/ 8.0156/ 8.0156/ 8.0156/ 8.0156/ 8.0155/ 8.0155
+
+: Soil temperature (F at 8 inch depth)
+.E UNIS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 8.0322/ 8.0322/ 8.0322/ 8.0322/ 8.0322/ 8.0322/ 8.0322
+
+: Soil moisture (pct at 20 inch depth)
+.E UNIS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 20.0045/ 20.0045/ 20.0045/ 20.0045/ 20.0046/ 20.0046
+.E1 20.0046
+
+: Soil temperature (F at 20 inch depth)
+.E UNIS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 20.0342/ 20.0342/ 20.0341/ 20.0341/ 20.0341/ 20.0341
+.E1 20.0342
+
+: Soil moisture (pct at 40 inch depth)
+.E UNIS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 40.0103/ 40.0103/ 40.0103/ 40.0103/ 40.0103/ 40.0103
+.E1 40.0103
+
+: Soil temperature (F at 40 inch depth)
+.E UNIS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 40.0365/ 40.0365/ 40.0366/ 40.0365/ 40.0365/ 40.0365
+.E1 40.0365
+
+: Relative humidity (pct)
+.E WRIS2 230301 Z DH0700/XRIRZ/DIH1
+.E1   64.66/   67.33/   71.45/   78.57/   81.70/   77.33
+.E1   77.73
+
+: Snow depth (in)
+.E WRIS2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1    0.47/    0.39/    0.43/    0.47/    0.47/    0.47
+.E1    0.47
+
+: Wind direction (deg)
+.E WRIS2 230301 Z DH0700/UDIRZ/DIH1
+.E1 255/ 267/ 279/ 285/ 289/ 303/ 295
+
+: Solar radiation (W/m2)
+.E WRIS2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/  -55.69/  -72.02/  -76.33/  -96.44/ -109.62
+.E1 -108.07
+
+: Precipitation (in)
+.E WRIS2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E WRIS2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   19.91/   16.84/   16.06/   18.55/   13.22/   19.51
+.E1   14.76
+
+: Air temperature (F)
+.E WRIS2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   35.83/   34.74/   32.94/   32.38/   29.73/   26.01
+.E1   23.70
+
+: Soil moisture (pct at 2 inch depth)
+.E WRIS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 2.0313/ 2.0312/ 2.0311/ 2.0310/ 2.0310/ 2.0309/ 2.0308
+
+: Soil temperature (F at 2 inch depth)
+.E WRIS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 2.0318/ 2.0318/ 2.0319/ 2.0319/ 2.0319/ 2.0318/ 2.0318
+
+: Soil moisture (pct at 4 inch depth)
+.E WRIS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0309/ 4.0308/ 4.0308/ 4.0308/ 4.0307/ 4.0307/ 4.0306
+
+: Soil temperature (F at 4 inch depth)
+.E WRIS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0324/ 4.0324/ 4.0324/ 4.0323/ 4.0324/ 4.0323/ 4.0323
+
+: Soil moisture (pct at 8 inch depth)
+.E WRIS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 8.0327/ 8.0327/ 8.0326/ 8.0324/ 8.0324/ 8.0324/ 8.0324
+
+: Soil temperature (F at 8 inch depth)
+.E WRIS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 8.0325/ 8.0326/ 8.0325/ 8.0326/ 8.0326/ 8.0326/ 8.0326
+
+: Soil moisture (pct at 20 inch depth)
+.E WRIS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 20.0372/ 20.0371/ 20.0371/ 20.0369/ 20.0366/ 20.0365
+.E1 20.0366
+
+: Soil temperature (F at 20 inch depth)
+.E WRIS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 20.0335/ 20.0335/ 20.0335/ 20.0334/ 20.0334/ 20.0334
+.E1 20.0335
+
+: Soil moisture (pct at 40 inch depth)
+.E WRIS2 230301 Z DH0700/MVIRZ/DIH1
+.E1 40.0230/ 40.0241/ 40.0247/ 40.0253/ 40.0257/ 40.0260
+.E1 40.0263
+
+: Soil temperature (F at 40 inch depth)
+.E WRIS2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 40.0355/ 40.0355/ 40.0355/ 40.0355/ 40.0355/ 40.0355
+.E1 40.0354
+
+: Relative humidity (pct)
+.E WTES2 230301 Z DH0700/XRIRZ/DIH1
+.E1   80.50/   67.99/   70.64/   73.24/   81.40/   85.10
+.E1   85.70
+
+: Snow depth (in)
+.E WTES2 230301 Z DH0700/DUE/SDIRZ/DIH1
+.E1    8.90/    8.62/    8.58/    8.50/    8.54/    8.62
+.E1    8.62
+
+: Wind direction (deg)
+.E WTES2 230301 Z DH0700/UDIRZ/DIH1
+.E1 244/ 253/ 258/ 275/ 281/ 279/ 293
+
+: Solar radiation (W/m2)
+.E WTES2 230301 Z DH0700/DUS/RWHRZ/DIH1
+.E1 -9999.00/  -46.61/  -40.88/  -50.80/  -86.32/ -105.97
+.E1 -101.54
+
+: Precipitation (in)
+.E WTES2 230301 Z DH0700/DUE/PPHRZ/DIH1
+.E1 -9999.00/    0.00/    0.00/    0.00/    0.00/    0.00
+.E1    0.00
+
+: Wind speed (mph)
+.E WTES2 230301 Z DH0700/DUE/USIRZ/DIH1
+.E1   20.45/   29.53/   29.31/   37.81/   33.07/   30.59
+.E1   30.41
+
+: Air temperature (F)
+.E WTES2 230301 Z DH0700/DUE/TAIRZ/DIH1
+.E1   36.25/   37.67/   36.99/   34.79/   30.79/   26.76
+.E1   24.84
+
+: Soil moisture (pct at 2 inch depth)
+.E WTES2 230301 Z DH0700/MVIRZ/DIH1
+.E1 2.0206/ 2.0207/ 2.0207/ 2.0207/ 2.0208/ 2.0208/ 2.0208
+
+: Soil temperature (F at 2 inch depth)
+.E WTES2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 2.0322/ 2.0323/ 2.0323/ 2.0323/ 2.0323/ 2.0323/ 2.0323
+
+: Soil moisture (pct at 4 inch depth)
+.E WTES2 230301 Z DH0700/MVIRZ/DIH1
+.E1 4.0277/ 4.0277/ 4.0278/ 4.0277/ 4.0278/ 4.0278/ 4.0278
+
+: Soil temperature (F at 4 inch depth)
+.E WTES2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 4.0325/ 4.0325/ 4.0325/ 4.0325/ 4.0325/ 4.0325/ 4.0325
+
+: Soil moisture (pct at 8 inch depth)
+.E WTES2 230301 Z DH0700/MVIRZ/DIH1
+.E1 8.0325/ 8.0326/ 8.0325/ 8.0325/ 8.0325/ 8.0325/ 8.0325
+
+: Soil temperature (F at 8 inch depth)
+.E WTES2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 8.0331/ 8.0331/ 8.0331/ 8.0331/ 8.0331/ 8.0331/ 8.0331
+
+: Soil moisture (pct at 20 inch depth)
+.E WTES2 230301 Z DH0700/MVIRZ/DIH1
+.E1 20.0261/ 20.0261/ 20.0261/ 20.0261/ 20.0261/ 20.0261
+.E1 20.0261
+
+: Soil temperature (F at 20 inch depth)
+.E WTES2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 20.0355/ 20.0355/ 20.0355/ 20.0356/ 20.0355/ 20.0355
+.E1 20.0355
+
+: Soil moisture (pct at 40 inch depth)
+.E WTES2 230301 Z DH0700/MVIRZ/DIH1
+.E1 40.0361/ 40.0361/ 40.0360/ 40.0360/ 40.0360/ 40.0361
+.E1 40.0361
+
+: Soil temperature (F at 40 inch depth)
+.E WTES2 230301 Z DH0700/DUE/TBIRZ/DIH1
+.E1 40.0389/ 40.0390/ 40.0390/ 40.0390/ 40.0390/ 40.0389
+.E1 40.0390
+
+
+:END OF MESSAGE
+NNNN

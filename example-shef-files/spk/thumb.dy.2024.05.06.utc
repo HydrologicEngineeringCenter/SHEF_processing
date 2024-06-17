@@ -1,0 +1,236 @@
+:
+:SHEF data pnfSHEF from poll pnf
+:Collected by Web Interface
+:Collected on May 06, 2024 01:45 Z
+:$@TS-WEB H2MS May 06, 2024 01:45 Z
+
+.A PNFR 20240505 P DH1100 /RBC 5935
+.A PNFR 20240505 P DH1100 /RCC 6165
+.A PNFR 20240505 P DH1100 /RDC 0
+.A PNFR 20240505 P DH1100 /REC 0
+
+
+:Generated 2024-05-06 01:00:09
+:['Apr 09, 2024', 'Apr 16, 2024', 'Apr 23, 2024']
+:[]
+:Diff -> -30.000000
+: Previous Runoff For the following Forecasts is 389.981000 on 20240422
+:Old runoff -> 389.981000 
+.A SHAFN 20240423 P DH2400 /QC 359.981000
+
+:Diff -> -20.000000
+:Error fetching previous runoff for SHA
+:Diff -> 10.000000
+:Error fetching previous runoff for ORO
+:Diff -> -10.000000
+:Error fetching previous runoff for YRS
+:Diff -> -20.000000
+:Error fetching previous runoff for FOL
+:Diff -> -10.000000
+: Previous Runoff For the following Forecasts is 389.981000 on 20240422
+:Old runoff -> 389.981000 
+.A CMN 20240423 P DH2400 /QC 379.981000
+
+:Diff -> -10.000000
+: Previous Runoff For the following Forecasts is 599.165665 on 20240422
+:Old runoff -> 599.165665 
+.A NWM 20240423 P DH2400 /QC 589.165665
+
+:Diff -> -10.000000
+: Previous Runoff For the following Forecasts is 502.947838 on 20240422
+:Old runoff -> 502.947838 
+.A NEX 20240423 P DH2400 /QC 492.947838
+
+:Diff -> -10.000000
+: Previous Runoff For the following Forecasts is 987.336937 on 20240422
+:Old runoff -> 987.336937 
+.A DNP 20240423 P DH2400 /QC 977.336937
+
+:Diff -> -10.000000
+: Previous Runoff For the following Forecasts is 1044.411065 on 20240422
+:Old runoff -> 1044.411065 
+.A FRI 20240423 P DH2400 /QC 1034.411065
+
+:Diff -> -10.000000
+: Previous Runoff For the following Forecasts is 1075.911802 on 20240422
+:Old runoff -> 1075.911802 
+.A PNF 20240423 P DH2400 /QC 1065.911802
+
+:Diff -> 0.000000
+: Previous Runoff For the following Forecasts is 230.733447 on 20240422
+:Old runoff -> 230.733447 
+.A TRM 20240423 P DH2400 /QC 230.733447
+
+:Diff -> 0.000000
+: Previous Runoff For the following Forecasts is 36.611190 on 20240422
+:Old runoff -> 36.611190 
+.A SCC 20240423 P DH2400 /QC 36.611190
+
+:Diff -> 0.000000
+: Previous Runoff For the following Forecasts is 372.913273 on 20240422
+:Old runoff -> 372.913273 
+.A ISB 20240423 P DH2400 /QC 372.913273
+
+:
+:SHEF data pnfSHEF from poll pnf
+:Collected by Web Interface
+:Collected on May 06, 2024 13:30 Z
+:$@TS-WEB H2MS May 06, 2024 13:30 Z
+
+.A PNFT 20240505 P DH2400 /PPD 0
+.A BLHA 20240505 P DH2400 /LSD 247
+.A BLHF 20240505 P DH2400 /LSD 1103
+.A CUR 20240505 P DH2400 /LSD 86281
+.A WSN 20240505 P DH2400 /LSD 66138
+
+:
+:SHEF data isbSHEF from poll isb
+:Collected by Web Interface
+:Collected on May 06, 2024 13:58 Z
+:$@TS-WEB H2MS May 06, 2024 13:58 Z
+
+.A ISBT 20240505 P DH2400 /PPD 0.00
+
+:
+:SHEF data trmSHEF from poll trm
+:Collected by Web Interface
+:Collected on May 06, 2024 13:56 Z
+:$@TS-WEB H2MS May 06, 2024 13:56 Z
+
+.A TRMT 20240505 P DH2400 /PPD 0.00
+
+:
+:SHEF data bucSHEF from poll buc
+:Collected by Web Interface
+:Collected on May 06, 2024 14:09 Z
+:$@TS-WEB H2MS May 06, 2024 14:09 Z
+
+.A BUCT 20240505 P DH2400 /PPD 0
+
+:
+:SHEF data sccSHEF from poll scc
+:Collected by Web Interface
+:Collected on May 06, 2024 14:13 Z
+:$@TS-WEB H2MS May 06, 2024 14:13 Z
+
+.A SCCT 20240505 P DH2400 /PPD 0.00
+
+:
+:SHEF data wrsSHEF from poll wrs
+:Collected by Web Interface
+:Collected on May 06, 2024 14:37 Z
+:$@TS-WEB H2MS May 06, 2024 14:37 Z
+
+.A WRST 20240505 P DH2400 /PPD 0
+
+:
+:SHEF data blbSHEF from poll blb
+:Collected by Web Interface
+:Collected on May 06, 2024 14:51 Z
+:$@TS-WEB H2MS May 06, 2024 14:51 Z
+
+.A BLBT 20240505 P DH2400 /PPD 0
+.A BLBT 20240505 P DH2400 /QRD 0
+.A BLBT 20240505 P DH2400 /BRD 207
+.A STG 20240505 P DH2400 /HPD 838.74
+.A STG 20240505 P DH2400 /HED 841
+.A STG 20240505 P DH2400 /LSD 47496
+.A STG 20240505 P DH2400 /QTD 344
+.A EPK 20240505 P DH2400 /LSD 48310
+
+:
+:SHEF data blbSHEF from poll blb
+:Collected by Web Interface
+:Collected on May 06, 2024 14:52 Z
+:$@TS-WEB H2MS May 06, 2024 14:52 Z
+
+.A BLBT 20240504 P DH2400 /PPD .25
+.A BLBT 20240504 P DH2400 /QRD 0
+.A BLBT 20240504 P DH2400 /BRD 207
+.A STG 20240504 P DH2400 /HPD 838.78
+.A STG 20240504 P DH2400 /HED 841
+.A STG 20240504 P DH2400 /LSD 47546
+.A STG 20240504 P DH2400 /QTD 344
+.A EPK 20240504 P DH2400 /LSD 48222
+
+:
+:SHEF data blbSHEF from poll blb
+:Collected by Web Interface
+:Collected on May 06, 2024 14:53 Z
+:$@TS-WEB H2MS May 06, 2024 14:53 Z
+
+.A BLBT 20240503 P DH2400 /PPD .24
+.A BLBT 20240503 P DH2400 /QRD 0
+.A BLBT 20240503 P DH2400 /BRD 206
+.A STG 20240503 P DH2400 /HPD 838.74
+.A STG 20240503 P DH2400 /HED 841
+.A STG 20240503 P DH2400 /LSD 47496
+.A STG 20240503 P DH2400 /QTD 344
+.A EPK 20240503 P DH2400 /LSD 48080
+
+:
+:SHEF data coySHEF from poll coy
+:Collected by Web Interface
+:Collected on May 06, 2024 15:18 Z
+:$@TS-WEB H2MS May 06, 2024 15:18 Z
+
+.A COYT 20240505 P DH2400 /PPD .01
+
+:
+:SHEF data nhgSHEF from poll nhg
+:Collected by Web Interface
+:Collected on May 06, 2024 15:17 Z
+:$@TS-WEB H2MS May 06, 2024 15:17 Z
+
+.A NHGT 20240505 P DH2400 /PPD 0
+
+:
+:SHEF data blbSHEF from poll blb
+:Collected by Web Interface
+:Collected on May 06, 2024 16:01 Z
+:$@TS-WEB H2MS May 06, 2024 16:01 Z
+
+.A BLBR 20240506 P DH0700 /RBC 200
+.A BLBR 20240506 P DH0700 /RCC 150
+.A BLBR 20240506 P DH0700 /RGC 0
+.A BLBR 20240506 P DH0700 /RFC 150
+.A BLBR 20240506 P DH0700 /RHC 0
+.A BLBR 20240506 P DH0700 /RJC 0
+
+:
+:SHEF data nhgSHEF from poll nhg
+:Collected by Web Interface
+:Collected on May 06, 2024 16:16 Z
+:$@TS-WEB H2MS May 06, 2024 16:16 Z
+
+.A NHGR 20240506 P DH0900 /RBC 120
+.A NHGR 20240506 P DH0900 /RCC 110
+
+:
+:SHEF data trmSHEF from poll trm
+:Collected by Web Interface
+:Collected on May 06, 2024 18:41 Z
+:$@TS-WEB H2MS May 06, 2024 18:41 Z
+
+.A TRMR 20240506 P DH0900 /RBC 563.00
+.A TRMR 20240506 P DH0900 /RCC 590.00
+
+:
+:SHEF data hidSHEF from poll hid
+:Collected by Web Interface
+:Collected on May 06, 2024 20:35 Z
+:$@TS-WEB H2MS May 06, 2024 20:35 Z
+
+.A HIDT 20240505 P DH2400 /PPD 0
+
+:
+:SHEF data pnfSHEF from poll pnf
+:Collected by Web Interface
+:Collected on May 06, 2024 23:25 Z
+:$@TS-WEB H2MS May 06, 2024 23:25 Z
+
+.A PNFR 20240506 P DH1900 /RBC 6165
+.A PNFR 20240506 P DH1900 /RCC 6275
+.A PNFR 20240506 P DH1900 /RDC 0
+.A PNFR 20240506 P DH1900 /REC 0
+
