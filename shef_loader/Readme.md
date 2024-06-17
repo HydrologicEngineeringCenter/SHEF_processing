@@ -40,7 +40,7 @@ Each loader module must have several module-level variables and one module-level
 These variables are typically defined at the bottom of the module since the loader class must be defined before the `loader_class` variable.
 
 ## The Shared Module
-The packages contains a module name `shared` which provides the following items:
+The packages contains a module named `shared` which provides the following items:
 #### Types
 |type|description|
 |--|--|
@@ -51,8 +51,8 @@ The packages contains a module name `shared` which provides the following items:
 |--|--|
 |`DURATION_CODES: dict[int, str]`|SHEF duration character by numeric value|
 |`DURATION_VALUES: dict[str, int]`|SHEF duration numeric value by character|
-|`PROBABILITY_CODES: dict[float, str]`|SHEF probability numeric value by character|
-|`PROBABILITY_VALUES: dict[str, float]`|SHEF probability character by numberic value|
+|`PROBABILITY_CODES: dict[float, str]`|SHEF probability character by numberic value|
+|`PROBABILITY_VALUES: dict[str, float]`|SHEF probability numeric value by character|
 |`SEND_CODES: dict[str, tuple[str, bool]]`|(<*parameter_code*>, <*value_time_is_prev_0700*>) by send code|
 |`VALUE_UNITS_PATTERN: re.Pattern`|matches pattern `([0-9]+)([a-z]+)` case insensitive|
 
