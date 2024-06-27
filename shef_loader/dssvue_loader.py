@@ -171,7 +171,7 @@ class DSSVueLoader(base_loader.BaseLoader) :
                         if not line or line[0] == '*' or not line[:2].strip() :
                             continue
                         pe_code = line[:2].strip()
-                        c_part = line[3:27].strip()
+                        c_part = line[3:29].strip()
                         unit = line[29:36].strip()
                         data_type = line[38:45].strip()
                         transform = line[47:56].strip()

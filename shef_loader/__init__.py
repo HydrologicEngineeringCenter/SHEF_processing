@@ -118,4 +118,5 @@ See https://github.com/HydrologicEngineeringCenter/SHEF_processing/blob/master/s
 __all__ : list = []
 from . import base_loader
 from . import dssvue_loader
+from . import shefdss_util
 
