@@ -1,0 +1,1005 @@
+* SHEF ID  (required),,,,,
+* PE Code  (required),,,,,
+* Interval (optional),,,,,
+*          blank=irregular,,,,,
+*          * = use SHEF duration,,,,,
+*          nU where n = number and U in (M H D L Y),,,,,
+*              5M = 5Minutes,,,,,
+*              6H = 6Hours,,,,,
+*              1D = 1Day,,,,,
+*              1L = 1Month,,,,,
+*              1Y = 1Year,,,,,
+* A Part (optional) defaults to blank,,,,,
+* B Part (optional) defaults to SHEF ID,,,,,
+* F Part (optional) set to * for forecast time,,,,,
+***********************************************,,,,,
+* SHEF ID,PE_Code,Interval,A Part,B Part,F Part
+ACSO2,PC,,,"Pecos River Near Acme, NM",OK Meosnet
+ACSO2,TA,*,,"Pecos River Near Acme, NM",OK Meosnet
+ACSO2,UD,*,,"Pecos River Near Acme, NM",OK Meosnet
+ACSO2,US,*,,"Pecos River Near Acme, NM",OK Meosnet
+ACSO2,XR,*,,"Pecos River Near Acme, NM",OK Meosnet
+ACSO2,YW,*,,"Pecos River Near Acme, NM",OK Meosnet
+ADSO2,PC,,,NWS Observer Station ADA,OK Meosnet
+ADSO2,TA,*,,NWS Observer Station ADA,OK Meosnet
+ADSO2,UD,*,,NWS Observer Station ADA,OK Meosnet
+ADSO2,US,*,,NWS Observer Station ADA,OK Meosnet
+ADSO2,XR,*,,NWS Observer Station ADA,OK Meosnet
+ADSO2,YW,*,,NWS Observer Station ADA,OK Meosnet
+ALSO2,PC,,,N. Fork Red River in Altus Basin,OK Meosnet
+ALSO2,TA,*,,N. Fork Red River in Altus Basin,OK Meosnet
+ALSO2,UD,*,,N. Fork Red River in Altus Basin,OK Meosnet
+ALSO2,US,*,,N. Fork Red River in Altus Basin,OK Meosnet
+ALSO2,XR,*,,N. Fork Red River in Altus Basin,OK Meosnet
+ALSO2,YW,*,,N. Fork Red River in Altus Basin,OK Meosnet
+ANSO2,PC,,,ANTLERS,OK Meosnet
+ANSO2,TA,*,,ANTLERS,OK Meosnet
+ANSO2,UD,*,,ANTLERS,OK Meosnet
+ANSO2,US,*,,ANTLERS,OK Meosnet
+ANSO2,XR,*,,ANTLERS,OK Meosnet
+ANSO2,YW,*,,ANTLERS,OK Meosnet
+ANTK1,PP,*,,Harper,KS Mesonet
+ANTK1,TA,*,,Harper,KS Mesonet
+ANTK1,UD,*,,Harper,KS Mesonet
+ANTK1,US,*,,Harper,KS Mesonet
+ANTK1,XR,*,,Harper,KS Mesonet
+ANTK1,YW,*,,Harper,KS Mesonet
+APSO2,PC,,,APACHE,OK Meosnet
+APSO2,TA,*,,APACHE,OK Meosnet
+APSO2,UD,*,,APACHE,OK Meosnet
+APSO2,US,*,,APACHE,OK Meosnet
+APSO2,XR,*,,APACHE,OK Meosnet
+APSO2,YW,*,,APACHE,OK Meosnet
+ARSO2,PC,,,ARDMORE,OK Meosnet
+ARSO2,TA,*,,ARDMORE,OK Meosnet
+ARSO2,UD,*,,ARDMORE,OK Meosnet
+ARSO2,US,*,,ARDMORE,OK Meosnet
+ARSO2,XR,*,,ARDMORE,OK Meosnet
+ARSO2,YW,*,,ARDMORE,OK Meosnet
+ASBK1,PP,*,,Ashland Bottoms,KS Mesonet
+ASBK1,TA,*,,Ashland Bottoms,KS Mesonet
+ASBK1,UD,*,,Ashland Bottoms,KS Mesonet
+ASBK1,US,*,,Ashland Bottoms,KS Mesonet
+ASBK1,XR,*,,Ashland Bottoms,KS Mesonet
+ASBK1,YW,*,,Ashland Bottoms,KS Mesonet
+ASUK1,PP,*,,Ashland 8S,KS Mesonet
+ASUK1,TA,*,,Ashland 8S,KS Mesonet
+ASUK1,UD,*,,Ashland 8S,KS Mesonet
+ASUK1,US,*,,Ashland 8S,KS Mesonet
+ASUK1,XR,*,,Ashland 8S,KS Mesonet
+ASUK1,YW,*,,Ashland 8S,KS Mesonet
+ATSO2,PC,,,ARNETT,OK Meosnet
+ATSO2,TA,*,,ARNETT,OK Meosnet
+ATSO2,UD,*,,ARNETT,OK Meosnet
+ATSO2,US,*,,ARNETT,OK Meosnet
+ATSO2,XR,*,,ARNETT,OK Meosnet
+ATSO2,YW,*,,ARNETT,OK Meosnet
+AVSO2,PC,,,"Salt Fork Arkansas Nr Alva, OK",OK Meosnet
+AVSO2,TA,*,,"Salt Fork Arkansas Nr Alva, OK",OK Meosnet
+AVSO2,UD,*,,"Salt Fork Arkansas Nr Alva, OK",OK Meosnet
+AVSO2,US,*,,"Salt Fork Arkansas Nr Alva, OK",OK Meosnet
+AVSO2,XR,*,,"Salt Fork Arkansas Nr Alva, OK",OK Meosnet
+AVSO2,YW,*,,"Salt Fork Arkansas Nr Alva, OK",OK Meosnet
+BCSO2,PC,,,BOISE CITY,OK Meosnet
+BCSO2,TA,*,,BOISE CITY,OK Meosnet
+BCSO2,UD,*,,BOISE CITY,OK Meosnet
+BCSO2,US,*,,BOISE CITY,OK Meosnet
+BCSO2,XR,*,,BOISE CITY,OK Meosnet
+BCSO2,YW,*,,BOISE CITY,OK Meosnet
+BEOK1,PP,*,,Mitchell,KS Mesonet
+BEOK1,TA,*,,Mitchell,KS Mesonet
+BEOK1,UD,*,,Mitchell,KS Mesonet
+BEOK1,US,*,,Mitchell,KS Mesonet
+BEOK1,XR,*,,Mitchell,KS Mesonet
+BEOK1,YW,*,,Mitchell,KS Mesonet
+BFSO2,PC,,,BUFFALO,OK Meosnet
+BFSO2,TA,*,,BUFFALO,OK Meosnet
+BFSO2,UD,*,,BUFFALO,OK Meosnet
+BFSO2,US,*,,BUFFALO,OK Meosnet
+BFSO2,XR,*,,BUFFALO,OK Meosnet
+BFSO2,YW,*,,BUFFALO,OK Meosnet
+BLSO2,PC,,,BLACKWELL,OK Meosnet
+BLSO2,TA,*,,BLACKWELL,OK Meosnet
+BLSO2,UD,*,,BLACKWELL,OK Meosnet
+BLSO2,US,*,,BLACKWELL,OK Meosnet
+BLSO2,XR,*,,BLACKWELL,OK Meosnet
+BLSO2,YW,*,,BLACKWELL,OK Meosnet
+BNSO2,PC,,,BURNEYVILLE,OK Meosnet
+BNSO2,TA,*,,BURNEYVILLE,OK Meosnet
+BNSO2,UD,*,,BURNEYVILLE,OK Meosnet
+BNSO2,US,*,,BURNEYVILLE,OK Meosnet
+BNSO2,XR,*,,BURNEYVILLE,OK Meosnet
+BNSO2,YW,*,,BURNEYVILLE,OK Meosnet
+BRSO2,PC,,,BRISTOW,OK Meosnet
+BRSO2,TA,*,,BRISTOW,OK Meosnet
+BRSO2,UD,*,,BRISTOW,OK Meosnet
+BRSO2,US,*,,BRISTOW,OK Meosnet
+BRSO2,XR,*,,BRISTOW,OK Meosnet
+BRSO2,YW,*,,BRISTOW,OK Meosnet
+BSSO2,PC,,,BESSIE,OK Meosnet
+BSSO2,TA,*,,BESSIE,OK Meosnet
+BSSO2,UD,*,,BESSIE,OK Meosnet
+BSSO2,US,*,,BESSIE,OK Meosnet
+BSSO2,XR,*,,BESSIE,OK Meosnet
+BSSO2,YW,*,,BESSIE,OK Meosnet
+BTSO2,PC,,,BUTLER,OK Meosnet
+BTSO2,TA,*,,BUTLER,OK Meosnet
+BTSO2,UD,*,,BUTLER,OK Meosnet
+BTSO2,US,*,,BUTLER,OK Meosnet
+BTSO2,XR,*,,BUTLER,OK Meosnet
+BTSO2,YW,*,,BUTLER,OK Meosnet
+BVMK1,PP,*,,Belleville 2W,KS Mesonet
+BVMK1,TA,*,,Belleville 2W,KS Mesonet
+BVMK1,UD,*,,Belleville 2W,KS Mesonet
+BVMK1,US,*,,Belleville 2W,KS Mesonet
+BVMK1,XR,*,,Belleville 2W,KS Mesonet
+BVMK1,YW,*,,Belleville 2W,KS Mesonet
+BVSO2,PC,,,BEAVER,OK Meosnet
+BVSO2,TA,*,,BEAVER,OK Meosnet
+BVSO2,UD,*,,BEAVER,OK Meosnet
+BVSO2,US,*,,BEAVER,OK Meosnet
+BVSO2,XR,*,,BEAVER,OK Meosnet
+BVSO2,YW,*,,BEAVER,OK Meosnet
+BXSO2,PC,,,Mesonet Station Bixby,OK Meosnet
+BXSO2,TA,*,,Mesonet Station Bixby,OK Meosnet
+BXSO2,UD,*,,Mesonet Station Bixby,OK Meosnet
+BXSO2,US,*,,Mesonet Station Bixby,OK Meosnet
+BXSO2,XR,*,,Mesonet Station Bixby,OK Meosnet
+BXSO2,YW,*,,Mesonet Station Bixby,OK Meosnet
+CASO2,PC,,,CLAYTON,OK Meosnet
+CASO2,TA,*,,CLAYTON,OK Meosnet
+CASO2,UD,*,,CLAYTON,OK Meosnet
+CASO2,US,*,,CLAYTON,OK Meosnet
+CASO2,XR,*,,CLAYTON,OK Meosnet
+CASO2,YW,*,,CLAYTON,OK Meosnet
+CBKK1,PP,*,,Colby,KS Mesonet
+CBKK1,TA,*,,Colby,KS Mesonet
+CBKK1,UD,*,,Colby,KS Mesonet
+CBKK1,US,*,,Colby,KS Mesonet
+CBKK1,XR,*,,Colby,KS Mesonet
+CBKK1,YW,*,,Colby,KS Mesonet
+CBSO2,PC,,,Lake Carl Blackwell,OK Meosnet
+CBSO2,TA,*,,Lake Carl Blackwell,OK Meosnet
+CBSO2,UD,*,,Lake Carl Blackwell,OK Meosnet
+CBSO2,US,*,,Lake Carl Blackwell,OK Meosnet
+CBSO2,XR,*,,Lake Carl Blackwell,OK Meosnet
+CBSO2,YW,*,,Lake Carl Blackwell,OK Meosnet
+CCSO2,PC,,,CHICKASHA,OK Meosnet
+CCSO2,TA,*,,CHICKASHA,OK Meosnet
+CCSO2,UD,*,,CHICKASHA,OK Meosnet
+CCSO2,US,*,,CHICKASHA,OK Meosnet
+CCSO2,XR,*,,CHICKASHA,OK Meosnet
+CCSO2,YW,*,,CHICKASHA,OK Meosnet
+CDSO2,PC,,,CLOUDY,OK Meosnet
+CDSO2,TA,*,,CLOUDY,OK Meosnet
+CDSO2,UD,*,,CLOUDY,OK Meosnet
+CDSO2,US,*,,CLOUDY,OK Meosnet
+CDSO2,XR,*,,CLOUDY,OK Meosnet
+CDSO2,YW,*,,CLOUDY,OK Meosnet
+CHSO2,PC,,,CHANDLER,OK Meosnet
+CHSO2,TA,*,,CHANDLER,OK Meosnet
+CHSO2,UD,*,,CHANDLER,OK Meosnet
+CHSO2,US,*,,CHANDLER,OK Meosnet
+CHSO2,XR,*,,CHANDLER,OK Meosnet
+CHSO2,YW,*,,CHANDLER,OK Meosnet
+CKMK1,PP,*,,Clay,KS Mesonet
+CKMK1,TA,*,,Clay,KS Mesonet
+CKMK1,UD,*,,Clay,KS Mesonet
+CKMK1,US,*,,Clay,KS Mesonet
+CKMK1,XR,*,,Clay,KS Mesonet
+CKMK1,YW,*,,Clay,KS Mesonet
+CMSO2,PC,,,CAMARGO,OK Meosnet
+CMSO2,TA,*,,CAMARGO,OK Meosnet
+CMSO2,UD,*,,CAMARGO,OK Meosnet
+CMSO2,US,*,,CAMARGO,OK Meosnet
+CMSO2,XR,*,,CAMARGO,OK Meosnet
+CMSO2,YW,*,,CAMARGO,OK Meosnet
+CNSO2,PC,,,CENTRAHOMA,OK Meosnet
+CNSO2,TA,*,,CENTRAHOMA,OK Meosnet
+CNSO2,UD,*,,CENTRAHOMA,OK Meosnet
+CNSO2,US,*,,CENTRAHOMA,OK Meosnet
+CNSO2,XR,*,,CENTRAHOMA,OK Meosnet
+CNSO2,YW,*,,CENTRAHOMA,OK Meosnet
+CPSO2,PC,,,Mesonet Station Copan,OK Meosnet
+CPSO2,TA,*,,Mesonet Station Copan,OK Meosnet
+CPSO2,UD,*,,Mesonet Station Copan,OK Meosnet
+CPSO2,US,*,,Mesonet Station Copan,OK Meosnet
+CPSO2,XR,*,,Mesonet Station Copan,OK Meosnet
+CPSO2,YW,*,,Mesonet Station Copan,OK Meosnet
+CRKK1,PP,*,,Cherokee,KS Mesonet
+CRKK1,TA,*,,Cherokee,KS Mesonet
+CRKK1,UD,*,,Cherokee,KS Mesonet
+CRKK1,US,*,,Cherokee,KS Mesonet
+CRKK1,XR,*,,Cherokee,KS Mesonet
+CRKK1,YW,*,,Cherokee,KS Mesonet
+CRSO2,PC,,,CHEROKEE,OK Meosnet
+CRSO2,TA,*,,CHEROKEE,OK Meosnet
+CRSO2,UD,*,,CHEROKEE,OK Meosnet
+CRSO2,US,*,,CHEROKEE,OK Meosnet
+CRSO2,XR,*,,CHEROKEE,OK Meosnet
+CRSO2,YW,*,,CHEROKEE,OK Meosnet
+CYSO2,PC,,,CHEYENNE,OK Meosnet
+CYSO2,TA,*,,CHEYENNE,OK Meosnet
+CYSO2,UD,*,,CHEYENNE,OK Meosnet
+CYSO2,US,*,,CHEYENNE,OK Meosnet
+CYSO2,XR,*,,CHEYENNE,OK Meosnet
+CYSO2,YW,*,,CHEYENNE,OK Meosnet
+DNSO2,PC,,,KETCHUM RANCH,OK Meosnet
+DNSO2,TA,*,,KETCHUM RANCH,OK Meosnet
+DNSO2,UD,*,,KETCHUM RANCH,OK Meosnet
+DNSO2,US,*,,KETCHUM RANCH,OK Meosnet
+DNSO2,XR,*,,KETCHUM RANCH,OK Meosnet
+DNSO2,YW,*,,KETCHUM RANCH,OK Meosnet
+DRSO2,PC,,,OILTON,OK Meosnet
+DRSO2,TA,*,,OILTON,OK Meosnet
+DRSO2,UD,*,,OILTON,OK Meosnet
+DRSO2,US,*,,OILTON,OK Meosnet
+DRSO2,XR,*,,OILTON,OK Meosnet
+DRSO2,YW,*,,OILTON,OK Meosnet
+DTSO2,PC,,,DURANT,OK Meosnet
+DTSO2,TA,*,,DURANT,OK Meosnet
+DTSO2,UD,*,,DURANT,OK Meosnet
+DTSO2,US,*,,DURANT,OK Meosnet
+DTSO2,XR,*,,DURANT,OK Meosnet
+DTSO2,YW,*,,DURANT,OK Meosnet
+EDCK1,PP,*,,Butler,KS Mesonet
+EDCK1,TA,*,,Butler,KS Mesonet
+EDCK1,UD,*,,Butler,KS Mesonet
+EDCK1,US,*,,Butler,KS Mesonet
+EDCK1,XR,*,,Butler,KS Mesonet
+EDCK1,YW,*,,Butler,KS Mesonet
+EKSO2,PC,,,Mesonet Station Erik,OK Meosnet
+EKSO2,TA,*,,Mesonet Station Erik,OK Meosnet
+EKSO2,UD,*,,Mesonet Station Erik,OK Meosnet
+EKSO2,US,*,,Mesonet Station Erik,OK Meosnet
+EKSO2,XR,*,,Mesonet Station Erik,OK Meosnet
+EKSO2,YW,*,,Mesonet Station Erik,OK Meosnet
+ELSO2,PC,,,ELK CITY,OK Meosnet
+ELSO2,TA,*,,ELK CITY,OK Meosnet
+ELSO2,UD,*,,ELK CITY,OK Meosnet
+ELSO2,US,*,,ELK CITY,OK Meosnet
+ELSO2,XR,*,,ELK CITY,OK Meosnet
+ELSO2,YW,*,,ELK CITY,OK Meosnet
+EMLK1,PP,*,,Elmdale 1SE,KS Mesonet
+EMLK1,TA,*,,Elmdale 1SE,KS Mesonet
+EMLK1,UD,*,,Elmdale 1SE,KS Mesonet
+EMLK1,US,*,,Elmdale 1SE,KS Mesonet
+EMLK1,XR,*,,Elmdale 1SE,KS Mesonet
+EMLK1,YW,*,,Elmdale 1SE,KS Mesonet
+ENSO2,PC,,,BRECKENRIDGE,OK Meosnet
+ENSO2,TA,*,,BRECKENRIDGE,OK Meosnet
+ENSO2,UD,*,,BRECKENRIDGE,OK Meosnet
+ENSO2,US,*,,BRECKENRIDGE,OK Meosnet
+ENSO2,XR,*,,BRECKENRIDGE,OK Meosnet
+ENSO2,YW,*,,BRECKENRIDGE,OK Meosnet
+ERSO2,PC,,,EL RENO,OK Meosnet
+ERSO2,TA,*,,EL RENO,OK Meosnet
+ERSO2,UD,*,,EL RENO,OK Meosnet
+ERSO2,US,*,,EL RENO,OK Meosnet
+ERSO2,XR,*,,EL RENO,OK Meosnet
+ERSO2,YW,*,,EL RENO,OK Meosnet
+EUSO2,PC,,,EUFAULA,OK Meosnet
+EUSO2,TA,*,,EUFAULA,OK Meosnet
+EUSO2,UD,*,,EUFAULA,OK Meosnet
+EUSO2,US,*,,EUFAULA,OK Meosnet
+EUSO2,XR,*,,EUFAULA,OK Meosnet
+EUSO2,YW,*,,EUFAULA,OK Meosnet
+EVSO2,PC,,,EVA,OK Meosnet
+EVSO2,TA,*,,EVA,OK Meosnet
+EVSO2,UD,*,,EVA,OK Meosnet
+EVSO2,US,*,,EVA,OK Meosnet
+EVSO2,XR,*,,EVA,OK Meosnet
+EVSO2,YW,*,,EVA,OK Meosnet
+FCSO2,PC,,,FORT COBB,OK Meosnet
+FCSO2,TA,*,,FORT COBB,OK Meosnet
+FCSO2,UD,*,,FORT COBB,OK Meosnet
+FCSO2,US,*,,FORT COBB,OK Meosnet
+FCSO2,XR,*,,FORT COBB,OK Meosnet
+FCSO2,YW,*,,FORT COBB,OK Meosnet
+FDSO2,PC,,,FREEDOM,OK Meosnet
+FDSO2,TA,*,,FREEDOM,OK Meosnet
+FDSO2,UD,*,,FREEDOM,OK Meosnet
+FDSO2,US,*,,FREEDOM,OK Meosnet
+FDSO2,XR,*,,FREEDOM,OK Meosnet
+FDSO2,YW,*,,FREEDOM,OK Meosnet
+FFSO2,PC,,,BURBANK,OK Meosnet
+FFSO2,TA,*,,BURBANK,OK Meosnet
+FFSO2,UD,*,,BURBANK,OK Meosnet
+FFSO2,US,*,,BURBANK,OK Meosnet
+FFSO2,XR,*,,BURBANK,OK Meosnet
+FFSO2,YW,*,,BURBANK,OK Meosnet
+FTSO2,PC,,,Fittstown,OK Meosnet
+FTSO2,TA,*,,Fittstown,OK Meosnet
+FTSO2,UD,*,,Fittstown,OK Meosnet
+FTSO2,US,*,,Fittstown,OK Meosnet
+FTSO2,XR,*,,Fittstown,OK Meosnet
+FTSO2,YW,*,,Fittstown,OK Meosnet
+GDSO2,PC,,,GOODWELL,OK Meosnet
+GDSO2,TA,*,,GOODWELL,OK Meosnet
+GDSO2,UD,*,,GOODWELL,OK Meosnet
+GDSO2,US,*,,GOODWELL,OK Meosnet
+GDSO2,XR,*,,GOODWELL,OK Meosnet
+GDSO2,YW,*,,GOODWELL,OK Meosnet
+GESK1,PP,*,,Garden City,KS Mesonet
+GESK1,TA,*,,Garden City,KS Mesonet
+GESK1,UD,*,,Garden City,KS Mesonet
+GESK1,US,*,,Garden City,KS Mesonet
+GESK1,XR,*,,Garden City,KS Mesonet
+GESK1,YW,*,,Garden City,KS Mesonet
+GRSO2,PC,,,GRANDFIELD,OK Meosnet
+GRSO2,TA,*,,GRANDFIELD,OK Meosnet
+GRSO2,UD,*,,GRANDFIELD,OK Meosnet
+GRSO2,US,*,,GRANDFIELD,OK Meosnet
+GRSO2,XR,*,,GRANDFIELD,OK Meosnet
+GRSO2,YW,*,,GRANDFIELD,OK Meosnet
+GTSO2,PC,,,GUTHRIE,OK Meosnet
+GTSO2,TA,*,,GUTHRIE,OK Meosnet
+GTSO2,UD,*,,GUTHRIE,OK Meosnet
+GTSO2,US,*,,GUTHRIE,OK Meosnet
+GTSO2,XR,*,,GUTHRIE,OK Meosnet
+GTSO2,YW,*,,GUTHRIE,OK Meosnet
+GTUK1,PP,*,,Ulysses,KS Mesonet
+GTUK1,TA,*,,Ulysses,KS Mesonet
+GTUK1,UD,*,,Ulysses,KS Mesonet
+GTUK1,US,*,,Ulysses,KS Mesonet
+GTUK1,XR,*,,Ulysses,KS Mesonet
+GTUK1,YW,*,,Ulysses,KS Mesonet
+GYMK1,PP,*,,Gypsum,KS Mesonet
+GYMK1,TA,*,,Gypsum,KS Mesonet
+GYMK1,UD,*,,Gypsum,KS Mesonet
+GYMK1,US,*,,Gypsum,KS Mesonet
+GYMK1,XR,*,,Gypsum,KS Mesonet
+GYMK1,YW,*,,Gypsum,KS Mesonet
+GYUK1,PP,*,,Montezuma,KS Mesonet
+GYUK1,TA,*,,Montezuma,KS Mesonet
+GYUK1,UD,*,,Montezuma,KS Mesonet
+GYUK1,US,*,,Montezuma,KS Mesonet
+GYUK1,XR,*,,Montezuma,KS Mesonet
+GYUK1,YW,*,,Montezuma,KS Mesonet
+HASK1,PP,*,,Hays,KS Mesonet
+HASK1,TA,*,,Hays,KS Mesonet
+HASK1,UD,*,,Hays,KS Mesonet
+HASK1,US,*,,Hays,KS Mesonet
+HASK1,XR,*,,Hays,KS Mesonet
+HASK1,YW,*,,Hays,KS Mesonet
+HBSO2,PC,,,HOBART,OK Meosnet
+HBSO2,TA,*,,HOBART,OK Meosnet
+HBSO2,UD,*,,HOBART,OK Meosnet
+HBSO2,US,*,,HOBART,OK Meosnet
+HBSO2,XR,*,,HOBART,OK Meosnet
+HBSO2,YW,*,,HOBART,OK Meosnet
+HCYK1,PP,*,,Hill City,KS Mesonet
+HCYK1,TA,*,,Hill City,KS Mesonet
+HCYK1,UD,*,,Hill City,KS Mesonet
+HCYK1,US,*,,Hill City,KS Mesonet
+HCYK1,XR,*,,Hill City,KS Mesonet
+HCYK1,YW,*,,Hill City,KS Mesonet
+HESO2,PC,,,HECTORVILLE,OK Meosnet
+HESO2,TA,*,,HECTORVILLE,OK Meosnet
+HESO2,UD,*,,HECTORVILLE,OK Meosnet
+HESO2,US,*,,HECTORVILLE,OK Meosnet
+HESO2,XR,*,,HECTORVILLE,OK Meosnet
+HESO2,YW,*,,HECTORVILLE,OK Meosnet
+HGSO2,PC,,,Mesonet Station Hugo,OK Meosnet
+HGSO2,TA,*,,Mesonet Station Hugo,OK Meosnet
+HGSO2,UD,*,,Mesonet Station Hugo,OK Meosnet
+HGSO2,US,*,,Mesonet Station Hugo,OK Meosnet
+HGSO2,XR,*,,Mesonet Station Hugo,OK Meosnet
+HGSO2,YW,*,,Mesonet Station Hugo,OK Meosnet
+HINK1,PP,*,,Hutchinson 10SW,KS Mesonet
+HINK1,TA,*,,Hutchinson 10SW,KS Mesonet
+HINK1,UD,*,,Hutchinson 10SW,KS Mesonet
+HINK1,US,*,,Hutchinson 10SW,KS Mesonet
+HINK1,XR,*,,Hutchinson 10SW,KS Mesonet
+HINK1,YW,*,,Hutchinson 10SW,KS Mesonet
+HISO2,PC,,,HOLLIS,OK Meosnet
+HISO2,TA,*,,HOLLIS,OK Meosnet
+HISO2,UD,*,,HOLLIS,OK Meosnet
+HISO2,US,*,,HOLLIS,OK Meosnet
+HISO2,XR,*,,HOLLIS,OK Meosnet
+HISO2,YW,*,,HOLLIS,OK Meosnet
+HKSO2,PC,,,HOOKER,OK Meosnet
+HKSO2,TA,*,,HOOKER,OK Meosnet
+HKSO2,UD,*,,HOOKER,OK Meosnet
+HKSO2,US,*,,HOOKER,OK Meosnet
+HKSO2,XR,*,,HOOKER,OK Meosnet
+HKSO2,YW,*,,HOOKER,OK Meosnet
+HLSO2,PC,,,Holdenville,OK Meosnet
+HLSO2,TA,*,,Holdenville,OK Meosnet
+HLSO2,UD,*,,Holdenville,OK Meosnet
+HLSO2,US,*,,Holdenville,OK Meosnet
+HLSO2,XR,*,,Holdenville,OK Meosnet
+HLSO2,YW,*,,Holdenville,OK Meosnet
+HMUK1,PP,*,,Syracuse,KS Mesonet
+HMUK1,TA,*,,Syracuse,KS Mesonet
+HMUK1,UD,*,,Syracuse,KS Mesonet
+HMUK1,US,*,,Syracuse,KS Mesonet
+HMUK1,XR,*,,Syracuse,KS Mesonet
+HMUK1,YW,*,,Syracuse,KS Mesonet
+HSSO2,PC,,,HASKELL,OK Meosnet
+HSSO2,TA,*,,HASKELL,OK Meosnet
+HSSO2,UD,*,,HASKELL,OK Meosnet
+HSSO2,US,*,,HASKELL,OK Meosnet
+HSSO2,XR,*,,HASKELL,OK Meosnet
+HSSO2,YW,*,,HASKELL,OK Meosnet
+HTSO2,PC,,,HINTON,OK Meosnet
+HTSO2,TA,*,,HINTON,OK Meosnet
+HTSO2,UD,*,,HINTON,OK Meosnet
+HTSO2,US,*,,HINTON,OK Meosnet
+HTSO2,XR,*,,HINTON,OK Meosnet
+HTSO2,YW,*,,HINTON,OK Meosnet
+IDSO2,PC,,,IDABEL,OK Meosnet
+IDSO2,TA,*,,IDABEL,OK Meosnet
+IDSO2,UD,*,,IDABEL,OK Meosnet
+IDSO2,US,*,,IDABEL,OK Meosnet
+IDSO2,XR,*,,IDABEL,OK Meosnet
+IDSO2,YW,*,,IDABEL,OK Meosnet
+INSO2,PC,,,Mesonet Station Inola,OK Meosnet
+INSO2,TA,*,,Mesonet Station Inola,OK Meosnet
+INSO2,UD,*,,Mesonet Station Inola,OK Meosnet
+INSO2,US,*,,Mesonet Station Inola,OK Meosnet
+INSO2,XR,*,,Mesonet Station Inola,OK Meosnet
+INSO2,YW,*,,Mesonet Station Inola,OK Meosnet
+JYSO2,PC,,,Mesonet Station Jay,OK Meosnet
+JYSO2,TA,*,,Mesonet Station Jay,OK Meosnet
+JYSO2,UD,*,,Mesonet Station Jay,OK Meosnet
+JYSO2,US,*,,Mesonet Station Jay,OK Meosnet
+JYSO2,XR,*,,Mesonet Station Jay,OK Meosnet
+JYSO2,YW,*,,Mesonet Station Jay,OK Meosnet
+KFSO2,PC,,,KINGFISHER,OK Meosnet
+KFSO2,TA,*,,KINGFISHER,OK Meosnet
+KFSO2,UD,*,,KINGFISHER,OK Meosnet
+KFSO2,US,*,,KINGFISHER,OK Meosnet
+KFSO2,XR,*,,KINGFISHER,OK Meosnet
+KFSO2,YW,*,,KINGFISHER,OK Meosnet
+KJTK1,PP,*,,Hodgeman,KS Mesonet
+KJTK1,TA,*,,Hodgeman,KS Mesonet
+KJTK1,UD,*,,Hodgeman,KS Mesonet
+KJTK1,US,*,,Hodgeman,KS Mesonet
+KJTK1,XR,*,,Hodgeman,KS Mesonet
+KJTK1,YW,*,,Hodgeman,KS Mesonet
+KSDK1,PP,*,,Sheridan,KS Mesonet
+KSDK1,TA,*,,Sheridan,KS Mesonet
+KSDK1,UD,*,,Sheridan,KS Mesonet
+KSDK1,US,*,,Sheridan,KS Mesonet
+KSDK1,XR,*,,Sheridan,KS Mesonet
+KSDK1,YW,*,,Sheridan,KS Mesonet
+KSHK1,PP,*,,Sherman,KS Mesonet
+KSHK1,TA,*,,Sherman,KS Mesonet
+KSHK1,UD,*,,Sherman,KS Mesonet
+KSHK1,US,*,,Sherman,KS Mesonet
+KSHK1,XR,*,,Sherman,KS Mesonet
+KSHK1,YW,*,,Sherman,KS Mesonet
+KTSO2,PC,,,KENTON,OK Meosnet
+KTSO2,TA,*,,KENTON,OK Meosnet
+KTSO2,UD,*,,KENTON,OK Meosnet
+KTSO2,US,*,,KENTON,OK Meosnet
+KTSO2,XR,*,,KENTON,OK Meosnet
+KTSO2,YW,*,,KENTON,OK Meosnet
+KWHK1,PP,*,,Leoti,KS Mesonet
+KWHK1,TA,*,,Leoti,KS Mesonet
+KWHK1,UD,*,,Leoti,KS Mesonet
+KWHK1,US,*,,Leoti,KS Mesonet
+KWHK1,XR,*,,Leoti,KS Mesonet
+KWHK1,YW,*,,Leoti,KS Mesonet
+KWLK1,PP,*,,Wallace,KS Mesonet
+KWLK1,TA,*,,Wallace,KS Mesonet
+KWLK1,UD,*,,Wallace,KS Mesonet
+KWLK1,US,*,,Wallace,KS Mesonet
+KWLK1,XR,*,,Wallace,KS Mesonet
+KWLK1,YW,*,,Wallace,KS Mesonet
+LCRK1,PP,*,,La Crosse,KS Mesonet
+LCRK1,TA,*,,La Crosse,KS Mesonet
+LCRK1,UD,*,,La Crosse,KS Mesonet
+LCRK1,US,*,,La Crosse,KS Mesonet
+LCRK1,XR,*,,La Crosse,KS Mesonet
+LCRK1,YW,*,,La Crosse,KS Mesonet
+LCUK1,PP,*,,Lake City,KS Mesonet
+LCUK1,TA,*,,Lake City,KS Mesonet
+LCUK1,UD,*,,Lake City,KS Mesonet
+LCUK1,US,*,,Lake City,KS Mesonet
+LCUK1,XR,*,,Lake City,KS Mesonet
+LCUK1,YW,*,,Lake City,KS Mesonet
+LHSO2,PC,,,LAHOMA,OK Meosnet
+LHSO2,TA,*,,LAHOMA,OK Meosnet
+LHSO2,UD,*,,LAHOMA,OK Meosnet
+LHSO2,US,*,,LAHOMA,OK Meosnet
+LHSO2,XR,*,,LAHOMA,OK Meosnet
+LHSO2,YW,*,,LAHOMA,OK Meosnet
+LKUK1,PP,*,,Lakin,KS Mesonet
+LKUK1,TA,*,,Lakin,KS Mesonet
+LKUK1,UD,*,,Lakin,KS Mesonet
+LKUK1,US,*,,Lakin,KS Mesonet
+LKUK1,XR,*,,Lakin,KS Mesonet
+LKUK1,YW,*,,Lakin,KS Mesonet
+LNSO2,PC,,,Mesonet Station Lane,OK Meosnet
+LNSO2,TA,*,,Mesonet Station Lane,OK Meosnet
+LNSO2,UD,*,,Mesonet Station Lane,OK Meosnet
+LNSO2,US,*,,Mesonet Station Lane,OK Meosnet
+LNSO2,XR,*,,Mesonet Station Lane,OK Meosnet
+LNSO2,YW,*,,Mesonet Station Lane,OK Meosnet
+LNUK1,PP,*,,Lane,KS Mesonet
+LNUK1,TA,*,,Lane,KS Mesonet
+LNUK1,UD,*,,Lane,KS Mesonet
+LNUK1,US,*,,Lane,KS Mesonet
+LNUK1,XR,*,,Lane,KS Mesonet
+LNUK1,YW,*,,Lane,KS Mesonet
+LORK1,PP,*,,Lorraine,KS Mesonet
+LORK1,TA,*,,Lorraine,KS Mesonet
+LORK1,UD,*,,Lorraine,KS Mesonet
+LORK1,US,*,,Lorraine,KS Mesonet
+LORK1,XR,*,,Lorraine,KS Mesonet
+LORK1,YW,*,,Lorraine,KS Mesonet
+LWSO2,PC,,,MEDICINE PARK,OK Meosnet
+LWSO2,TA,*,,MEDICINE PARK,OK Meosnet
+LWSO2,UD,*,,MEDICINE PARK,OK Meosnet
+LWSO2,US,*,,MEDICINE PARK,OK Meosnet
+LWSO2,XR,*,,MEDICINE PARK,OK Meosnet
+LWSO2,YW,*,,MEDICINE PARK,OK Meosnet
+MASO2,PC,,,MARENA,OK Meosnet
+MASO2,TA,*,,MARENA,OK Meosnet
+MASO2,UD,*,,MARENA,OK Meosnet
+MASO2,US,*,,MARENA,OK Meosnet
+MASO2,XR,*,,MARENA,OK Meosnet
+MASO2,YW,*,,MARENA,OK Meosnet
+MCHK1,PP,*,,McPherson 1S,KS Mesonet
+MCHK1,TA,*,,McPherson 1S,KS Mesonet
+MCHK1,UD,*,,McPherson 1S,KS Mesonet
+MCHK1,US,*,,McPherson 1S,KS Mesonet
+MCHK1,XR,*,,McPherson 1S,KS Mesonet
+MCHK1,YW,*,,McPherson 1S,KS Mesonet
+MCSO2,PC,,,MCALESTER,OK Meosnet
+MCSO2,TA,*,,MCALESTER,OK Meosnet
+MCSO2,UD,*,,MCALESTER,OK Meosnet
+MCSO2,US,*,,MCALESTER,OK Meosnet
+MCSO2,XR,*,,MCALESTER,OK Meosnet
+MCSO2,YW,*,,MCALESTER,OK Meosnet
+MDSO2,PC,,,MADILL,OK Meosnet
+MDSO2,TA,*,,MADILL,OK Meosnet
+MDSO2,UD,*,,MADILL,OK Meosnet
+MDSO2,US,*,,MADILL,OK Meosnet
+MDSO2,XR,*,,MADILL,OK Meosnet
+MDSO2,YW,*,,MADILL,OK Meosnet
+MEUK1,PP,*,,Meade,KS Mesonet
+MEUK1,TA,*,,Meade,KS Mesonet
+MEUK1,UD,*,,Meade,KS Mesonet
+MEUK1,US,*,,Meade,KS Mesonet
+MEUK1,XR,*,,Meade,KS Mesonet
+MEUK1,YW,*,,Meade,KS Mesonet
+MFSO2,PC,,,"near MEDFORD,OK",OK Meosnet
+MFSO2,TA,*,,"near MEDFORD,OK",OK Meosnet
+MFSO2,UD,*,,"near MEDFORD,OK",OK Meosnet
+MFSO2,US,*,,"near MEDFORD,OK",OK Meosnet
+MFSO2,XR,*,,"near MEDFORD,OK",OK Meosnet
+MFSO2,YW,*,,"near MEDFORD,OK",OK Meosnet
+MHSO2,PC,,,MT HERMAN,OK Meosnet
+MHSO2,TA,*,,MT HERMAN,OK Meosnet
+MHSO2,UD,*,,MT HERMAN,OK Meosnet
+MHSO2,US,*,,MT HERMAN,OK Meosnet
+MHSO2,XR,*,,MT HERMAN,OK Meosnet
+MHSO2,YW,*,,MT HERMAN,OK Meosnet
+MISO2,PC,,,Mesonet Station Miami,OK Meosnet
+MISO2,TA,*,,Mesonet Station Miami,OK Meosnet
+MISO2,UD,*,,Mesonet Station Miami,OK Meosnet
+MISO2,US,*,,Mesonet Station Miami,OK Meosnet
+MISO2,XR,*,,Mesonet Station Miami,OK Meosnet
+MISO2,YW,*,,Mesonet Station Miami,OK Meosnet
+MNSO2,PC,,,MANGUM,OK Meosnet
+MNSO2,TA,*,,MANGUM,OK Meosnet
+MNSO2,UD,*,,MANGUM,OK Meosnet
+MNSO2,US,*,,MANGUM,OK Meosnet
+MNSO2,XR,*,,MANGUM,OK Meosnet
+MNSO2,YW,*,,MANGUM,OK Meosnet
+MOSO2,PC,,,Mesonet Station Minco,OK Meosnet
+MOSO2,TA,*,,Mesonet Station Minco,OK Meosnet
+MOSO2,UD,*,,Mesonet Station Minco,OK Meosnet
+MOSO2,US,*,,Mesonet Station Minco,OK Meosnet
+MOSO2,XR,*,,Mesonet Station Minco,OK Meosnet
+MOSO2,YW,*,,Mesonet Station Minco,OK Meosnet
+MSSO2,PC,,,MARSHALL,OK Meosnet
+MSSO2,TA,*,,MARSHALL,OK Meosnet
+MSSO2,UD,*,,MARSHALL,OK Meosnet
+MSSO2,US,*,,MARSHALL,OK Meosnet
+MSSO2,XR,*,,MARSHALL,OK Meosnet
+MSSO2,YW,*,,MARSHALL,OK Meosnet
+MTNK1,PP,*,,Manhattan,KS Mesonet
+MTNK1,TA,*,,Manhattan,KS Mesonet
+MTNK1,UD,*,,Manhattan,KS Mesonet
+MTNK1,US,*,,Manhattan,KS Mesonet
+MTNK1,XR,*,,Manhattan,KS Mesonet
+MTNK1,YW,*,,Manhattan,KS Mesonet
+MYSO2,PC,,,MAY RANCH,OK Meosnet
+MYSO2,TA,*,,MAY RANCH,OK Meosnet
+MYSO2,UD,*,,MAY RANCH,OK Meosnet
+MYSO2,US,*,,MAY RANCH,OK Meosnet
+MYSO2,XR,*,,MAY RANCH,OK Meosnet
+MYSO2,YW,*,,MAY RANCH,OK Meosnet
+NESO2,PC,,,NEWPORT,OK Meosnet
+NESO2,TA,*,,NEWPORT,OK Meosnet
+NESO2,UD,*,,NEWPORT,OK Meosnet
+NESO2,US,*,,NEWPORT,OK Meosnet
+NESO2,XR,*,,NEWPORT,OK Meosnet
+NESO2,YW,*,,NEWPORT,OK Meosnet
+NKSO2,PC,,,NEWKIRK,OK Meosnet
+NKSO2,TA,*,,NEWKIRK,OK Meosnet
+NKSO2,UD,*,,NEWKIRK,OK Meosnet
+NKSO2,US,*,,NEWKIRK,OK Meosnet
+NKSO2,XR,*,,NEWKIRK,OK Meosnet
+NKSO2,YW,*,,NEWKIRK,OK Meosnet
+NRSO2,PC,,,NORMAN,OK Meosnet
+NRSO2,TA,*,,NORMAN,OK Meosnet
+NRSO2,UD,*,,NORMAN,OK Meosnet
+NRSO2,US,*,,NORMAN,OK Meosnet
+NRSO2,XR,*,,NORMAN,OK Meosnet
+NRSO2,YW,*,,NORMAN,OK Meosnet
+NSUK1,PP,*,,Ness City,KS Mesonet
+NSUK1,TA,*,,Ness City,KS Mesonet
+NSUK1,UD,*,,Ness City,KS Mesonet
+NSUK1,US,*,,Ness City,KS Mesonet
+NSUK1,XR,*,,Ness City,KS Mesonet
+NSUK1,YW,*,,Ness City,KS Mesonet
+NTSO2,PC,,,NOWATA,OK Meosnet
+NTSO2,TA,*,,NOWATA,OK Meosnet
+NTSO2,UD,*,,NOWATA,OK Meosnet
+NTSO2,US,*,,NOWATA,OK Meosnet
+NTSO2,XR,*,,NOWATA,OK Meosnet
+NTSO2,YW,*,,NOWATA,OK Meosnet
+OAWK1,PP,*,,Ottawa 2SE,KS Mesonet
+OAWK1,TA,*,,Ottawa 2SE,KS Mesonet
+OAWK1,UD,*,,Ottawa 2SE,KS Mesonet
+OAWK1,US,*,,Ottawa 2SE,KS Mesonet
+OAWK1,XR,*,,Ottawa 2SE,KS Mesonet
+OAWK1,YW,*,,Ottawa 2SE,KS Mesonet
+OESO2,PC,,,Oklahoma City East,OK Meosnet
+OESO2,TA,*,,Oklahoma City East,OK Meosnet
+OESO2,UD,*,,Oklahoma City East,OK Meosnet
+OESO2,US,*,,Oklahoma City East,OK Meosnet
+OESO2,XR,*,,Oklahoma City East,OK Meosnet
+OESO2,YW,*,,Oklahoma City East,OK Meosnet
+OGSO2,PC,,,OKMULGEE,OK Meosnet
+OGSO2,TA,*,,OKMULGEE,OK Meosnet
+OGSO2,UD,*,,OKMULGEE,OK Meosnet
+OGSO2,US,*,,OKMULGEE,OK Meosnet
+OGSO2,XR,*,,OKMULGEE,OK Meosnet
+OGSO2,YW,*,,OKMULGEE,OK Meosnet
+OMSO2,PC,,,OKEMAH,OK Meosnet
+OMSO2,TA,*,,OKEMAH,OK Meosnet
+OMSO2,UD,*,,OKEMAH,OK Meosnet
+OMSO2,US,*,,OKEMAH,OK Meosnet
+OMSO2,XR,*,,OKEMAH,OK Meosnet
+OMSO2,YW,*,,OKEMAH,OK Meosnet
+OSNK1,PP,*,,Osborne,KS Mesonet
+OSNK1,TA,*,,Osborne,KS Mesonet
+OSNK1,UD,*,,Osborne,KS Mesonet
+OSNK1,US,*,,Osborne,KS Mesonet
+OSNK1,XR,*,,Osborne,KS Mesonet
+OSNK1,YW,*,,Osborne,KS Mesonet
+PARK1,PP,*,,Parsons,KS Mesonet
+PARK1,TA,*,,Parsons,KS Mesonet
+PARK1,UD,*,,Parsons,KS Mesonet
+PARK1,US,*,,Parsons,KS Mesonet
+PARK1,XR,*,,Parsons,KS Mesonet
+PARK1,YW,*,,Parsons,KS Mesonet
+PCSO2,PC,,,WASHINGTON,OK Meosnet
+PCSO2,TA,*,,WASHINGTON,OK Meosnet
+PCSO2,UD,*,,WASHINGTON,OK Meosnet
+PCSO2,US,*,,WASHINGTON,OK Meosnet
+PCSO2,XR,*,,WASHINGTON,OK Meosnet
+PCSO2,YW,*,,WASHINGTON,OK Meosnet
+PMSK1,PP,*,,Overbrook,KS Mesonet
+PMSK1,TA,*,,Overbrook,KS Mesonet
+PMSK1,UD,*,,Overbrook,KS Mesonet
+PMSK1,US,*,,Overbrook,KS Mesonet
+PMSK1,XR,*,,Overbrook,KS Mesonet
+PMSK1,YW,*,,Overbrook,KS Mesonet
+PMSO2,PC,,,PUTNAM,OK Meosnet
+PMSO2,TA,*,,PUTNAM,OK Meosnet
+PMSO2,UD,*,,PUTNAM,OK Meosnet
+PMSO2,US,*,,PUTNAM,OK Meosnet
+PMSO2,XR,*,,PUTNAM,OK Meosnet
+PMSO2,YW,*,,PUTNAM,OK Meosnet
+PNSO2,PC,,,PAWNEE,OK Meosnet
+PNSO2,TA,*,,PAWNEE,OK Meosnet
+PNSO2,UD,*,,PAWNEE,OK Meosnet
+PNSO2,US,*,,PAWNEE,OK Meosnet
+PNSO2,XR,*,,PAWNEE,OK Meosnet
+PNSO2,YW,*,,PAWNEE,OK Meosnet
+POSO2,PC,,,Mesonet Station Pryor,OK Meosnet
+POSO2,TA,*,,Mesonet Station Pryor,OK Meosnet
+POSO2,UD,*,,Mesonet Station Pryor,OK Meosnet
+POSO2,US,*,,Mesonet Station Pryor,OK Meosnet
+POSO2,XR,*,,Mesonet Station Pryor,OK Meosnet
+POSO2,YW,*,,Mesonet Station Pryor,OK Meosnet
+PRSO2,PC,,,PERKINS,OK Meosnet
+PRSO2,TA,*,,PERKINS,OK Meosnet
+PRSO2,UD,*,,PERKINS,OK Meosnet
+PRSO2,US,*,,PERKINS,OK Meosnet
+PRSO2,XR,*,,PERKINS,OK Meosnet
+PRSO2,YW,*,,PERKINS,OK Meosnet
+PTSO2,PC,,,WISTER,OK Meosnet
+PTSO2,TA,*,,WISTER,OK Meosnet
+PTSO2,UD,*,,WISTER,OK Meosnet
+PTSO2,US,*,,WISTER,OK Meosnet
+PTSO2,XR,*,,WISTER,OK Meosnet
+PTSO2,YW,*,,WISTER,OK Meosnet
+PVSO2,PC,,,PAULS VALLEY,OK Meosnet
+PVSO2,TA,*,,PAULS VALLEY,OK Meosnet
+PVSO2,UD,*,,PAULS VALLEY,OK Meosnet
+PVSO2,US,*,,PAULS VALLEY,OK Meosnet
+PVSO2,XR,*,,PAULS VALLEY,OK Meosnet
+PVSO2,YW,*,,PAULS VALLEY,OK Meosnet
+PWSO2,PC,,,FORAKER,OK Meosnet
+PWSO2,TA,*,,FORAKER,OK Meosnet
+PWSO2,UD,*,,FORAKER,OK Meosnet
+PWSO2,US,*,,FORAKER,OK Meosnet
+PWSO2,XR,*,,FORAKER,OK Meosnet
+PWSO2,YW,*,,FORAKER,OK Meosnet
+PYSO2,PC,,,RED ROCK,OK Meosnet
+PYSO2,TA,*,,RED ROCK,OK Meosnet
+PYSO2,UD,*,,RED ROCK,OK Meosnet
+PYSO2,US,*,,RED ROCK,OK Meosnet
+PYSO2,XR,*,,RED ROCK,OK Meosnet
+PYSO2,YW,*,,RED ROCK,OK Meosnet
+PZSO2,PC,,,PORTER,OK Meosnet
+PZSO2,TA,*,,PORTER,OK Meosnet
+PZSO2,UD,*,,PORTER,OK Meosnet
+PZSO2,US,*,,PORTER,OK Meosnet
+PZSO2,XR,*,,PORTER,OK Meosnet
+PZSO2,YW,*,,PORTER,OK Meosnet
+RFUK1,PP,*,,Richfield,KS Mesonet
+RFUK1,TA,*,,Richfield,KS Mesonet
+RFUK1,UD,*,,Richfield,KS Mesonet
+RFUK1,US,*,,Richfield,KS Mesonet
+RFUK1,XR,*,,Richfield,KS Mesonet
+RFUK1,YW,*,,Richfield,KS Mesonet
+RKSK1,PP,*,,Rock Springs,KS Mesonet
+RKSK1,TA,*,,Rock Springs,KS Mesonet
+RKSK1,UD,*,,Rock Springs,KS Mesonet
+RKSK1,US,*,,Rock Springs,KS Mesonet
+RKSK1,XR,*,,Rock Springs,KS Mesonet
+RKSK1,YW,*,,Rock Springs,KS Mesonet
+RNSO2,PC,,,RINGLING,OK Meosnet
+RNSO2,TA,*,,RINGLING,OK Meosnet
+RNSO2,UD,*,,RINGLING,OK Meosnet
+RNSO2,US,*,,RINGLING,OK Meosnet
+RNSO2,XR,*,,RINGLING,OK Meosnet
+RNSO2,YW,*,,RINGLING,OK Meosnet
+RSVK1,PP,*,,Rossville 2SE,KS Mesonet
+RSVK1,TA,*,,Rossville 2SE,KS Mesonet
+RSVK1,UD,*,,Rossville 2SE,KS Mesonet
+RSVK1,US,*,,Rossville 2SE,KS Mesonet
+RSVK1,XR,*,,Rossville 2SE,KS Mesonet
+RSVK1,YW,*,,Rossville 2SE,KS Mesonet
+SAUK1,PP,*,,Satanta,KS Mesonet
+SAUK1,TA,*,,Satanta,KS Mesonet
+SAUK1,UD,*,,Satanta,KS Mesonet
+SAUK1,US,*,,Satanta,KS Mesonet
+SAUK1,XR,*,,Satanta,KS Mesonet
+SAUK1,YW,*,,Satanta,KS Mesonet
+SEAK1,PP,*,,Sedan,KS Mesonet
+SEAK1,TA,*,,Sedan,KS Mesonet
+SEAK1,UD,*,,Sedan,KS Mesonet
+SEAK1,US,*,,Sedan,KS Mesonet
+SEAK1,XR,*,,Sedan,KS Mesonet
+SEAK1,YW,*,,Sedan,KS Mesonet
+SESO2,PC,,,SEILING,OK Meosnet
+SESO2,TA,*,,SEILING,OK Meosnet
+SESO2,UD,*,,SEILING,OK Meosnet
+SESO2,US,*,,SEILING,OK Meosnet
+SESO2,XR,*,,SEILING,OK Meosnet
+SESO2,YW,*,,SEILING,OK Meosnet
+SFSO2,PC,,,Mesonet Station Byars,OK Meosnet
+SFSO2,TA,*,,Mesonet Station Byars,OK Meosnet
+SFSO2,UD,*,,Mesonet Station Byars,OK Meosnet
+SFSO2,US,*,,Mesonet Station Byars,OK Meosnet
+SFSO2,XR,*,,Mesonet Station Byars,OK Meosnet
+SFSO2,YW,*,,Mesonet Station Byars,OK Meosnet
+SHSO2,PC,,,SHAWNEE,OK Meosnet
+SHSO2,TA,*,,SHAWNEE,OK Meosnet
+SHSO2,UD,*,,SHAWNEE,OK Meosnet
+SHSO2,US,*,,SHAWNEE,OK Meosnet
+SHSO2,XR,*,,SHAWNEE,OK Meosnet
+SHSO2,YW,*,,SHAWNEE,OK Meosnet
+SKSO2,PC,,,SKIATOOK,OK Meosnet
+SKSO2,TA,*,,SKIATOOK,OK Meosnet
+SKSO2,UD,*,,SKIATOOK,OK Meosnet
+SKSO2,US,*,,SKIATOOK,OK Meosnet
+SKSO2,XR,*,,SKIATOOK,OK Meosnet
+SKSO2,YW,*,,SKIATOOK,OK Meosnet
+SLKK1,PP,*,,Silver Lake 4E,KS Mesonet
+SLKK1,TA,*,,Silver Lake 4E,KS Mesonet
+SLKK1,UD,*,,Silver Lake 4E,KS Mesonet
+SLKK1,US,*,,Silver Lake 4E,KS Mesonet
+SLKK1,XR,*,,Silver Lake 4E,KS Mesonet
+SLKK1,YW,*,,Silver Lake 4E,KS Mesonet
+SLSO2,PC,,,SULPHUR,OK Meosnet
+SLSO2,TA,*,,SULPHUR,OK Meosnet
+SLSO2,UD,*,,SULPHUR,OK Meosnet
+SLSO2,US,*,,SULPHUR,OK Meosnet
+SLSO2,XR,*,,SULPHUR,OK Meosnet
+SLSO2,YW,*,,SULPHUR,OK Meosnet
+SNSO2,PC,,,SPENCER,OK Meosnet
+SNSO2,TA,*,,SPENCER,OK Meosnet
+SNSO2,UD,*,,SPENCER,OK Meosnet
+SNSO2,US,*,,SPENCER,OK Meosnet
+SNSO2,XR,*,,SPENCER,OK Meosnet
+SNSO2,YW,*,,SPENCER,OK Meosnet
+SPSO2,PC,,,SLAPOUT,OK Meosnet
+SPSO2,TA,*,,SLAPOUT,OK Meosnet
+SPSO2,UD,*,,SLAPOUT,OK Meosnet
+SPSO2,US,*,,SLAPOUT,OK Meosnet
+SPSO2,XR,*,,SLAPOUT,OK Meosnet
+SPSO2,YW,*,,SLAPOUT,OK Meosnet
+SPUK1,PP,*,,Spearville,KS Mesonet
+SPUK1,TA,*,,Spearville,KS Mesonet
+SPUK1,UD,*,,Spearville,KS Mesonet
+SPUK1,US,*,,Spearville,KS Mesonet
+SPUK1,XR,*,,Spearville,KS Mesonet
+SPUK1,YW,*,,Spearville,KS Mesonet
+SRSO2,PC,,,STILLWATER,OK Meosnet
+SRSO2,TA,*,,STILLWATER,OK Meosnet
+SRSO2,UD,*,,STILLWATER,OK Meosnet
+SRSO2,US,*,,STILLWATER,OK Meosnet
+SRSO2,XR,*,,STILLWATER,OK Meosnet
+SRSO2,YW,*,,STILLWATER,OK Meosnet
+SSSO2,PC,,,SALLISAW,OK Meosnet
+SSSO2,TA,*,,SALLISAW,OK Meosnet
+SSSO2,UD,*,,SALLISAW,OK Meosnet
+SSSO2,US,*,,SALLISAW,OK Meosnet
+SSSO2,XR,*,,SALLISAW,OK Meosnet
+SSSO2,YW,*,,SALLISAW,OK Meosnet
+STJK1,PP,*,,St. John 1NW,KS Mesonet
+STJK1,TA,*,,St. John 1NW,KS Mesonet
+STJK1,UD,*,,St. John 1NW,KS Mesonet
+STJK1,US,*,,St. John 1NW,KS Mesonet
+STJK1,XR,*,,St. John 1NW,KS Mesonet
+STJK1,YW,*,,St. John 1NW,KS Mesonet
+STSO2,PC,,,STIGLER,OK Meosnet
+STSO2,TA,*,,STIGLER,OK Meosnet
+STSO2,UD,*,,STIGLER,OK Meosnet
+STSO2,US,*,,STIGLER,OK Meosnet
+STSO2,XR,*,,STIGLER,OK Meosnet
+STSO2,YW,*,,STIGLER,OK Meosnet
+STUK1,PP,*,,Stanton,KS Mesonet
+STUK1,TA,*,,Stanton,KS Mesonet
+STUK1,UD,*,,Stanton,KS Mesonet
+STUK1,US,*,,Stanton,KS Mesonet
+STUK1,XR,*,,Stanton,KS Mesonet
+STUK1,YW,*,,Stanton,KS Mesonet
+SUSO2,PC,,,STUART,OK Meosnet
+SUSO2,TA,*,,STUART,OK Meosnet
+SUSO2,UD,*,,STUART,OK Meosnet
+SUSO2,US,*,,STUART,OK Meosnet
+SUSO2,XR,*,,STUART,OK Meosnet
+SUSO2,YW,*,,STUART,OK Meosnet
+SVUK1,PP,*,,Moscow 10NW,KS Mesonet
+SVUK1,TA,*,,Moscow 10NW,KS Mesonet
+SVUK1,UD,*,,Moscow 10NW,KS Mesonet
+SVUK1,US,*,,Moscow 10NW,KS Mesonet
+SVUK1,XR,*,,Moscow 10NW,KS Mesonet
+SVUK1,YW,*,,Moscow 10NW,KS Mesonet
+TASO2,PC,,,TALALA,OK Meosnet
+TASO2,TA,*,,TALALA,OK Meosnet
+TASO2,UD,*,,TALALA,OK Meosnet
+TASO2,US,*,,TALALA,OK Meosnet
+TASO2,XR,*,,TALALA,OK Meosnet
+TASO2,YW,*,,TALALA,OK Meosnet
+THSO2,PC,,,TALIHINA,OK Meosnet
+THSO2,TA,*,,TALIHINA,OK Meosnet
+THSO2,UD,*,,TALIHINA,OK Meosnet
+THSO2,US,*,,TALIHINA,OK Meosnet
+THSO2,XR,*,,TALIHINA,OK Meosnet
+THSO2,YW,*,,TALIHINA,OK Meosnet
+TKSO2,PC,,,Cookson,OK Meosnet
+TKSO2,TA,*,,Cookson,OK Meosnet
+TKSO2,UD,*,,Cookson,OK Meosnet
+TKSO2,US,*,,Cookson,OK Meosnet
+TKSO2,XR,*,,Cookson,OK Meosnet
+TKSO2,YW,*,,Cookson,OK Meosnet
+TNEK1,PP,*,,Tribune 6NE,KS Mesonet
+TNEK1,TA,*,,Tribune 6NE,KS Mesonet
+TNEK1,UD,*,,Tribune 6NE,KS Mesonet
+TNEK1,US,*,,Tribune 6NE,KS Mesonet
+TNEK1,XR,*,,Tribune 6NE,KS Mesonet
+TNEK1,YW,*,,Tribune 6NE,KS Mesonet
+TNSO2,PC,,,TULSA,OK Meosnet
+TNSO2,TA,*,,TULSA,OK Meosnet
+TNSO2,UD,*,,TULSA,OK Meosnet
+TNSO2,US,*,,TULSA,OK Meosnet
+TNSO2,XR,*,,TULSA,OK Meosnet
+TNSO2,YW,*,,TULSA,OK Meosnet
+TPSO2,PC,,,TIPTON,OK Meosnet
+TPSO2,TA,*,,TIPTON,OK Meosnet
+TPSO2,UD,*,,TIPTON,OK Meosnet
+TPSO2,US,*,,TIPTON,OK Meosnet
+TPSO2,XR,*,,TIPTON,OK Meosnet
+TPSO2,YW,*,,TIPTON,OK Meosnet
+TQSO2,PC,,,TAHLEQUAH,OK Meosnet
+TQSO2,TA,*,,TAHLEQUAH,OK Meosnet
+TQSO2,UD,*,,TAHLEQUAH,OK Meosnet
+TQSO2,US,*,,TAHLEQUAH,OK Meosnet
+TQSO2,XR,*,,TAHLEQUAH,OK Meosnet
+TQSO2,YW,*,,TAHLEQUAH,OK Meosnet
+TRBK1,PP,*,,Tribune,KS Mesonet
+TRBK1,TA,*,,Tribune,KS Mesonet
+TRBK1,UD,*,,Tribune,KS Mesonet
+TRBK1,US,*,,Tribune,KS Mesonet
+TRBK1,XR,*,,Tribune,KS Mesonet
+TRBK1,YW,*,,Tribune,KS Mesonet
+TSSO2,PC,,,TISHOMINGO,OK Meosnet
+TSSO2,TA,*,,TISHOMINGO,OK Meosnet
+TSSO2,UD,*,,TISHOMINGO,OK Meosnet
+TSSO2,US,*,,TISHOMINGO,OK Meosnet
+TSSO2,XR,*,,TISHOMINGO,OK Meosnet
+TSSO2,YW,*,,TISHOMINGO,OK Meosnet
+VIOK1,PP,*,,Viola,KS Mesonet
+VIOK1,TA,*,,Viola,KS Mesonet
+VIOK1,UD,*,,Viola,KS Mesonet
+VIOK1,US,*,,Viola,KS Mesonet
+VIOK1,XR,*,,Viola,KS Mesonet
+VIOK1,YW,*,,Viola,KS Mesonet
+VLSO2,PC,,,VALLIANT,OK Meosnet
+VLSO2,TA,*,,VALLIANT,OK Meosnet
+VLSO2,UD,*,,VALLIANT,OK Meosnet
+VLSO2,US,*,,VALLIANT,OK Meosnet
+VLSO2,XR,*,,VALLIANT,OK Meosnet
+VLSO2,YW,*,,VALLIANT,OK Meosnet
+VNSO2,PC,,,VINITA,OK Meosnet
+VNSO2,TA,*,,VINITA,OK Meosnet
+VNSO2,UD,*,,VINITA,OK Meosnet
+VNSO2,US,*,,VINITA,OK Meosnet
+VNSO2,XR,*,,VINITA,OK Meosnet
+VNSO2,YW,*,,VINITA,OK Meosnet
+WBSO2,PC,,,WILBURTON,OK Meosnet
+WBSO2,TA,*,,WILBURTON,OK Meosnet
+WBSO2,UD,*,,WILBURTON,OK Meosnet
+WBSO2,US,*,,WILBURTON,OK Meosnet
+WBSO2,XR,*,,WILBURTON,OK Meosnet
+WBSO2,YW,*,,WILBURTON,OK Meosnet
+WNSO2,PC,,,WATONGA,OK Meosnet
+WNSO2,TA,*,,WATONGA,OK Meosnet
+WNSO2,UD,*,,WATONGA,OK Meosnet
+WNSO2,US,*,,WATONGA,OK Meosnet
+WNSO2,XR,*,,WATONGA,OK Meosnet
+WNSO2,YW,*,,WATONGA,OK Meosnet
+WRSO2,PC,,,WAURIKA,OK Meosnet
+WRSO2,TA,*,,WAURIKA,OK Meosnet
+WRSO2,UD,*,,WAURIKA,OK Meosnet
+WRSO2,US,*,,WAURIKA,OK Meosnet
+WRSO2,XR,*,,WAURIKA,OK Meosnet
+WRSO2,YW,*,,WAURIKA,OK Meosnet
+WTSO2,PC,,,WALTERS,OK Meosnet
+WTSO2,TA,*,,WALTERS,OK Meosnet
+WTSO2,UD,*,,WALTERS,OK Meosnet
+WTSO2,US,*,,WALTERS,OK Meosnet
+WTSO2,XR,*,,WALTERS,OK Meosnet
+WVSO2,PC,,,WESTVILLE,OK Meosnet
+WVSO2,TA,*,,WESTVILLE,OK Meosnet
+WVSO2,UD,*,,WESTVILLE,OK Meosnet
+WVSO2,US,*,,WESTVILLE,OK Meosnet
+WVSO2,XR,*,,WESTVILLE,OK Meosnet
+WVSO2,YW,*,,WESTVILLE,OK Meosnet
+WWSO2,PC,,,WOODWARD,OK Meosnet
+WWSO2,TA,*,,WOODWARD,OK Meosnet
+WWSO2,UD,*,,WOODWARD,OK Meosnet
+WWSO2,US,*,,WOODWARD,OK Meosnet
+WWSO2,XR,*,,WOODWARD,OK Meosnet
+WWSO2,YW,*,,WOODWARD,OK Meosnet
+WXSO2,PC,,,WEATHERFORD,OK Meosnet
+WXSO2,TA,*,,WEATHERFORD,OK Meosnet
+WXSO2,UD,*,,WEATHERFORD,OK Meosnet
+WXSO2,US,*,,WEATHERFORD,OK Meosnet
+WXSO2,XR,*,,WEATHERFORD,OK Meosnet
+WXSO2,YW,*,,WEATHERFORD,OK Meosnet
+WYSO2,PC,,,WYNONA,OK Meosnet
+WYSO2,TA,*,,WYNONA,OK Meosnet
+WYSO2,UD,*,,WYNONA,OK Meosnet
+WYSO2,US,*,,WYNONA,OK Meosnet
+WYSO2,XR,*,,WYNONA,OK Meosnet
+WYSO2,YW,*,,WYNONA,OK Meosnet
+YACK1,PP,*,,Woodson,KS Mesonet
+YACK1,TA,*,,Woodson,KS Mesonet
+YACK1,UD,*,,Woodson,KS Mesonet
+YACK1,US,*,,Woodson,KS Mesonet
+YACK1,XR,*,,Woodson,KS Mesonet
+YACK1,YW,*,,Woodson,KS Mesonet

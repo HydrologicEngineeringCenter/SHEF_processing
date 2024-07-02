@@ -89,6 +89,7 @@ The class `base_loader.BaseLoader` provides the following fields and methods:
 |--|--|
 |`__init__(self, logger: Optional[Logger], output_object: Optional[Union[BufferedRandom, TextIO, str]] = None, append: bool = False) -> None`|Constructor. **Must be overridden, but be sure to call `super()__init__()` at beginning of subclass constructor.**|
 |`set_options(self, options_str: Optional[str]) -> None`|Initializer. **Override if loader takes any configuration options.**|
+|`get_additional_pe_codes(self, parser_recognized_pe_code: set) -> set`|Returns PE codes recognized by the loader in addition to those recognized by the parser. **Should be overridden.**|
 |`assert_value_is_set(self) -> None`|Raises `shared.LoaderException` if there is no current `ShefValue` object. **Should not need to override.**|
 |`assert_value_is_recognized(self) -> None`|Raises `shared.LoaderException` if the current `ShefValue` object is not recognized as a time series. **Should not need to override.**|
 |`output(self, s: str) -> None`|Sends a string to the output. No exception is raised if `_output is None`. **Should not need to override unless the subclass uses `_output` as a non-stream file output (e.g., HDF5, HEC-DSS).**|

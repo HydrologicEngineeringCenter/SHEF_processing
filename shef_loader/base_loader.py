@@ -54,12 +54,18 @@ class BaseLoader :
             if self._logger :
                 self._logger.info(f"{self.loader_name} initialized with {str(options)}")
 
+    def get_additional_pe_codes(self, parser_recognized_pe_code: set) -> set :
+        '''
+        Return any PE codes recognized by this loader that aren't otherwised recognized by the parser
+        '''
+        return set()
+
     def assert_value_is_set(self) -> None :
         '''
         Called from methods that require a ShefValue to be set
         '''
         if not self._shef_value :
-            raise shared.LoaderException("setvalue() has not been called on transformer")
+            raise shared.LoaderException("setvalue() has not been called on loader")
 
     def assert_value_is_recognized(self) -> None :
         '''
@@ -98,6 +104,7 @@ class BaseLoader :
                 #------------------#
                 # same time series #
                 #------------------#
+                self._shef_value = shef_value
                 if self.use_value :
                     self._time_series.append([self.date_time, self.value, self.data_qualifier, self.forecast_date_time])
             else :
@@ -250,6 +257,6 @@ class BaseLoader :
 
 loader_options = "--loader dummy"
 loader_description = "Base class for other SHEF data loaders. Writes SHEF information to output"
-loader_version = "1.0"
+loader_version = "1.1"
 loader_class = BaseLoader
 can_unload = False

@@ -1,4 +1,4 @@
-import csv, os, re, sys
+import csv, os, re, traceback
 from .        import base_loader
 from .        import shared
 from datetime import timedelta
@@ -68,14 +68,20 @@ class DSSVueLoader(base_loader.BaseLoader) :
                 pe_code = shared.SEND_CODES[pe_code][0][:2]
             sensor = f"{location}/{pe_code}"
             if duration_str :
-                duration_value = int(duration_str[:-1])
-                if duration_value == 0 :
-                    e_part = "IR-Month"
+                if duration_str == '*' :
+                    e_part = '*'
                 else :
-                    duration_unit=DSSVueLoader.duration_units[duration_str[-1]]
-                    e_part = f"{duration_value}{duration_unit}"
-                    if e_part == "7Day" :
-                        e_part = "1Week"
+                    try :
+                        duration_value = int(duration_str[:-1])
+                    except :
+                        raise shared.LoaderException(f"Invalid duration string: [{duration_str}]")
+                    if duration_value == 0 :
+                        e_part = "IR-Month"
+                    else :
+                        duration_unit=DSSVueLoader.duration_units[duration_str[-1]]
+                        e_part = f"{duration_value}{duration_unit}"
+                        if e_part == "7Day" :
+                            e_part = "1Week"
             else :
                 e_part = "IR-Month"
             if not b_part :
@@ -145,7 +151,7 @@ class DSSVueLoader(base_loader.BaseLoader) :
         except Exception as e :
             if self._logger :
                 self._logger.error(f"{str(e)} on line [{line_number}] in {sensorfile_name}")
-                raise
+            raise
         #-------------------------#
         # load the parameter file #
         #-------------------------#
@@ -190,6 +196,12 @@ class DSSVueLoader(base_loader.BaseLoader) :
                     self._logger.warning(f"Sensor [{sensor}] in [{sensorfile_name}] will not be used, no entry for [{pe_code}] in [{parameterfile_name}]")
         for sensor in deleted_sensors :
             del self._sensors[sensor]
+
+    def get_additional_pe_codes(self, parser_recognized_pe_codes: set) -> set :
+        '''
+        Return any PE codes recognized by this loader that aren't otherwised recognized by the parser
+        '''
+        return set([pe_code for pe_code in self._parameters if pe_code not in parser_recognized_pe_codes])
 
     def set_input(self, input_object: Union[TextIO, str]) -> None :
         '''
@@ -257,18 +269,31 @@ class DSSVueLoader(base_loader.BaseLoader) :
                         raise shared.LoaderException(f"Unexpected transform for pathname [{self._pathname}]: [{transform}]")
             return val
 
+        def make_output_value(token: str, transform: str) -> str :
+            val: Union[float, str] = float(token)
+            if token is None :
+                val = "m"
+            if val == UNDEFINED :
+                val = "m"
+            else :
+                val = apply_transform(cast(float, val), transform)
+                if val is None :
+                    val = "m"
+            return str(val)
+
         if not self._time_series :
             msg = f"No time series values for [{self._pathname}]"
             if self._logger :
                 self._logger.info(msg)
             self.output(f":     <{msg}>\n")
         else :
-            val: Optional[Union[float, str]]
+            val: Optional[str]
             if not self._sensor :
                 raise shared.LoaderException("Empty sensor in output_shef_text()")
             if not self._parameter :
                 raise shared.LoaderException("Empty parameter in output_shef_text()")
-            if self._sensor["e_part"].upper().startswith("IR-") or self._sensor["e_part"][0] == "~" :
+            e_part = cast(str, self._pathname).split("/")[5]
+            if e_part.upper().startswith("IR-") or e_part[0] == "~" :
                 #-----------------------#
                 # irregular time series #
                 #-----------------------#
@@ -278,11 +303,11 @@ class DSSVueLoader(base_loader.BaseLoader) :
                 # regular time series #
                 #---------------------#
                 y,m,d,h,n = self._time_series[0][0].replace(":"," ").replace("-"," ").split()[:5]
-                header = f".E {self._sensor['location']} {y}{m}{d} Z DN{h}{n}/"
+                header = f".E {self._sensor['location']} {y}{m}{d} Z DH{h}{n}/"
                 if self._forecast_time :
                     header += f"DC{self._forecast_time}/"
                 header += f"{self._parameter['pe_code']}"
-                duration_str = self._sensor["e_part"].upper().replace("1WEEK", "7DAYS")
+                duration_str = e_part.upper().replace("1WEEK", "7DAYS")
                 m = shared.VALUE_UNITS_PATTERN.match(duration_str)
                 if m :
                     if m.group(2).startswith("SEC") :
@@ -300,46 +325,49 @@ class DSSVueLoader(base_loader.BaseLoader) :
                     elif m.group(2).startswith("DECADE") :
                         header += f"/DIY{10*int(m.group(1)):02d}"
                     else :
-                        msg = f"Could not determine a valid SHEF interval for [{self._pathname}]"
-                        if self._logger :
-                            self._logger.error(msg)
-                        self.output(f":     <{msg}>\n")
-                        self._pathname = None
-                        self._sensor = None
-                        self._parameter = None
-                        self._time_series = []
-                        return
+                        header = None
+                else :
+                    header = None
+                if not header :
+                    msg = f"Could not determine a valid SHEF interval for [{self._pathname}]"
+                    if self._logger :
+                        self._logger.error(msg)
+                    self.output(f":     <{msg}>\n")
+                    self._pathname = None
+                    self._sensor = None
+                    self._parameter = None
+                    self._time_series = []
+                    return
             transform = self._parameter["transform"]
             try :
                 if header :
+                    #----------------------------------------------#
+                    # regular time series, use a single .E message #
+                    #----------------------------------------------#
                     message = header
+                    max_message_len = 132
+                    continuation = 0
                     for tsv in self._time_series :
-                        val = float(tsv[1])
-                        if val is None or val == UNDEFINED :
-                            message += "/m"
-                        else :
-                            val = apply_transform(val, transform)
-                            if val is None :
-                                val = "m"
-                            message += f"/{val}"
+                        len1 = len(message)
+                        val = make_output_value(tsv[1], transform)
+                        message += f"/{val}"
+                        len2 = len(message)
+                        if len2 > max_message_len :
+                            self.output(f"{message[:len1]}\n")
+                            message = f".E{continuation % 100:02d} {val}"
+                            continuation += 1
                     self.output(f"{message}\n")
                     self._message_count += 1
                     self._value_count += len(self._time_series)
                 else :
-                    #-----------------------#
-                    # irregular time series #
-                    #-----------------------#
+                    #-------------------------------------------------#
+                    # irregular time series, use multiple .A messages #
+                    #-------------------------------------------------#
                     for i in range(len(self._time_series)) :
                         tsv = self._time_series[i]
-                        val = float(tsv[1])
-                        if val == UNDEFINED :
-                            val = "m"
-                        else :
-                            val = apply_transform(val, transform)
-                            if val is None :
-                                val = "m"
+                        val = make_output_value(tsv[1], transform)
                         y,m,d,h,n = tsv[0].replace(":"," ").replace("-"," ").split()[:5]
-                        message = f".A {self._sensor['location']} {y}{m}{d} Z DN{h}{n}/"
+                        message = f".A {self._sensor['location']} {y}{m}{d} Z DH{h}{n}/"
                         if self._forecast_time :
                             message += f"DC{self._forecast_time}/"
                         message += f"{self._parameter['pe_code']} {val}"
@@ -407,20 +435,26 @@ class DSSVueLoader(base_loader.BaseLoader) :
                 if self._pathname :
                     A,B,C,E,F = 1,2,3,5,6
                     parts = self._pathname.split("/")
-                    try :
-                        key = (parts[A],parts[B],parts[E],parts[F])
-                        self._sensor = self._unload_sensors[key]
-                    except KeyError :
+                    keys = [
+                        (parts[A],parts[B],parts[E],parts[F]),
+                        (parts[A],parts[B],'*',parts[F]),
+                        (parts[A],parts[B],parts[E],'*'),
+                        (parts[A],parts[B],'*','*')
+                    ]
+                    self._sensor = None
+                    for key in keys :
                         try :
-                            key = (parts[A],parts[B],parts[E],'*')
                             self._sensor = self._unload_sensors[key]
+                            break
                         except KeyError :
-                            msg = f"No sensor found for [{self._pathname}]"
-                            if self._logger :
-                                self._logger.info(msg)
-                            self.output(f":     <{msg}>\n")
-                            self._unload_sensor = None
                             continue
+                    if not self._sensor :
+                        msg = f"No sensor found for [{self._pathname}]"
+                        if self._logger :
+                            self._logger.info(msg)
+                        self.output(f":     <{msg}>\n")
+                        self._unload_sensor = None
+                        continue
                     loadinfo = eval(line.strip())
                     try :
                         data_type = loadinfo["type"]
@@ -605,8 +639,29 @@ class DSSVueLoader(base_loader.BaseLoader) :
         c_part = self._parameters[pe_code]["c_part"]
         if not c_part :
             raise shared.LoaderException(f"No C Pathname part specified for PE code [{pe_code}]")
-        c_part = self.parameter
         e_part = sensor["e_part"]
+        if e_part == "*" :
+            try :
+                e_part = {
+                    'I' : 'IR-Month',
+                    'U' : '1Minute',
+                    'E' : '5Minute',
+                    'G' : '10Minute',
+                    'C' : '15Minute',
+                    'J' : '30Minute',
+                    'H' : '1Hour',
+                    'B' : '2Hour',
+                    'T' : '3Hour',
+                    'F' : '3Hour',
+                    'Q' : '4Hour',
+                    'A' : '8Hour',
+                    'K' : '12Hour',
+                    'D' : '1Day',
+                    'W' : '1Week',
+                    'N' : '1Month',
+                    'Y' : '1Year'}[shef_value.parameter_code[2]]
+            except :
+                raise shared.LoaderException(f"Cannot determine E pathname part for duration [{shef_value.parameter_code[2]}]")
         f_part = sensor["f_part"]
         if f_part == "*" :
             create_date = shef_value.create_date
@@ -748,6 +803,6 @@ loader_options     = "--loader dssvue[sensor_file_path][parameter_file_path]\n" 
                      "parameter_file_path = the name of the ShefDss-style parameter file to use \n"
 loader_description = "Used by HEC-DSSVue to import/export SHEF data. Uses ShefDss-style configuration.\n" \
                      "As of v1.2 .csv sensor and parameter files can be used to handle long pathname parts."
-loader_version     = "1.2"
+loader_version     = "1.3"
 loader_class       = DSSVueLoader
 can_unload         = True
