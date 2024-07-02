@@ -1484,6 +1484,10 @@ class ShefParser :
 
         if self._shefparm_pathname :
             self.read_shefparm(self._shefparm_pathname)
+            
+        self._duration_ids = {}
+        for key in self._duration_codes :
+            self._duration_ids[self._duration_codes[key]] = key
 
     @property
     def shefit_times(self) -> bool :
@@ -2923,54 +2927,34 @@ class ShefParser :
                 time_series_code = 1
                 interval_unit = token[2].upper()
                 interval_value = int(token[3:])
+                duration_code = interval_value
                 if abs(interval_value) > 99 :
                     raise ShefParser.ParseException(f"Invalid interval value: [{token}]")
-                duration_code = None
                 if interval_unit == 'S' :
                     interval = timedelta(seconds=interval_value)
-                    try :
-                        duration_code = [x for x in self._duration_codes if self._duration_codes[x] == interval_value + 7000][0]
-                    except :
-                        pass
+                    duration_code += 7000
                 elif interval_unit == 'N' :
-                    interval = timedelta(minutes=interval_value)
-                    try :
-                        duration_code = [x for x in self._duration_codes if self._duration_codes[x] == interval_value][0]
-                    except :
-                        pass
+                    pass
                 elif interval_unit == 'H' :
                     interval = timedelta(hours=interval_value)
-                    try :
-                        duration_code = [x for x in self._duration_codes if self._duration_codes[x] == interval_value + 1000][0]
-                    except :
-                        pass
+                    duration_code += 1000
                 elif interval_unit == 'D' :
                     interval = timedelta(days=interval_value)
-                    try :
-                        duration_code = [x for x in self._duration_codes if self._duration_codes[x] == interval_value + 2000][0]
-                    except :
-                        pass
+                    duration_code += 2000
                 elif interval_unit == 'M' :
                     interval = MonthsDelta(interval_value)
-                    try :
-                        duration_code = [x for x in self._duration_codes if self._duration_codes[x] == interval_value + 3000][0]
-                    except :
-                        pass
+                    duration_code += 3000
                 elif interval_unit == 'E' :
                     interval = MonthsDelta(interval_value, eom=True)
-                    try :
-                        duration_code = [x for x in self._duration_codes if self._duration_codes[x] == interval_value + 3000][0]
-                    except :
-                        pass
+                    duration_code += 3000
                 elif interval_unit == 'Y' :
-                    interval = MonthsDelta(12 * interval_value)
-                    try :
-                        duration_code = [x for x in self._duration_codes if self._duration_codes[x] == interval_value + 4000][0]
-                    except :
-                        pass
-                if not duration_code :
+                    duration_code += 4000
+                try :
+                    duration_id = self._duration_ids[duration_code]
+                except KeyError :
                     self.error(f"No valid duration code for time interval [{token}]")
-                parameter_code = f"{parameter_code[:2]}{duration_code}{parameter_code[3:]}"
+                    return [] if self._reject_problematic else outrecs
+                parameter_code = f"{parameter_code[:2]}{duration_id}{parameter_code[3:]}"
             elif self._parameter_code_pattern.match(token) :
                 #-------------------------------------------------#
                 # set the parameter code for the susequent values #
