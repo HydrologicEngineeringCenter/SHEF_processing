@@ -270,13 +270,14 @@ class DSSVueLoader(base_loader.BaseLoader) :
             return val
 
         def make_output_value(token: str, transform: str) -> str :
-            val: Union[float, str] = float(token)
+            val: Union[float, str]
             if token is None :
                 val = "m"
             if val == UNDEFINED :
                 val = "m"
             else :
-                val = apply_transform(cast(float, val), transform)
+                val = float(token)
+                val = apply_transform(val, transform)
                 if val is None :
                     val = "m"
             return str(val)
