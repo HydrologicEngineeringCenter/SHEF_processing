@@ -639,7 +639,9 @@ class DSSVueLoader(base_loader.BaseLoader) :
         b_part = sensor["b_part"]
         c_part = self._parameters[pe_code]["c_part"]
         if not c_part :
-            raise shared.LoaderException(f"No C Pathname part specified for PE code [{pe_code}]")
+            if self._logger :
+                self._logger.warning(f"No C Pathname part specified for PE code [{pe_code}]")
+            c_part = pe_code
         e_part = sensor["e_part"]
         if e_part == "*" :
             try :
