@@ -806,6 +806,6 @@ loader_options     = "--loader dssvue[sensor_file_path][parameter_file_path]\n" 
                      "parameter_file_path = the name of the ShefDss-style parameter file to use \n"
 loader_description = "Used by HEC-DSSVue to import/export SHEF data. Uses ShefDss-style configuration.\n" \
                      "As of v1.2 .csv sensor and parameter files can be used to handle long pathname parts."
-loader_version     = "1.3"
+loader_version     = "1.3.1"
 loader_class       = DSSVueLoader
 can_unload         = True
