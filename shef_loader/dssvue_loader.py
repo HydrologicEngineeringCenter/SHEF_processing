@@ -639,7 +639,9 @@ class DSSVueLoader(base_loader.BaseLoader) :
         b_part = sensor["b_part"]
         c_part = self._parameters[pe_code]["c_part"]
         if not c_part :
-            raise shared.LoaderException(f"No C Pathname part specified for PE code [{pe_code}]")
+            if self._logger :
+                self._logger.warning(f"No C Pathname part specified for PE code [{pe_code}]")
+            c_part = pe_code
         e_part = sensor["e_part"]
         if e_part == "*" :
             try :
@@ -804,6 +806,6 @@ loader_options     = "--loader dssvue[sensor_file_path][parameter_file_path]\n" 
                      "parameter_file_path = the name of the ShefDss-style parameter file to use \n"
 loader_description = "Used by HEC-DSSVue to import/export SHEF data. Uses ShefDss-style configuration.\n" \
                      "As of v1.2 .csv sensor and parameter files can be used to handle long pathname parts."
-loader_version     = "1.3"
+loader_version     = "1.3.1"
 loader_class       = DSSVueLoader
 can_unload         = True
