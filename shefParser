@@ -75,14 +75,17 @@ versions = '''
 +-------+-----------+-----+-------------------------------------------------------------------------+
 | 1.1.1 | 11Jun2024 | MDP | Add --unload option to have loader write SHEF text                      |
 +-------+-----------+-----+-------------------------------------------------------------------------+
+| 1.2.0 | 02Jul2024 | MDP | Fix several issues with parsing and interaction with loaders            |
+|       |           |     | Loading/unloading/reloading mesonet.shef now yields identical DSS files |
++-------+-----------+-----+-------------------------------------------------------------------------+
 
 Authors:
     MDP  Mike Perryman, USACE IWR-HEC
 '''
 
 progname     = Path(sys.argv[0]).stem
-version      = "1.1.1"
-version_date = "11Jun2024"
+version      = "1.2.0"
+version_date = "02Jul2024"
 logger       = logging.getLogger() # make mypy complains if set to None
 
 #---------------------------------------------------------#
@@ -1398,6 +1401,7 @@ class ShefParser :
         #-----------------------------#
         self._pe_conversions              = copy.deepcopy(ShefParser.PE_CONVERSIONS)
         self._send_codes                  = copy.deepcopy(ShefParser.SEND_CODES)
+        self._addional_pe_codes:          set[str] = set() # any extra PE codes recognized by a loader
         self._duration_codes              = copy.deepcopy(ShefParser.DURATION_CODES)
         self._ts_codes                    = copy.deepcopy(ShefParser.TS_CODES)
         self._extremum_codes              = copy.deepcopy(ShefParser.EXTREMUM_CODES)
@@ -1480,6 +1484,10 @@ class ShefParser :
 
         if self._shefparm_pathname :
             self.read_shefparm(self._shefparm_pathname)
+            
+        self._duration_ids = {}
+        for key in self._duration_codes :
+            self._duration_ids[self._duration_codes[key]] = key
 
     @property
     def shefit_times(self) -> bool :
@@ -1568,6 +1576,21 @@ class ShefParser :
             else :
                 self.warning(f"{self._shefparm_pathname}: Updating standard physical element code [{key}] conversion factor from [{self._pe_conversions[key]}] to [{value}]")
         self._pe_conversions[key] = value
+
+    def get_recognized_pe_codes(self) -> set :
+        '''
+        Return the set of recognized PE codes
+        '''
+        return set(self._pe_conversions.keys()).union(self._addional_pe_codes)
+
+    def set_additional_pe_codes(self, additional_pe_codes: set) -> None :
+        '''
+        Add to the set of recognized PE codes
+        '''
+        recognozed_pe_codes = self.get_recognized_pe_codes()
+        for additional_pe_code in [x for x in sorted(additional_pe_codes) if x not in recognozed_pe_codes] :
+            self.info(f"PE code [{additional_pe_code}] is now recognized and will not generate any warning messages")
+            self._addional_pe_codes.add(additional_pe_code)
 
     def set_duration_code(self, line: str) -> None :
         '''
@@ -2662,6 +2685,11 @@ class ShefParser :
                 # data value #
                 #------------#
                 code = tokens[i][0].upper()
+                if len(code) < 2 :
+                    self.error(f"Invalid PE code: [{code[:min(2, len(code))]}]")
+                    return []
+                elif code not in self._send_codes and code[:2] not in self._pe_conversions and code[:2] not in self._addional_pe_codes :
+                    self.warning(f"Unknown PE code: [{code[:min(2, len(code))]}], value(s) will be untransformed")
                 try :
                     parameter_code, use_prev_7am = self.get_parameter_code(code)
                     orig_parameter_code = code
@@ -2889,6 +2917,8 @@ class ShefParser :
                 #-----------------------------------------#
                 # set the intrerval for subsequent values #
                 #-----------------------------------------#
+                if parameter_code is None :
+                    raise ShefParser.ParseException("Interval is specified before parameter")
                 if use_prev_7am :
                     raise ShefParser.ParseException(f"Cannot use data interval [{token}] with send codes QY, HY, or PY")
                 if interval :
@@ -2897,22 +2927,34 @@ class ShefParser :
                 time_series_code = 1
                 interval_unit = token[2].upper()
                 interval_value = int(token[3:])
+                duration_code = interval_value
                 if abs(interval_value) > 99 :
                     raise ShefParser.ParseException(f"Invalid interval value: [{token}]")
                 if interval_unit == 'S' :
                     interval = timedelta(seconds=interval_value)
+                    duration_code += 7000
                 elif interval_unit == 'N' :
-                    interval = timedelta(minutes=interval_value)
+                    pass
                 elif interval_unit == 'H' :
                     interval = timedelta(hours=interval_value)
+                    duration_code += 1000
                 elif interval_unit == 'D' :
                     interval = timedelta(days=interval_value)
+                    duration_code += 2000
                 elif interval_unit == 'M' :
                     interval = MonthsDelta(interval_value)
+                    duration_code += 3000
                 elif interval_unit == 'E' :
                     interval = MonthsDelta(interval_value, eom=True)
+                    duration_code += 3000
                 elif interval_unit == 'Y' :
-                    interval = MonthsDelta(12 * interval_value)
+                    duration_code += 4000
+                try :
+                    duration_id = self._duration_ids[duration_code]
+                except KeyError :
+                    self.error(f"No valid duration code for time interval [{token}]")
+                    return [] if self._reject_problematic else outrecs
+                parameter_code = f"{parameter_code[:2]}{duration_id}{parameter_code[3:]}"
             elif self._parameter_code_pattern.match(token) :
                 #-------------------------------------------------#
                 # set the parameter code for the susequent values #
@@ -2921,9 +2963,11 @@ class ShefParser :
                     self.error("Parameter code specified more than once")
                     return [] if self._reject_problematic else outrecs
                 code = token.upper()
-                if len(code) < 2 or (code[:2] not in self._send_codes and code[:2] not in self._pe_conversions) :
+                if len(code) < 2 :
                     self.error(f"Invalid PE code: [{code[:min(2, len(code))]}]")
                     return [] if self._reject_problematic else outrecs
+                elif code not in self._send_codes and code[:2] not in self._pe_conversions and code[:2] not in self._addional_pe_codes :
+                    self.warning(f"Unknown PE code: [{code[:2]}], value(s) will be untransformed")
                 parameter_code, use_prev_7am = self.get_parameter_code(code)
                 orig_parameter_code = code
                 if use_prev_7am :
@@ -3160,8 +3204,10 @@ class ShefParser :
                     # create a new parameter control object for this parameter #
                     #----------------------------------------------------------#
                     code = token.upper()
-                    if len(code) < 2 or (code[:2] not in self._send_codes and code[:2] not in self._pe_conversions) :
+                    if len(code) < 2 :
                         raise ShefParser.ParseException(f"Invalid PE code: [{code[:min(2, len(code))]}]")
+                    elif code not in self._send_codes and code[:2] not in self._pe_conversions :
+                        self.warning(f"Unknown PE code: [{code[:min(2, len(code))]}], value(s) will be untransformed")
                     parameter_code, use_prev_7am = self.get_parameter_code(code)
                     orig_parameter_code = code
                     if obstime_error :
@@ -3653,7 +3699,8 @@ Loading SHEF data to data stores:''')
         #-------------------#
         parser = ShefParser(args.format, args.shefparm, shefit_times=args.shefit_times, reject_problematic=args.reject_problematic)
         parser.set_input(getattr(args, "in"))
-        if not loader :
+        if loader :
+            parser.set_additional_pe_codes(loader.get_additional_pe_codes(parser.get_recognized_pe_codes()))
             parser.set_output(args.out, args.append_out)
             if args.format == 1 and isinstance(parser._output, TextIOWrapper) and parser._output.isatty():
                 parser._output.write("STATION   OBSERVATION-DATE/TM  CREATION-DATE/TIME   PARM-CD     DATA-VALUE Q  PROB-CD DURTN R T  GROUP-NM  QUOTE\n")
