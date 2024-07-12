@@ -1,13 +1,12 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from io import BufferedRandom
 from logging import Logger
 import os
 import re
-from typing import List, Optional, TextIO, Union, cast
+from typing import Optional, TextIO, Union, cast
 
 from shef_loader import shared
 from . import base_loader
-import CWMSpy
 
 
 @dataclass
@@ -36,7 +35,7 @@ class CdaLoader(base_loader.BaseLoader):
         """
         super().__init__(logger, output_object, append)
         self._cda_url = "https://cwms-data-test.cwbi.us/cwms-data/"
-        self._transforms: List[ShefTransform] = []
+        self._transforms: dict[str, ShefTransform] = {}
 
     def set_options(self, options_str: str | None) -> None:
         """
@@ -88,13 +87,29 @@ class CdaLoader(base_loader.BaseLoader):
                     line = line.strip()
                     if line == "" or line[0] == "#":
                         continue
-                    self._transforms.append(make_shef_transform(line))
+                    transform = make_shef_transform(line)
+                    transform_key = f"{transform.location}.{transform.parameter_code}"
+                    self._transforms[transform_key] = transform
         except Exception as e:
             if self._logger:
                 self._logger.error(
                     f"{str(e)} on line [{line_number}] in {critfile_name}"
                 )
                 raise
+
+    @property
+    def transform_key(self) -> str:
+        """
+        The transform key for the current SHEF value
+        """
+        self.assert_value_is_set()
+        return f"{self._shef_value.location}.{self._shef_value.parameter_code[:-1]}"
+
+    def get_time_series_name(self, shef_value: Optional[shared.ShefValue]) -> str:
+        if shef_value is None:
+            raise shared.LoaderException(f"Empty SHEF value in get_time_series_name()")
+        transform_key = f"{shef_value.location}.{shef_value.parameter_code[:-1]}"
+        return self._transforms[transform_key].timeseries_id
 
     def load_time_series(self) -> None:
         """
@@ -141,8 +156,7 @@ class CdaLoader(base_loader.BaseLoader):
     @property
     def use_value(self) -> bool:
         self.assert_value_is_set()
-        # TODO: Check if critfile assignment exists
-        return True
+        return self.transform_key in self._transforms
 
 
 loader_options = "--loader cda[crit_file_path]\n"
