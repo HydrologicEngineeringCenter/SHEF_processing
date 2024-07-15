@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from io import BufferedRandom
 from logging import Logger
 import os
@@ -7,6 +8,7 @@ from typing import Optional, TextIO, Union, cast
 
 from shef_loader import shared
 from . import base_loader
+import CWMSpy
 
 
 @dataclass
@@ -35,11 +37,12 @@ class CdaLoader(base_loader.BaseLoader):
         """
         super().__init__(logger, output_object, append)
         self._cda_url = "https://cwms-data-test.cwbi.us/cwms-data/"
+        self._cwms = CWMSpy.CWMS()
         self._transforms: dict[str, ShefTransform] = {}
 
     def set_options(self, options_str: str | None) -> None:
         """
-        Set the crit file name
+        Set the crit file name and CDA apiKey
         """
         if not options_str:
             raise shared.LoaderException(
@@ -72,11 +75,11 @@ class CdaLoader(base_loader.BaseLoader):
             )
 
         options = tuple(re.findall("\[(.*?)\]", options_str))
-        if len(options) == 1:
-            (critfile_name,) = options
+        if len(options) == 2:
+            (critfile_name, cda_api_key) = options
         else:
             raise shared.LoaderException(
-                f"{self.loader_name} expected 1 option, got [{len(options)}]"
+                f"{self.loader_name} expected 2 options, got [{len(options)}]"
             )
         if not os.path.exists(critfile_name) or not os.path.isfile(critfile_name):
             raise shared.LoaderException(f"Crit file [{critfile_name}] does not exist")
@@ -96,6 +99,7 @@ class CdaLoader(base_loader.BaseLoader):
                     f"{str(e)} on line [{line_number}] in {critfile_name}"
                 )
                 raise
+        self._cwms.connect(self._cda_url, f"apikey {cda_api_key}")
 
     @property
     def transform_key(self) -> str:
@@ -105,11 +109,25 @@ class CdaLoader(base_loader.BaseLoader):
         self.assert_value_is_set()
         return f"{self._shef_value.location}.{self._shef_value.parameter_code[:-1]}"
 
+    @property
+    def transform(self) -> ShefTransform:
+        """
+        The ShefTransform object for the current SHEF value
+        """
+        return self._transforms[self.transform_key]
+
     def get_time_series_name(self, shef_value: Optional[shared.ShefValue]) -> str:
         if shef_value is None:
             raise shared.LoaderException(f"Empty SHEF value in get_time_series_name()")
         transform_key = f"{shef_value.location}.{shef_value.parameter_code[:-1]}"
         return self._transforms[transform_key].timeseries_id
+
+    @staticmethod
+    def get_unix_timestamp(timestamp: str) -> int:
+        dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S").replace(
+            tzinfo=timezone.utc
+        )
+        return int(dt.timestamp() * 1000)
 
     def load_time_series(self) -> None:
         """
@@ -125,8 +143,15 @@ class CdaLoader(base_loader.BaseLoader):
         if self._time_series:
             time_series = []
             for ts in self._time_series:
-                time_series.append([ts[0], ts[1]])
-            time_series_count += 1
+                time = self.get_unix_timestamp(ts[0])
+                time_series.append([time, ts[1], 0])
+            post_data = {}
+            post_data["name"] = self.get_time_series_name(sv)
+            post_data["office-id"] = "LRL"
+            post_data["units"] = self.transform.units
+            post_data["values"] = time_series
+            self._cwms.write_ts(post_data)
+            time_series_count = 1
         value_count = len(time_series)
         self._value_count += value_count
         self._time_series_count += time_series_count
@@ -159,7 +184,7 @@ class CdaLoader(base_loader.BaseLoader):
         return self.transform_key in self._transforms
 
 
-loader_options = "--loader cda[crit_file_path]\n"
+loader_options = "--loader cda[crit_file_path][cda_api_key]\n"
 loader_description = "Used by CDA to import SHEF data."
 loader_version = "0.1"
 loader_class = CdaLoader
