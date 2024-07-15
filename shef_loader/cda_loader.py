@@ -1,10 +1,15 @@
+import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from io import BufferedRandom
+import json
 from logging import Logger
 import os
 import re
-from typing import Optional, TextIO, Union, cast
+import time
+from typing import Coroutine, Optional, TextIO, Union, cast
+
+from requests import Response
 
 from shef_loader import shared
 from . import base_loader
@@ -39,6 +44,7 @@ class CdaLoader(base_loader.BaseLoader):
         self._cda_url = "https://cwms-data-test.cwbi.us/cwms-data/"
         self._cwms = CWMSpy.CWMS()
         self._transforms: dict[str, ShefTransform] = {}
+        self._write_tasks: list[Coroutine] = []
 
     def set_options(self, options_str: str | None) -> None:
         """
@@ -150,12 +156,34 @@ class CdaLoader(base_loader.BaseLoader):
             post_data["office-id"] = "LRL"
             post_data["units"] = self.transform.units
             post_data["values"] = time_series
-            self._cwms.write_ts(post_data)
+            task = self.create_write_task(post_data)
+            self._write_tasks.append(task)
             time_series_count = 1
         value_count = len(time_series)
         self._value_count += value_count
         self._time_series_count += time_series_count
         self._time_series = []
+
+    def create_write_task(self, post_data: str) -> Coroutine:
+        return asyncio.to_thread(self._cwms.write_ts, post_data)
+
+    async def process_write_tasks(self) -> None:
+        if self._logger:
+            self._logger.info("Beginning CWMS-Data-API POST tasks...")
+        start_time = time.time()
+        results: list[Response] = await asyncio.gather(*self._write_tasks)
+        process_time = time.time() - start_time
+        for response in [x for x in results if x.status_code >= 400]:
+            if self._logger:
+                payload = json.loads(response.request.body)
+                tsid = payload["name"]
+                self._logger.error(
+                    f"HTTP {response.status_code}: {tsid} - {response.content}"
+                )
+        if self._logger:
+            self._logger.info(
+                f"CWMS-Data-API POST tasks complete ({process_time:.2f} seconds)"
+            )
 
     def done(self) -> None:
         """
@@ -163,6 +191,7 @@ class CdaLoader(base_loader.BaseLoader):
         """
         super().done()
         if self._logger:
+            asyncio.run(self.process_write_tasks())
             self._logger.info(
                 "--[Summary]-----------------------------------------------------------"
             )
