@@ -7,7 +7,7 @@ from logging import Logger
 import os
 import re
 import time
-from typing import Coroutine, Optional, TextIO, Union, cast
+from typing import Coroutine, NamedTuple, Optional, TextIO, TypedDict, Union, cast
 
 from requests import Response
 
@@ -16,14 +16,25 @@ from . import base_loader
 import CWMSpy
 
 
-@dataclass
-class ShefTransform:
+class ShefTransform(NamedTuple):
     location: str
     parameter_code: str
     timeseries_id: str
     units: Optional[str]
     timezone: Optional[str]
     dl_time: Optional[bool]
+
+
+class CdaValue(NamedTuple):
+    timestamp: str
+    value: float
+    quality: int
+
+
+TimeseriesPayload = TypedDict(
+    "TimeseriesPayload",
+    {"name": str, "office-id": str, "units": str, "values": list[CdaValue]},
+)
 
 
 class CdaLoader(base_loader.BaseLoader):
@@ -147,11 +158,11 @@ class CdaLoader(base_loader.BaseLoader):
             self._logger.debug(f"time_series: {self._time_series}")
         value_count = time_series_count = 0
         if self._time_series:
-            time_series = []
+            time_series: list[CdaValue] = []
             for ts in self._time_series:
                 time = self.get_unix_timestamp(ts[0])
                 time_series.append([time, ts[1], 0])
-            post_data = {}
+            post_data: TimeseriesPayload = {}
             post_data["name"] = self.get_time_series_name(sv)
             post_data["office-id"] = "LRL"
             post_data["units"] = self.transform.units
