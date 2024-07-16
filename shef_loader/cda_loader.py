@@ -54,7 +54,9 @@ class CdaLoader(base_loader.BaseLoader):
         super().__init__(logger, output_object, append)
         self._cda_url = "https://cwms-data-test.cwbi.us/cwms-data/"
         self._cwms = CWMSpy.CWMS()
+        self._time_series_error_count: int = 0
         self._transforms: dict[str, ShefTransform] = {}
+        self._value_error_count: int = 0
         self._write_tasks: list[Coroutine] = []
 
     def set_options(self, options_str: str | None) -> None:
@@ -184,24 +186,31 @@ class CdaLoader(base_loader.BaseLoader):
         start_time = time.time()
         for response_future in asyncio.as_completed(self._write_tasks):
             response: Response = await response_future
+            payload: TimeseriesPayload = json.loads(response.request.body)
+            tsid = payload["name"]
+            value_count = len(payload["values"])
             if response.status_code >= 400:
-                if self._logger:
-                    payload = json.loads(response.request.body)
-                    tsid = payload["name"]
-                    self._logger.error(
-                        f"HTTP {response.status_code}: {tsid} - {response.content}"
-                    )
+                self.record_error(
+                    tsid, value_count, response.status_code, response.content
+                )
             else:
                 if self._logger:
-                    payload: TimeseriesPayload = json.loads(response.request.body)
-                    tsid = payload["name"]
-                    value_count = len(payload["values"])
                     self._logger.info(f"Posted {value_count} values to {tsid}")
         process_time = time.time() - start_time
         if self._logger:
             self._logger.info(
                 f"CWMS-Data-API POST tasks complete ({process_time:.2f} seconds)"
             )
+
+    def record_error(
+        self, tsid: str, value_count: int, status: int, content: str
+    ) -> None:
+        self._value_error_count += value_count
+        self._value_count -= value_count
+        self._time_series_error_count += 1
+        self._time_series_count -= 1
+        if self._logger:
+            self._logger.error(f"HTTP {status}: {tsid} - {content}")
 
     def done(self) -> None:
         """
@@ -214,8 +223,12 @@ class CdaLoader(base_loader.BaseLoader):
                 "--[Summary]-----------------------------------------------------------"
             )
             self._logger.info(
-                f"{self._value_count} values output in {self._time_series_count} time series"
+                f"{self._value_count} values posted in {self._time_series_count} time series"
             )
+            if self._value_error_count > 0:
+                self._logger.info(
+                    f"Errors occurred for {self._value_error_count} values in {self._time_series_error_count} time series"
+                )
 
     @property
     def loader_version(self) -> str:
