@@ -182,15 +182,22 @@ class CdaLoader(base_loader.BaseLoader):
         if self._logger:
             self._logger.info("Beginning CWMS-Data-API POST tasks...")
         start_time = time.time()
-        results: list[Response] = await asyncio.gather(*self._write_tasks)
+        for response_future in asyncio.as_completed(self._write_tasks):
+            response: Response = await response_future
+            if response.status_code >= 400:
+                if self._logger:
+                    payload = json.loads(response.request.body)
+                    tsid = payload["name"]
+                    self._logger.error(
+                        f"HTTP {response.status_code}: {tsid} - {response.content}"
+                    )
+            else:
+                if self._logger:
+                    payload: TimeseriesPayload = json.loads(response.request.body)
+                    tsid = payload["name"]
+                    value_count = len(payload["values"])
+                    self._logger.info(f"Posted {value_count} values to {tsid}")
         process_time = time.time() - start_time
-        for response in [x for x in results if x.status_code >= 400]:
-            if self._logger:
-                payload = json.loads(response.request.body)
-                tsid = payload["name"]
-                self._logger.error(
-                    f"HTTP {response.status_code}: {tsid} - {response.content}"
-                )
         if self._logger:
             self._logger.info(
                 f"CWMS-Data-API POST tasks complete ({process_time:.2f} seconds)"
@@ -201,8 +208,8 @@ class CdaLoader(base_loader.BaseLoader):
         Load any remaining time series and close the output if necessary
         """
         super().done()
+        asyncio.run(self.process_write_tasks())
         if self._logger:
-            asyncio.run(self.process_write_tasks())
             self._logger.info(
                 "--[Summary]-----------------------------------------------------------"
             )
