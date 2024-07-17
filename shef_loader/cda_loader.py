@@ -375,8 +375,12 @@ class CdaLoader(base_loader.BaseLoader):
         return self.transform_key in self._transforms
 
 
-loader_options = "--loader cda[crit_file_path][cda_api_key]\n"
-loader_description = "Used by CDA to import SHEF data."
+loader_options = (
+    "--loader cda[crit_file_path][cda_api_key]\n"
+    "crit_file_path = the name of the SHEF-crit criteria file\n"
+    "cda_api_key    = the api_key to use for CDA POST requests\n"
+)
+loader_description = "Used by CDA to import SHEF data using a criteria file."
 loader_version = "0.1"
 loader_class = CdaLoader
 can_unload = False
