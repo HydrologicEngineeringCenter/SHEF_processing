@@ -92,6 +92,9 @@ class CdaLoader(base_loader.BaseLoader):
             )
 
         def make_shef_transform(crit: str) -> ShefTransform:
+            """
+            Create a ShefTransform object based on the provided criteria line
+            """
             base, *options = crit.split(";")
             shef, timeseries_id = base.split("=")
             location, pe_code, type_code, duration_value = shef.split(".")
@@ -159,6 +162,9 @@ class CdaLoader(base_loader.BaseLoader):
         return self._transforms[self.transform_key]
 
     def get_time_series_name(self, shef_value: Optional[shared.ShefValue]) -> str:
+        """
+        Get the time series ID for the current SHEF value
+        """
         if shef_value is None:
             raise shared.LoaderException(f"Empty SHEF value in get_time_series_name()")
         transform_key = f"{shef_value.location}.{shef_value.parameter_code[:-1]}"
@@ -166,6 +172,9 @@ class CdaLoader(base_loader.BaseLoader):
 
     @staticmethod
     def get_unix_timestamp(timestamp: str) -> int:
+        """
+        Convert a SHEFIT timestamp string to a Unix timestamp in milliseconds
+        """
         dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S").replace(
             tzinfo=timezone.utc
         )
@@ -173,7 +182,7 @@ class CdaLoader(base_loader.BaseLoader):
 
     def load_time_series(self) -> None:
         """
-        Output the timeseries for CDA
+        Store SHEF values as CDA POST payloads grouped by time series ID
         """
         self.assert_value_is_set()
         sv = cast(shared.ShefValue, self._shef_value)
@@ -200,9 +209,15 @@ class CdaLoader(base_loader.BaseLoader):
         self._time_series = []
 
     def create_write_task(self, post_data: str) -> Coroutine:
+        """
+        Create an async CDA POST request coroutine for provided post_data
+        """
         return asyncio.to_thread(self._cwms.write_ts, post_data)
 
     async def process_write_tasks(self) -> None:
+        """
+        Submit CDA POST requests and report results
+        """
         if self._logger:
             self._logger.info("Beginning CWMS-Data-API POST tasks...")
         start_time = time.time()
@@ -229,12 +244,18 @@ class CdaLoader(base_loader.BaseLoader):
     def record_error(
         self, tsid: str, value_count: int, status: int, content: str
     ) -> None:
+        """
+        Update error count and output message for failed CDA POST request
+        """
         self._value_error_count += value_count
         self._time_series_error_count += 1
         if self._logger:
             self._logger.error(f"HTTP {status}: {tsid} - {content}")
 
     def find_matching_payload_index(self, payload: TimeseriesPayload) -> int | None:
+        """
+        Get index of matching payload for tsid, office, and units
+        """
         for i, this_payload in enumerate(self._payloads):
             if (
                 payload["name"] == this_payload["name"]
@@ -245,7 +266,18 @@ class CdaLoader(base_loader.BaseLoader):
         return None
 
     def parse_payload_tasks(self) -> None:
+        """
+        Prepare POST request payloads and create an async coroutine for each
+
+        Payloads are grouped based on the corresponding time series interval.
+        Irregular and pseudo-irregular intervals are always combined.  Regular
+        intervals are combined when no gaps are present.
+        """
+
         def get_cwms_interval_ms(cwms_interval: str):
+            """
+            Return the integer-equivalent to a CWMS interval string (in milliseconds)
+            """
             match = re.match(CWMS_INTERVAL_PATTERN, cwms_interval)
             quantity = int(match.group(1))
             unit = match.group(2)
@@ -253,7 +285,14 @@ class CdaLoader(base_loader.BaseLoader):
             return quantity * multiplier
 
         def group_by_interval(interval: int):
+            """
+            Return a group_values function for the specified interval (in milliseconds)
+            """
+
             def group_values(enum_tuple: Tuple[int, CdaValue]):
+                """
+                Group continuous series of timestamps based on a chosen interval
+                """
                 index, cda_value = enum_tuple
                 timestamp = cda_value.timestamp
                 group_key = (timestamp / interval) - index
@@ -262,6 +301,9 @@ class CdaLoader(base_loader.BaseLoader):
             return group_values
 
         def remove_duplicate_timestamps(tsid: str, values: list[CdaValue]):
+            """
+            Return a list of CdaValues with no duplicate timestamps
+            """
             cleaned_values: list[CdaValue] = []
             used_timestamps: list[int] = []
             for value in values:
@@ -297,7 +339,7 @@ class CdaLoader(base_loader.BaseLoader):
 
     def done(self) -> None:
         """
-        Load any remaining time series and close the output if necessary
+        Submit all collected CDA POST requests
         """
         super().done()
         self.parse_payload_tasks()
@@ -324,6 +366,9 @@ class CdaLoader(base_loader.BaseLoader):
 
     @property
     def use_value(self) -> bool:
+        """
+        Returns true if criteria exist for the current ShefValue
+        """
         self.assert_value_is_set()
         return self.transform_key in self._transforms
 
