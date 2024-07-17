@@ -17,12 +17,10 @@ from typing import (
     Union,
     cast,
 )
-
-from requests import Response
-
 from shef_loader import shared
 from . import base_loader
-import CWMSpy
+from requests import Response
+import CWMSpy  # type: ignore
 
 
 class ShefTransform(NamedTuple):
@@ -42,7 +40,7 @@ class CdaValue(NamedTuple):
 
 TimeseriesPayload = TypedDict(
     "TimeseriesPayload",
-    {"name": str, "office-id": str, "units": str, "values": list[CdaValue]},
+    {"name": str, "office-id": str, "units": Optional[str], "values": list[CdaValue]},
 )
 
 CWMS_INTERVAL_PATTERN: str = r"([0-9]+)(\w+)"
@@ -152,7 +150,8 @@ class CdaLoader(base_loader.BaseLoader):
         The transform key for the current SHEF value
         """
         self.assert_value_is_set()
-        return f"{self._shef_value.location}.{self._shef_value.parameter_code[:-1]}"
+        sv = cast(shared.ShefValue, self._shef_value)
+        return f"{sv.location}.{sv.parameter_code[:-1]}"
 
     @property
     def transform(self) -> ShefTransform:
@@ -195,11 +194,12 @@ class CdaLoader(base_loader.BaseLoader):
             for ts in self._time_series:
                 time = self.get_unix_timestamp(ts[0])
                 time_series.append(CdaValue(time, ts[1], 0))
-            post_data: TimeseriesPayload = {}
-            post_data["name"] = self.get_time_series_name(sv)
-            post_data["office-id"] = "LRL"
-            post_data["units"] = self.transform.units
-            post_data["values"] = time_series
+            post_data: TimeseriesPayload = {
+                "name": self.get_time_series_name(sv),
+                "office-id": "LRL",
+                "units": self.transform.units,
+                "values": time_series,
+            }
             match_index = self.find_matching_payload_index(post_data)
             if not match_index:
                 self._payloads.append(post_data)
@@ -208,7 +208,7 @@ class CdaLoader(base_loader.BaseLoader):
                 match_payload["values"].append(*time_series)
         self._time_series = []
 
-    def create_write_task(self, post_data: str) -> Coroutine:
+    def create_write_task(self, post_data: TimeseriesPayload) -> Coroutine:
         """
         Create an async CDA POST request coroutine for provided post_data
         """
@@ -225,6 +225,8 @@ class CdaLoader(base_loader.BaseLoader):
         start_time = time.time()
         for response_future in asyncio.as_completed(self._write_tasks):
             response: Response = await response_future
+            if not response.request.body:
+                raise shared.LoaderException("Error retrieving request payload")
             payload: TimeseriesPayload = json.loads(response.request.body)
             tsid = payload["name"]
             value_count = len(payload["values"])
@@ -244,7 +246,7 @@ class CdaLoader(base_loader.BaseLoader):
             )
 
     def record_error(
-        self, tsid: str, value_count: int, status: int, content: str
+        self, tsid: str, value_count: int, status: int, content: bytes
     ) -> None:
         """
         Update error count and output message for failed CDA POST request
@@ -252,7 +254,7 @@ class CdaLoader(base_loader.BaseLoader):
         self._value_error_count += value_count
         self._time_series_error_count += 1
         if self._logger:
-            self._logger.error(f"HTTP {status}: {tsid} - {content}")
+            self._logger.error(f"HTTP {status}: {tsid} - {content.decode()}")
 
     def find_matching_payload_index(self, payload: TimeseriesPayload) -> int | None:
         """
@@ -276,15 +278,20 @@ class CdaLoader(base_loader.BaseLoader):
         intervals are combined when no gaps are present.
         """
 
-        def get_cwms_interval_ms(cwms_interval: str):
+        def get_cwms_interval_ms(cwms_interval: str) -> int:
             """
             Return the integer-equivalent to a CWMS interval string (in milliseconds)
             """
             match = re.match(CWMS_INTERVAL_PATTERN, cwms_interval)
-            quantity = int(match.group(1))
-            unit = match.group(2)
-            multiplier = CWMS_INTERVAL_SECONDS[unit] * 1000
-            return quantity * multiplier
+            if match:
+                quantity = int(match.group(1))
+                unit = match.group(2)
+                multiplier = CWMS_INTERVAL_SECONDS[unit] * 1000
+                return quantity * multiplier
+            else:
+                raise shared.LoaderException(
+                    f"Could not parse CWMS interval string: {cwms_interval}"
+                )
 
         def group_by_interval(interval: int):
             """
