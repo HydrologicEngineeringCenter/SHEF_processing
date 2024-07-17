@@ -1,13 +1,22 @@
 import asyncio
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from io import BufferedRandom
+from itertools import groupby
 import json
 from logging import Logger
 import os
 import re
 import time
-from typing import Coroutine, NamedTuple, Optional, TextIO, TypedDict, Union, cast
+from typing import (
+    Coroutine,
+    NamedTuple,
+    Optional,
+    TextIO,
+    Tuple,
+    TypedDict,
+    Union,
+    cast,
+)
 
 from requests import Response
 
@@ -26,7 +35,7 @@ class ShefTransform(NamedTuple):
 
 
 class CdaValue(NamedTuple):
-    timestamp: str
+    timestamp: int
     value: float
     quality: int
 
@@ -35,6 +44,19 @@ TimeseriesPayload = TypedDict(
     "TimeseriesPayload",
     {"name": str, "office-id": str, "units": str, "values": list[CdaValue]},
 )
+
+CWMS_INTERVAL_PATTERN: str = r"([0-9]+)(\w+)"
+
+CWMS_INTERVAL_SECONDS: dict[str, int] = {
+    "Second": 1,
+    "Seconds": 1,
+    "Minute": 60,
+    "Minutes": 60,
+    "Hour": 3600,
+    "Hours": 3600,
+    "Day": 86400,
+    "Days": 86400,
+}
 
 
 class CdaLoader(base_loader.BaseLoader):
@@ -54,6 +76,7 @@ class CdaLoader(base_loader.BaseLoader):
         super().__init__(logger, output_object, append)
         self._cda_url = "https://cwms-data-test.cwbi.us/cwms-data/"
         self._cwms = CWMSpy.CWMS()
+        self._payloads: list[TimeseriesPayload] = []
         self._time_series_error_count: int = 0
         self._transforms: dict[str, ShefTransform] = {}
         self._value_error_count: int = 0
@@ -158,23 +181,22 @@ class CdaLoader(base_loader.BaseLoader):
             self._logger.debug(f"ts_name: {self.get_time_series_name(sv)}")
             self._logger.debug(f"shef_value: {sv}")
             self._logger.debug(f"time_series: {self._time_series}")
-        value_count = time_series_count = 0
         if self._time_series:
             time_series: list[CdaValue] = []
             for ts in self._time_series:
                 time = self.get_unix_timestamp(ts[0])
-                time_series.append([time, ts[1], 0])
+                time_series.append(CdaValue(time, ts[1], 0))
             post_data: TimeseriesPayload = {}
             post_data["name"] = self.get_time_series_name(sv)
             post_data["office-id"] = "LRL"
             post_data["units"] = self.transform.units
             post_data["values"] = time_series
-            task = self.create_write_task(post_data)
-            self._write_tasks.append(task)
-            time_series_count = 1
-        value_count = len(time_series)
-        self._value_count += value_count
-        self._time_series_count += time_series_count
+            match_index = self.find_matching_payload_index(post_data)
+            if not match_index:
+                self._payloads.append(post_data)
+            else:
+                match_payload = self._payloads[match_index]
+                match_payload["values"].append(*time_series)
         self._time_series = []
 
     def create_write_task(self, post_data: str) -> Coroutine:
@@ -194,6 +216,8 @@ class CdaLoader(base_loader.BaseLoader):
                     tsid, value_count, response.status_code, response.content
                 )
             else:
+                self._value_count += value_count
+                self._time_series_count += 1
                 if self._logger:
                     self._logger.info(f"Posted {value_count} values to {tsid}")
         process_time = time.time() - start_time
@@ -206,17 +230,77 @@ class CdaLoader(base_loader.BaseLoader):
         self, tsid: str, value_count: int, status: int, content: str
     ) -> None:
         self._value_error_count += value_count
-        self._value_count -= value_count
         self._time_series_error_count += 1
-        self._time_series_count -= 1
         if self._logger:
             self._logger.error(f"HTTP {status}: {tsid} - {content}")
+
+    def find_matching_payload_index(self, payload: TimeseriesPayload) -> int | None:
+        for i, this_payload in enumerate(self._payloads):
+            if (
+                payload["name"] == this_payload["name"]
+                and payload["office-id"] == this_payload["office-id"]
+                and payload["units"] == this_payload["units"]
+            ):
+                return i
+        return None
+
+    def parse_payload_tasks(self) -> None:
+        def get_cwms_interval_ms(cwms_interval: str):
+            match = re.match(CWMS_INTERVAL_PATTERN, cwms_interval)
+            quantity = int(match.group(1))
+            unit = match.group(2)
+            multiplier = CWMS_INTERVAL_SECONDS[unit] * 1000
+            return quantity * multiplier
+
+        def group_by_interval(interval: int):
+            def group_values(enum_tuple: Tuple[int, CdaValue]):
+                index, cda_value = enum_tuple
+                timestamp = cda_value.timestamp
+                group_key = (timestamp / interval) - index
+                return group_key
+
+            return group_values
+
+        def remove_duplicate_timestamps(tsid: str, values: list[CdaValue]):
+            cleaned_values: list[CdaValue] = []
+            used_timestamps: list[int] = []
+            for value in values:
+                if value.timestamp in used_timestamps:
+                    if self._logger:
+                        self._logger.warning(
+                            f"Removing duplicate timestamp {value.timestamp} for {tsid}"
+                        )
+                else:
+                    used_timestamps.append(value.timestamp)
+                    cleaned_values.append(value)
+            return cleaned_values
+
+        for payload in self._payloads:
+            payload["values"].sort(key=lambda x: x.timestamp)
+            payload["values"] = remove_duplicate_timestamps(
+                payload["name"], payload["values"]
+            )
+            cwms_interval_str = payload["name"].split(".")[3]
+            if cwms_interval_str == "0" or cwms_interval_str[0] == "~":
+                task = self.create_write_task(payload)
+                self._write_tasks.append(task)
+                continue
+            interval = get_cwms_interval_ms(cwms_interval_str)
+            for _, group in groupby(
+                enumerate(payload["values"]), group_by_interval(interval)
+            ):
+                values = [x[1] for x in group]
+                this_payload = payload.copy()
+                this_payload["values"] = values
+                task = self.create_write_task(this_payload)
+                self._write_tasks.append(task)
 
     def done(self) -> None:
         """
         Load any remaining time series and close the output if necessary
         """
         super().done()
+        self.parse_payload_tasks()
         asyncio.run(self.process_write_tasks())
         if self._logger:
             self._logger.info(
