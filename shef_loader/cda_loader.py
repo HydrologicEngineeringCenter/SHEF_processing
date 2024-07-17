@@ -212,7 +212,9 @@ class CdaLoader(base_loader.BaseLoader):
         """
         Create an async CDA POST request coroutine for provided post_data
         """
-        return asyncio.to_thread(self._cwms.write_ts, post_data)
+        return asyncio.to_thread(
+            self._cwms.write_ts, post_data, store_rule="REPLACE WITH NON MISSING"
+        )
 
     async def process_write_tasks(self) -> None:
         """
