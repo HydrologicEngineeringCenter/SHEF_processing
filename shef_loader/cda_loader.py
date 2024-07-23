@@ -79,7 +79,7 @@ class CdaLoader(base_loader.BaseLoader):
         self._value_error_count: int = 0
         self._write_tasks: list[Coroutine] = []
 
-    def set_options(self, options_str: str | None) -> None:
+    def set_options(self, options_str: Union[str, None]) -> None:
         """
         Set the crit file name and CDA apiKey
         """
@@ -243,7 +243,7 @@ class CdaLoader(base_loader.BaseLoader):
                 f"CWMS-Data-API POST tasks complete ({process_time:.2f} seconds)"
             )
 
-    def find_matching_payload_index(self, payload: TimeseriesPayload) -> int | None:
+    def find_matching_payload_index(self, payload: TimeseriesPayload) -> Union[int, None]:
         """
         Get index of matching payload for tsid, office, and units
         """
