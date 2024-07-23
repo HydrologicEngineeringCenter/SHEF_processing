@@ -2,7 +2,6 @@ import asyncio
 from datetime import datetime, timezone
 from io import BufferedRandom
 from itertools import groupby
-import json
 from logging import Logger
 import os
 import re
@@ -19,8 +18,7 @@ from typing import (
 )
 from shef_loader import shared
 from . import base_loader
-from requests import Response
-import CWMSpy  # type: ignore
+import cwms # type: ignore
 
 
 class ShefTransform(NamedTuple):
@@ -72,8 +70,9 @@ class CdaLoader(base_loader.BaseLoader):
         Constructor
         """
         super().__init__(logger, output_object, append)
-        self._cda_url = "https://cwms-data-test.cwbi.us/cwms-data/"
-        self._cwms = CWMSpy.CWMS()
+        # self._cda_url = "https://cwms-data-test.cwbi.us/cwms-data/"
+        self._cda_url = "https://wm.lrl.ds.usace.army.mil:8243/lrl-data/"
+        self._parsed_payloads: list[TimeseriesPayload] = []
         self._payloads: list[TimeseriesPayload] = []
         self._time_series_error_count: int = 0
         self._transforms: dict[str, ShefTransform] = {}
@@ -142,7 +141,7 @@ class CdaLoader(base_loader.BaseLoader):
                     f"{str(e)} on line [{line_number}] in {critfile_name}"
                 )
                 raise
-        self._cwms.connect(self._cda_url, f"apikey {cda_api_key}")
+        cwms.init_session(api_root=self._cda_url, api_key=f"apikey {cda_api_key}")
 
     @property
     def transform_key(self) -> str:
@@ -165,7 +164,7 @@ class CdaLoader(base_loader.BaseLoader):
         Get the time series ID for the current SHEF value
         """
         if shef_value is None:
-            raise shared.LoaderException(f"Empty SHEF value in get_time_series_name()")
+            raise shared.LoaderException("Empty SHEF value in get_time_series_name()")
         transform_key = f"{shef_value.location}.{shef_value.parameter_code[:-1]}"
         return self._transforms[transform_key].timeseries_id
 
@@ -195,7 +194,7 @@ class CdaLoader(base_loader.BaseLoader):
                 time = self.get_unix_timestamp(ts[0])
                 time_series.append(CdaValue(time, ts[1], 0))
             post_data: TimeseriesPayload = {
-                "name": self.get_time_series_name(sv),
+                "name": self.get_time_series_name(sv) + "-sheftest",
                 "office-id": "LRL",
                 "units": self.transform.units,
                 "values": time_series,
@@ -208,12 +207,12 @@ class CdaLoader(base_loader.BaseLoader):
                 match_payload["values"].append(*time_series)
         self._time_series = []
 
-    def create_write_task(self, post_data: TimeseriesPayload) -> Coroutine:
+    def create_write_task(self, post_data: TimeseriesPayload):
         """
         Create an async CDA POST request coroutine for provided post_data
         """
         return asyncio.to_thread(
-            self._cwms.write_ts, post_data, store_rule="REPLACE WITH NON MISSING"
+            cwms.store_timeseries, data=post_data, store_rule="REPLACE WITH NON MISSING"
         )
 
     async def process_write_tasks(self) -> None:
@@ -223,38 +222,26 @@ class CdaLoader(base_loader.BaseLoader):
         if self._logger:
             self._logger.info("Beginning CWMS-Data-API POST tasks...")
         start_time = time.time()
-        for response_future in asyncio.as_completed(self._write_tasks):
-            response: Response = await response_future
-            if not response.request.body:
-                raise shared.LoaderException("Error retrieving request payload")
-            payload: TimeseriesPayload = json.loads(response.request.body)
+        results = await asyncio.gather(*self._write_tasks, return_exceptions=True)
+        for i, result in enumerate(results):
+            payload = self._parsed_payloads[i]
             tsid = payload["name"]
             value_count = len(payload["values"])
-            if response.status_code >= 400:
-                self.record_error(
-                    tsid, value_count, response.status_code, response.content
-                )
+            if isinstance(result, BaseException):
+                self._value_error_count += value_count
+                self._time_series_error_count += 1
+                if self._logger:
+                    self._logger.error(f"Failed to store {value_count} values in {tsid}", exc_info=result)
             else:
                 self._value_count += value_count
                 self._time_series_count += 1
                 if self._logger:
-                    self._logger.info(f"Posted {value_count} values to {tsid}")
+                    self._logger.info(f"Stored {value_count} values in {tsid}")
         process_time = time.time() - start_time
         if self._logger:
             self._logger.info(
                 f"CWMS-Data-API POST tasks complete ({process_time:.2f} seconds)"
             )
-
-    def record_error(
-        self, tsid: str, value_count: int, status: int, content: bytes
-    ) -> None:
-        """
-        Update error count and output message for failed CDA POST request
-        """
-        self._value_error_count += value_count
-        self._time_series_error_count += 1
-        if self._logger:
-            self._logger.error(f"HTTP {status}: {tsid} - {content.decode()}")
 
     def find_matching_payload_index(self, payload: TimeseriesPayload) -> int | None:
         """
@@ -333,6 +320,7 @@ class CdaLoader(base_loader.BaseLoader):
             )
             cwms_interval_str = payload["name"].split(".")[3]
             if cwms_interval_str == "0" or cwms_interval_str[0] == "~":
+                self._parsed_payloads.append(payload)
                 task = self.create_write_task(payload)
                 self._write_tasks.append(task)
                 continue
@@ -343,6 +331,7 @@ class CdaLoader(base_loader.BaseLoader):
                 values = [x[1] for x in group]
                 this_payload = payload.copy()
                 this_payload["values"] = values
+                self._parsed_payloads.append(this_payload)
                 task = self.create_write_task(this_payload)
                 self._write_tasks.append(task)
 
@@ -387,7 +376,7 @@ loader_options = (
     "crit_file_path = the name of the SHEF-crit criteria file\n"
     "cda_api_key    = the api_key to use for CDA POST requests\n"
 )
-loader_description = "Used by CDA to import SHEF data using a criteria file."
+loader_description = "Used by CDA to import SHEF data using a criteria file.  Requires cwms-python v0.3.0 or greater."
 loader_version = "0.1"
 loader_class = CdaLoader
 can_unload = False
