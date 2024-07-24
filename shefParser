@@ -78,14 +78,16 @@ versions = '''
 | 1.2.0 | 02Jul2024 | MDP | Fix several issues with parsing and interaction with loaders            |
 |       |           |     | Loading/unloading/reloading mesonet.shef now yields identical DSS files |
 +-------+-----------+-----+-------------------------------------------------------------------------+
+| 1.2.1 | 23Jul2024 | MDP | Correct not calling set_ouput() unless using loader                     |
++-------+-----------+-----+-------------------------------------------------------------------------+
 
 Authors:
     MDP  Mike Perryman, USACE IWR-HEC
 '''
 
 progname     = Path(sys.argv[0]).stem
-version      = "1.2.0"
-version_date = "02Jul2024"
+version      = "1.2.1"
+version_date = "23Jul2024"
 logger       = logging.getLogger() # make mypy complains if set to None
 
 #---------------------------------------------------------#
@@ -3699,9 +3701,10 @@ Loading SHEF data to data stores:''')
         #-------------------#
         parser = ShefParser(args.format, args.shefparm, shefit_times=args.shefit_times, reject_problematic=args.reject_problematic)
         parser.set_input(getattr(args, "in"))
+        parser.set_output(args.out, args.append_out)
         if loader :
             parser.set_additional_pe_codes(loader.get_additional_pe_codes(parser.get_recognized_pe_codes()))
-            parser.set_output(args.out, args.append_out)
+        else :
             if args.format == 1 and isinstance(parser._output, TextIOWrapper) and parser._output.isatty():
                 parser._output.write("STATION   OBSERVATION-DATE/TM  CREATION-DATE/TIME   PARM-CD     DATA-VALUE Q  PROB-CD DURTN R T  GROUP-NM  QUOTE\n")
                 parser._output.write('aaaaaaaa  yyyy mm dd hh nn ss  yyyy mm dd hh nn ss  pedtsep     rrrrr.dddd a  rrr.ddd iiiii i i  aaaaaaaa  "aa..."\n\n')
