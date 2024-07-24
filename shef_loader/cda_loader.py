@@ -7,6 +7,7 @@ import os
 import re
 import time
 from typing import (
+    Callable,
     Coroutine,
     NamedTuple,
     Optional,
@@ -207,7 +208,7 @@ class CdaLoader(base_loader.BaseLoader):
                 match_payload["values"].append(*time_series)
         self._time_series = []
 
-    def create_write_task(self, post_data: TimeseriesPayload):
+    def create_write_task(self, post_data: TimeseriesPayload) -> Coroutine:
         """
         Create an async CDA POST request coroutine for provided post_data
         """
@@ -280,12 +281,12 @@ class CdaLoader(base_loader.BaseLoader):
                     f"Could not parse CWMS interval string: {cwms_interval}"
                 )
 
-        def group_by_interval(interval: int):
+        def group_by_interval(interval: int) -> Callable[[Tuple[int, CdaValue]], float]:
             """
             Return a group_values function for the specified interval (in milliseconds)
             """
 
-            def group_values(enum_tuple: Tuple[int, CdaValue]):
+            def group_values(enum_tuple: Tuple[int, CdaValue]) -> float:
                 """
                 Group continuous series of timestamps based on a chosen interval
                 """
@@ -296,7 +297,7 @@ class CdaLoader(base_loader.BaseLoader):
 
             return group_values
 
-        def remove_duplicate_timestamps(tsid: str, values: list[CdaValue]):
+        def remove_duplicate_timestamps(tsid: str, values: list[CdaValue]) -> list[CdaValue]:
             """
             Return a list of CdaValues with no duplicate timestamps
             """
