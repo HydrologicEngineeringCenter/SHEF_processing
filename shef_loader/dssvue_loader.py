@@ -42,10 +42,12 @@ class DSSVueLoader(base_loader.BaseLoader) :
         super().__init__(logger, output_object, append)
         self._sensors: dict[str, dict[str, str]] = {}
         self._parameters: dict[str, dict[str, str]] = {}
+        self._time_series = []
+        self._unknown_sensors: set = set()
+        self._unknown_pe_codes: set = set()
+        # following are for unload()
         self._unload_sensors: dict[tuple[str, str, str, str], dict[str, str]] = {}
         self._unload_parameters: dict[tuple[str, str, str], dict[str, str]] = {}
-        self._time_series = []
-        # following are for unload()
         self._input: Optional[Union[BufferedRandom, TextIOWrapper]] = None
         self._pathname: Optional[str] = None
         self._sensor: Optional[dict[str, str]] = None
@@ -187,15 +189,17 @@ class DSSVueLoader(base_loader.BaseLoader) :
         #--------------------------------------------------------------------#
         # verify all the PE codes in the sensors have an entry in parameters #
         #--------------------------------------------------------------------#
-        deleted_sensors = []
+        unknown_sensor_pe_codes: dict[str, list[str]] = {}
         for sensor in self._sensors :
             pe_code = sensor.split("/")[1]
             if pe_code not in self._parameters :
-                deleted_sensors.append(sensor)
-                if self._logger :
-                    self._logger.warning(f"Sensor [{sensor}] in [{sensorfile_name}] will not be used, no entry for [{pe_code}] in [{parameterfile_name}]")
-        for sensor in deleted_sensors :
-            del self._sensors[sensor]
+                unknown_sensor_pe_codes.setdefault(pe_code, []).append(sensor)
+        if self._logger :
+            for pe_code in sorted(unknown_sensor_pe_codes) :
+                msg = f"No entry for [{pe_code}] in the parameter file. Values for the following sensors in the sensor file will be untransformed:"
+                for sensor in unknown_sensor_pe_codes[pe_code] :
+                    msg += f"\n\t[{sensor}]"
+                self._logger.warning(msg)
 
     def get_additional_pe_codes(self, parser_recognized_pe_codes: set) -> set :
         '''
@@ -634,15 +638,43 @@ class DSSVueLoader(base_loader.BaseLoader) :
             raise shared.LoaderException(f"Empty SHEF value in get_time_series_name()")
         pe_code = shef_value.parameter_code[:2]
         sensor_name = f"{shef_value.location}/{pe_code}"
-        sensor = self._sensors[sensor_name]
-        a_part = sensor["a_part"]
-        b_part = sensor["b_part"]
-        c_part = self._parameters[pe_code]["c_part"]
+        try :
+            sensor = self._sensors[sensor_name]
+        except KeyError :
+            if not sensor_name in self._unknown_sensors :
+                self._unknown_sensors.add(sensor_name)
+                if self._logger :
+                    self._logger.warning(
+                        f"Sensor [{sensor_name}] is not in sensor file." \
+                             "\n\tA Part will be blank" \
+                            f"\n\tB Part will be [{shef_value.location}]" \
+                             "\n\tE Part will be determined from SHEF duration" \
+                             "\n\tF Part will be blank")
+            a_part = ""
+            b_part = shef_value.location
+            e_part = "*"
+            f_part = ""
+        else :
+            a_part = sensor["a_part"]
+            b_part = sensor["b_part"]
+            e_part = sensor["e_part"]
+            f_part = sensor["f_part"]
+        try :
+            parameter = self._parameters[pe_code]
+        except KeyError :
+            c_part = ""
+        else :
+            c_part = parameter["c_part"]
         if not c_part :
-            if self._logger :
-                self._logger.warning(f"No C Pathname part specified for PE code [{pe_code}]")
+            if not pe_code in self._unknown_pe_codes :
+                self._unknown_pe_codes.add(pe_code)
+                if self._logger :
+                    try :
+                        unit = shared.SHEF_ENGLISH_UNITS[pe_code]
+                    except KeyError :
+                        unit = "unknown"
+                    self._logger.warning(f"Parameter [{pe_code}] is not in parameter file.\n\tC Part will be [{pe_code}]\n\tValues will be untransformed (unit = [{unit}])")
             c_part = pe_code
-        e_part = sensor["e_part"]
         if e_part == "*" :
             try :
                 e_part = {
@@ -665,7 +697,6 @@ class DSSVueLoader(base_loader.BaseLoader) :
                     'Y' : '1Year'}[shef_value.parameter_code[2]]
             except :
                 raise shared.LoaderException(f"Cannot determine E pathname part for duration [{shef_value.parameter_code[2]}]")
-        f_part = sensor["f_part"]
         if f_part == "*" :
             create_date = shef_value.create_date
             if create_date == "0000-00-00" :
@@ -675,15 +706,8 @@ class DSSVueLoader(base_loader.BaseLoader) :
                 y, m, d = create_date.split("-")
                 h, n, s = create_time.split(":")
                 f_part = f"T:{y}{m}{d}-{h}{n}|"
-        return f"/{a_part}/{b_part}/{c_part}//{e_part}/{f_part}/"
 
-    @property
-    def use_value(self) -> bool :
-        '''
-        Get whether the current ShefValue is recognized by the loader
-        '''
-        self.assert_value_is_set()
-        return self.sensor in self._sensors
+        return f"/{a_part}/{b_part}/{c_part}//{e_part}/{f_part}/"
 
     @property
     def location(self) -> str :
@@ -700,10 +724,19 @@ class DSSVueLoader(base_loader.BaseLoader) :
         '''
         self.assert_value_is_set()
         sv = cast(shared.ShefValue, self._shef_value)
-        param = self._parameters[self.sensor.split("/")[1]]
-        specified_type = param["type"]
         pe_code = sv.parameter_code[:2]
         duration_code = sv.parameter_code[2]
+        try :
+            param = self._parameters[self.sensor.split("/")[1]]
+        except KeyError :
+            try :
+                unit = shared.SHEF_ENGLISH_UNITS[pe_code]
+            except KeyError :
+                unit = "unknown"
+            specified_type = "*"
+        else :
+            unit = param["unit"]
+            specified_type = param["type"]
         if specified_type == "*" :
             parameter_code = sv.parameter_code
             if duration_code == 'I' :
@@ -721,7 +754,7 @@ class DSSVueLoader(base_loader.BaseLoader) :
                     data_type = "INST-VAL"
         else :
             data_type = specified_type
-        return {"unit" : param["unit"], "type" : data_type}
+        return {"unit" : unit, "type" : data_type}
 
     @property
     def value(self) -> float :
@@ -733,7 +766,10 @@ class DSSVueLoader(base_loader.BaseLoader) :
         sv = cast(shared.ShefValue, self._shef_value)
         val = sv.value
         pe_code = sv.parameter_code[:2]
-        transform = self._parameters[pe_code]["transform"]
+        try :
+            transform = self._parameters[pe_code]["transform"]
+        except KeyError :
+            transform = None
         if not transform :
             #---------------------------------------------#
             # null transform - set to default for PE code #
@@ -806,6 +842,6 @@ loader_options     = "--loader dssvue[sensor_file_path][parameter_file_path]\n" 
                      "parameter_file_path = the name of the ShefDss-style parameter file to use \n"
 loader_description = "Used by HEC-DSSVue to import/export SHEF data. Uses ShefDss-style configuration.\n" \
                      "As of v1.2 .csv sensor and parameter files can be used to handle long pathname parts."
-loader_version     = "1.3.1"
+loader_version     = "1.4"
 loader_class       = DSSVueLoader
 can_unload         = True
