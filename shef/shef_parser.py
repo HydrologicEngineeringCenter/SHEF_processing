@@ -3469,11 +3469,11 @@ def parse(
     '''
     Either parse incoming SHEF (optionally loading into a datastore) or unload from a datastore into SHEF text
 
-        input               : Name of input file (SHEF text for parsing, possibly intermediate data for unloading). Use None or "" for <stdin>
-        output              : Name of output file (shefit -1 or shefit -2 for parsing or possibly intermediate data for loading). Use None or "" for <stdout>
+        input_name          : Name of input file (SHEF text for parsing, possibly intermediate data for unloading). Use None or "" for <stdin>
+        output_name         : Name of output file (shefit -1 or shefit -2 for parsing or possibly intermediate data for loading). Use None or "" for <stdout>
         output_format       : 1 for shefit -1 or 2 for shefit -2 (not used with a loader)
         append_output       : Whether to append to existing output if outputting to a file
-        log                 : Name of log file. Use None or "" for <stderr>
+        log_name            : Name of log file. Use None or "" for <stderr>
         log_level           : "DEBUG", "INFO", "WARNING", "ERROR", or "CRITICAL"
         append_log          : Whether to append to existing log if logging to a file
         log_timestamps      : Whether to timestamp log records
