@@ -68,7 +68,7 @@ SHEF_ENGLISH_UNITS : dict[str, str] = {
     "IT": "in",      "LA": "kac",     "LC": "kaf",     "LS": "kaf",     "MD": "code",    "MI": "in",      "ML": "in",
     "MM": "%",       "MN": "code",    "MS": "code",    "MT": "F",       "MU": "in",      "MV": "code",    "MW": "%",
     "NC": "code",    "NG": "ft",      "NL": "unit",    "NN": "unit",    "NO": "code",    "NS": "unit",    "PA": "in-hg",
-    "PC": "in",      "PD": "in-hg",   "PE": "code",    "PF": "in",      "PJ": "in",      "PL": "in-hg",   "PM": "code",
+    "PC": "in",      "PD": "in-hg",   "PE": "code",    "PF": "in",      "PJ": "in",      "PL": "mb",      "PM": "code",
     "PN": "in",      "PP": "in",      "PR": "in/day",  "PT": "code",    "PY": "in",      "QA": "kcfs",    "QB": "in",
     "QC": "kaf",     "QD": "kcfs",    "QE": "%",       "QF": "mph",     "QG": "kcfs",    "QI": "kcfs",    "QL": "kcfs",
     "QM": "kcfs",    "QN": "kcfs",    "QP": "kcfs",    "QR": "kcfs",    "QS": "kcfs",    "QT": "kcfs",    "QU": "kcfs",

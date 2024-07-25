@@ -152,7 +152,7 @@ class DSSVueLoader(base_loader.BaseLoader) :
                         make_sensor(location, pe_code, duration_str, a_part, b_part, f_part)
         except Exception as e :
             if self._logger :
-                self._logger.error(f"{str(e)} on line [{line_number}] in {sensorfile_name}")
+                self._logger.error(f"{shared.exc_info(e)} on line [{line_number}] in {sensorfile_name}")
             raise
         #-------------------------#
         # load the parameter file #
@@ -185,7 +185,7 @@ class DSSVueLoader(base_loader.BaseLoader) :
                         transform = line[47:56].strip()
                         make_parameter(pe_code, c_part, unit, data_type, transform)
         except Exception as e :
-            raise shared.LoaderException(f"{str(e)} on line [{line_number}] in [{parameterfile_name}]")
+            raise shared.LoaderException(f"{shared.exc_info(e)} on line [{line_number}] in [{parameterfile_name}]")
         #--------------------------------------------------------------------#
         # verify all the PE codes in the sensors have an entry in parameters #
         #--------------------------------------------------------------------#
@@ -382,8 +382,8 @@ class DSSVueLoader(base_loader.BaseLoader) :
                 self._time_series_count += 1
             except shared.LoaderException as e :
                 if self._logger :
-                    self._logger.error(str(e))
-                self.output(f":     <{str(e)}>\n")
+                    self._logger.error(shared.exc_info(e))
+                self.output(f":     <{shared.exc_info(e)}>\n")
                 self._pathname = None
                 self._sensor = None
                 self._parameter = None

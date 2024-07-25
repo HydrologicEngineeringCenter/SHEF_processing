@@ -55,11 +55,13 @@ The packages contains a module named `shared` which provides the following items
 |`PROBABILITY_CODES: dict[float, str]`|SHEF probability character by numeric value|
 |`PROBABILITY_VALUES: dict[str, float]`|SHEF probability numeric value by character|
 |`SEND_CODES: dict[str, tuple[str, bool]]`|(<*parameter_code*>, <*value_time_is_prev_0700*>) by send code|
+|`SHEF_ENGLISH_UNITS : dict[str, str]`|Units of parsed SHEF values (SHEF standard English units) by PE code|
 |`VALUE_UNITS_PATTERN: re.Pattern`|matches pattern `([0-9]+)([a-z]+)` case insensitive|
 
 #### Functions
 |function|description|
 |--|--|
+|`exc_info(e: Exception) -> str`|Formats a string for logging exceptions|
 |`make_shef_value(format_1_line: str) -> ShefValue`|Creates a `ShefValue` object from a shefParser -f 1 (shefit -1) line.|
 |`get_datetime(datetime_str: str) -> datetime`|Creates a `datetime.datetime` object from a string like "yyyy-mm-dd hh:nn:ss".|
 |`duration_interval(parameter_code: str) -> timedelta`|Creates a `datetime.timedelta` object that represents the duration in a SHEF parameter code.|
