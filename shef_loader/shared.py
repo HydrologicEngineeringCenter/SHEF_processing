@@ -49,6 +49,45 @@ SEND_CODES: dict[str, tuple[str, bool]] = {
     "TH" : ("THS",     False), "TX" : ("TAIRZXZ", False), "UC" : ("UCD",     False), "UL" : ("ULD",     False), "XG" : ("XGJ",     False),
     "XP" : ("XPQ",     False)}
 
+SHEF_ENGLISH_UNITS : dict[str, str] = {
+    "AD": "unkonwn", "AF": "code",    "AG": "%",       "AM": "code",    "AT": "hr",      "AU": "hr",      "AW": "hr",
+    "BA": "in",      "BB": "in",      "BC": "in",      "BD": "F",       "BE": "in",      "BF": "in",      "BG": "%",
+    "BH": "in",      "BI": "in",      "BJ": "in",      "BK": "in",      "BL": "in",      "BM": "in",      "BN": "in",
+    "BO": "in",      "BP": "in",      "BQ": "in",      "CA": "in",      "CB": "in",      "CC": "in",      "CD": "in",
+    "CE": "in",      "CF": "in",      "CG": "in",      "CH": "in",      "CI": "in",      "CJ": "in",      "CK": "in",
+    "CL": "F",       "CM": "F",       "CN": "%",       "CO": "code",    "CP": "in",      "CQ": "in",      "CR": "in",
+    "CS": "in",      "CT": "unit",    "CU": "F",       "CV": "F",       "CW": "in",      "CX": "in",      "CY": "in",
+    "CZ": "code",    "EA": "in",      "ED": "in",      "EM": "in",      "EP": "in",      "ER": "in",      "ET": "in",
+    "EV": "in",      "FA": "unit",    "FB": "unit",    "FC": "unit",    "FE": "unit",    "FK": "unit",    "FL": "unit",
+    "FP": "unit",    "FS": "unit",    "FT": "unit",    "FZ": "unit",    "GC": "code",    "GD": "in",      "GL": "%",
+    "GP": "in",      "GR": "code",    "GS": "code",    "GT": "in",      "GW": "in",      "HA": "ft",      "HB": "ft",
+    "HC": "ft",      "HD": "ft",      "HE": "ft",      "HF": "ft",      "HG": "ft",      "HH": "ft",      "HI": "code",
+    "HJ": "ft",      "HK": "ft",      "HL": "ft",      "HM": "ft",      "HN": "ft",      "HO": "ft",      "HP": "ft",
+    "HQ": "code",    "HR": "ft",      "HS": "ft",      "HT": "ft",      "HU": "ft",      "HV": "ft",      "HW": "ft",
+    "HX": "ft",      "HY": "ft",      "HZ": "kft",     "IC": "%",       "IE": "mi",      "IO": "ft",      "IR": "code",
+    "IT": "in",      "LA": "kac",     "LC": "kaf",     "LS": "kaf",     "MD": "code",    "MI": "in",      "ML": "in",
+    "MM": "%",       "MN": "code",    "MS": "code",    "MT": "F",       "MU": "in",      "MV": "code",    "MW": "%",
+    "NC": "code",    "NG": "ft",      "NL": "unit",    "NN": "unit",    "NO": "code",    "NS": "unit",    "PA": "in-hg",
+    "PC": "in",      "PD": "in-hg",   "PE": "code",    "PF": "in",      "PJ": "in",      "PL": "in-hg",   "PM": "code",
+    "PN": "in",      "PP": "in",      "PR": "in/day",  "PT": "code",    "PY": "in",      "QA": "kcfs",    "QB": "in",
+    "QC": "kaf",     "QD": "kcfs",    "QE": "%",       "QF": "mph",     "QG": "kcfs",    "QI": "kcfs",    "QL": "kcfs",
+    "QM": "kcfs",    "QN": "kcfs",    "QP": "kcfs",    "QR": "kcfs",    "QS": "kcfs",    "QT": "kcfs",    "QU": "kcfs",
+    "QV": "kaf",     "QX": "kcfs",    "QY": "kcfs",    "QZ": "unkonwn", "RA": "%",       "RI": "ly",      "RN": "w/m2",
+    "RP": "%",       "RT": "hr",      "RW": "w/m2",    "SA": "%",       "SB": "in",      "SD": "in",      "SE": "F",
+    "SF": "in",      "SI": "in",      "SL": "kft",     "SM": "in",      "SP": "in",      "SR": "code",    "SS": "n/a",
+    "ST": "code",    "SU": "in",      "SW": "in",      "TA": "F",       "TB": "code",    "TC": "F",       "TD": "F",
+    "TE": "code",    "TF": "F",       "TH": "F",       "TJ": "F",       "TM": "F",       "TN": "F",       "TP": "F",
+    "TR": "F",       "TS": "F",       "TV": "code",    "TW": "F",       "TX": "F",       "TZ": "F",       "UC": "mi",
+    "UD": "deg",     "UE": "deg",     "UG": "mph",     "UL": "mi",      "UP": "mph",     "UQ": "code",    "UR": "deg/10",
+    "US": "mph",     "UT": "min",     "VB": "v",       "VC": "mw",      "VE": "mwh",     "VG": "mw",      "VH": "hr",
+    "VJ": "mwh",     "VK": "mwh",     "VL": "mwh",     "VM": "mwh",     "VP": "mw",      "VQ": "mwh",     "VR": "mwh",
+    "VS": "mwh",     "VT": "mw",      "VU": "code",    "VW": "mw",      "WA": "ppm",     "WC": "umho/cm", "WD": "in",
+    "WG": "in-hg",   "WH": "ppm",     "WL": "ppm",     "WO": "ppm",     "WP": "ph",      "WS": "ppt",     "WT": "jtu",
+    "WV": "ft/s",    "WX": "%",       "WY": "ppb",     "XC": "unit*10", "XG": "unit",    "XL": "unit",    "XP": "code",
+    "XR": "%",       "XU": "g/ft3",   "XV": "mi",      "XW": "code",    "YA": "unit",    "YC": "unit",    "YF": "w",
+    "YI": "code",    "YP": "code",    "YR": "w",       "YS": "unit",    "YT": "unit",    "YV": "v",       "YY": "code",
+}
+
 VALUE_UNITS_PATTERN: re.Pattern = re.compile("([0-9]+)([a-z]+)", re.I)
 
 DATETIME_PATTERN: re.Pattern = re.compile("[ :-]")

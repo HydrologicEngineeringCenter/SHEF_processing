@@ -115,9 +115,18 @@ The class `base_loader.BaseLoader` provides the following fields and methods:
 
 See https://github.com/HydrologicEngineeringCenter/SHEF_processing/blob/master/shef_loader/Readme.md for formatted version
 '''
-__all__ : list = []
-from . import base_loader
-from . import cda_loader
-from . import dssvue_loader
-from . import shefdss_util
 
+__all__ : list = []
+
+error_modules = []
+try    : from . import base_loader
+except : raise Exception("ERROR|Cannot import base_loader")
+
+try    : from . import cda_loader
+except : error_modules.append("cda_loader")
+
+try    : from . import dssvue_loader
+except : error_modules.append("dssvue_loader")
+
+try    : from . import shefdss_util
+except : error_modules.append("shefdss_util")

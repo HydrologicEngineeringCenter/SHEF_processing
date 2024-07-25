@@ -33,7 +33,6 @@ make_parameter_csv(col_filename: str, csv_filename: Optional[str] = None) -> int
 
 '''
 import os, sys
-from typing import Iterable
 from typing import Optional
 from typing import TextIO
 

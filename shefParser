@@ -78,15 +78,19 @@ versions = '''
 | 1.2.0 | 02Jul2024 | MDP | Fix several issues with parsing and interaction with loaders            |
 |       |           |     | Loading/unloading/reloading mesonet.shef now yields identical DSS files |
 +-------+-----------+-----+-------------------------------------------------------------------------+
+| 1.2.1 | 23Jul2024 | MDP | Correct not calling set_ouput() unless using loader                     |
++-------+-----------+-----+-------------------------------------------------------------------------+
+| 1.2.2 | 24Jul2024 | MDP | Prevent an error in importing a loader from importing other loaders.    |
++-------+-----------+-----+-------------------------------------------------------------------------+
 
 Authors:
     MDP  Mike Perryman, USACE IWR-HEC
 '''
 
 progname     = Path(sys.argv[0]).stem
-version      = "1.2.0"
-version_date = "02Jul2024"
-logger       = logging.getLogger() # make mypy complains if set to None
+version      = "1.2.2"
+version_date = "24Jul2024"
+logger       = logging.getLogger()
 
 #---------------------------------------------------------#
 # catalog the SHEF data loaders in the shef_loader module #
@@ -94,6 +98,20 @@ logger       = logging.getLogger() # make mypy complains if set to None
 loaders = {}
 try :
     import shef_loader
+except Exception as e:
+    msg = str(e)
+    parts = msg.split("|", 1)
+    if parts[0] == 'ERROR' :
+        logger.error(parts[1])
+    elif parts[0] == 'WARNING' :
+        logger.warning(parts[1])
+    elif parts[0] == 'INFO' :
+        logger.info(parts[1])
+    else :
+        logger.error(msg)
+else :
+    if shef_loader.error_modules :
+        logger.warning("Errors loading the following modules:\n\t{}".format("\n\t".join(shef_loader.error_modules)))
     for loader in [item for item in dir(shef_loader) if eval(f"shef_loader.{item}.__class__.__name__") == "module"] :
         exec(f"from shef_loader import {loader}")
         try :
@@ -105,8 +123,6 @@ try :
             loaders[loader] = {"option_format" : opts, "description" : desc, "version" : vers, "class" : clazz, "can_unload" : unload}
         except :
             pass
-except :
-    pass
 
 class MonthsDelta :
     '''
@@ -3699,9 +3715,10 @@ Loading SHEF data to data stores:''')
         #-------------------#
         parser = ShefParser(args.format, args.shefparm, shefit_times=args.shefit_times, reject_problematic=args.reject_problematic)
         parser.set_input(getattr(args, "in"))
+        parser.set_output(args.out, args.append_out)
         if loader :
             parser.set_additional_pe_codes(loader.get_additional_pe_codes(parser.get_recognized_pe_codes()))
-            parser.set_output(args.out, args.append_out)
+        else :
             if args.format == 1 and isinstance(parser._output, TextIOWrapper) and parser._output.isatty():
                 parser._output.write("STATION   OBSERVATION-DATE/TM  CREATION-DATE/TIME   PARM-CD     DATA-VALUE Q  PROB-CD DURTN R T  GROUP-NM  QUOTE\n")
                 parser._output.write('aaaaaaaa  yyyy mm dd hh nn ss  yyyy mm dd hh nn ss  pedtsep     rrrrr.dddd a  rrr.ddd iiiii i i  aaaaaaaa  "aa..."\n\n')
