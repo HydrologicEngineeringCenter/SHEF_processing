@@ -118,7 +118,7 @@ if script_dir not in sys.path :
 #-----------------------------------------------------#
 available_loaders = {}
 try :
-    import loaders
+    from . import loaders
 except Exception as e:
     msg = str(e)
     parts = msg.split("|", 1)
@@ -3452,11 +3452,11 @@ class ShefParser :
         return outrecs
     
 def parse(
-        input: Optional[str],
-        output: Optional[str],
+        input_name: Optional[str],
+        output_name: Optional[str],
         output_format: int,
         append_output: bool,
-        log: Optional[str],
+        log_name: Optional[str],
         log_level: str,
         append_log: bool,
         log_timestamps: bool,
@@ -3489,9 +3489,9 @@ def parse(
     #-------------------------------------------------------#
     # assign input and output streams if no filenames given #
     #-------------------------------------------------------#
-    input  = sys.stdin  if not input  else input
-    output = sys.stdout if not output else output
-    log    = sys.stderr if not log    else log
+    input:  Union[TextIO, str] = sys.stdin  if not input_name  else input_name
+    output: Union[TextIO, str] = sys.stdout if not output_name else output_name
+    log:    Union[TextIO, str] = sys.stderr if not log_name    else log_name
     #-----------------------------------------------------------------#
     # get default SHEFPARM file if exists and --default not specified #
     #-----------------------------------------------------------------#
@@ -3640,7 +3640,7 @@ def parse(
             logger.info("")
             logger.info("--[Summary]-----------------------------------------------------------")
             logger.info(f"Program    = {progname} version {version} ({version_date})")
-            logger.info(f"SHEFPARM   = {args.shefparm}")
+            logger.info(f"SHEFPARM   = {shefparm}")
             logger.info(f"Start Time = {str(start_time)[:-7]}")
             logger.info(f"Run Time   = {str(datetime.now() - start_time)[:-3]}")
             logger.info(f"{parser._line_number:6d} lines read from {parser._input_name}")
@@ -3748,7 +3748,7 @@ def main() -> None :
     args = argparser.parse_args()
 
     if args.make_shefparm :
-        if args.shefparm or getattr(args, "in") != sys.stdin or args.log != sys.stderr or args.format != 1 or log_level != "INFO" \
+        if args.shefparm or getattr(args, "in") != sys.stdin or args.log != sys.stderr or args.format != 1 or args.loglevel != "INFO" \
         or args.defaults or args.timestamps or args.reject_problematic or args.description :
             print("\nArgument --make_shefparm may not be used with any other argument except -o/--out\n")
             exit(-1)
@@ -3829,11 +3829,11 @@ Loading SHEF data to data stores:''')
 
     input = getattr(args, "in")
     parse(
-        input              = input if isinstance(input, str) else None,
-        output             = args.out if isinstance(args.out, str) else None,
+        input_name         = input if isinstance(input, str) else None,
+        output_name        = args.out if isinstance(args.out, str) else None,
         output_format      = args.format,
         append_output      = args.append_out,
-        log                = args.log if isinstance(args.log, str) else None,
+        log_name           = args.log if isinstance(args.log, str) else None,
         log_level          = args.loglevel,
         append_log         = args.append_log,
         log_timestamps     = args.timestamps,

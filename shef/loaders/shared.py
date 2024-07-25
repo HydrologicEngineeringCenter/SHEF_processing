@@ -112,6 +112,15 @@ FORMAT_1_PATTERN: re.Pattern = re.compile(
 #     7               8      9                     0      1        2                3
     r"([ 0-9.+-]{15}) ([A-Z])([ 0-9.+-]{9})  \d{4} ([01]) ([012])  ((?: |\w){8})  \"(.+)\"")
 
+def exc_info(e: Exception) -> str :
+    '''
+    Get exception info for logging
+    '''
+    info = f"{e.__class__.__name__}: {str(e)}"
+    if e.args :
+        info += f"args = {e.args}"
+    return info
+
 def make_shef_value(format_1_line: str) -> ShefValue :
     '''
     Creates a ShefValue object from a shefParser -f 1 (shefit -1) line
