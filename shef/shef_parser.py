@@ -82,14 +82,23 @@ versions = '''
 +-------+-----------+-----+-------------------------------------------------------------------------+
 | 1.2.2 | 24Jul2024 | MDP | Prevent an error in importing a loader from importing other loaders.    |
 +-------+-----------+-----+-------------------------------------------------------------------------+
+| 1.3.0 | 26Jul2024 | MDP | Restrucured code                                                        |
+|       |           |     | * Moved main script to shef package (shefParser -> shef.shef_parser.py) |
+|       |           |     | * Moved shef_loader package to shef.loaders subpackage                  |
+|       |           |     | * Added parse() function                                                |
+|       |           |     |   * Handles everything but parsing command line and generating SHEFPARM |
+|       |           |     |   * main() now calls parse() for parsing, loading, and unloading        |
+|       |           |     |   * Can be called directly from other scripts                           |
+|       |           |     | Improved exception handling and logging                                 |
++-------+-----------+-----+-------------------------------------------------------------------------+
 
 Authors:
     MDP  Mike Perryman, USACE IWR-HEC
 '''
 
 progname     = Path(sys.argv[0]).stem
-version      = "1.2.2"
-version_date = "24Jul2024"
+version      = "1.3.0"
+version_date = "26Jul2024"
 logger       = logging.getLogger()
 
 def exc_info(e: Exception) -> str :
