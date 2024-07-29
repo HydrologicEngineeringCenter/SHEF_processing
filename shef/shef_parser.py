@@ -106,8 +106,8 @@ def exc_info(e: Exception) -> str :
     Get exception info for logging
     '''
     info = f"{e.__class__.__name__}: {str(e)}"
-    if e.args :
-        info += f"args = {e.args}"
+    if e.args and " ".join(e.args) != str(e):
+        info += f" args = {e.args}"
     return info
 
 #------------------------------------------------------#
@@ -140,8 +140,6 @@ except Exception as e:
     else :
         logger.error(exc_info(e))
 else :
-    if loaders.error_modules :
-        logger.warning("Errors loading the following modules:\n\t{}".format("\n\t".join(loaders.error_modules)))
     for loader in [item for item in dir(loaders) if eval(f"loaders.{item}.__class__.__name__") == "module"] :
         exec(f"from loaders import {loader}")
         try :
@@ -3273,7 +3271,8 @@ class ShefParser :
                             qualifier,
                             duration_unit,
                             duration_value))
-                        createtime = hdr_param_info[0].createtime
+                        if hdr_param_info[0] :
+                            createtime = hdr_param_info[0].createtime
                     else :
                         if obstime_specified :
                             relativetime = None
@@ -3461,20 +3460,20 @@ class ShefParser :
         return outrecs
     
 def parse(
-        input_name: Optional[str],
-        output_name: Optional[str],
-        output_format: int,
-        append_output: bool,
-        log_name: Optional[str],
-        log_level: str,
-        append_log: bool,
-        log_timestamps: bool,
-        shefparm: Optional[str],
-        use_defaults: bool,
-        shefit_times: bool,
-        reject_problematic: bool,
-        loader_spec: str,
-        unload: bool,) :
+        input_name: Optional[str] = None,
+        output_name: Optional[str] = None,
+        output_format: int = 1,
+        append_output: bool = False,
+        log_name: Optional[str] = None,
+        log_level: str = "INFO",
+        append_log: bool = False,
+        log_timestamps: bool = False,
+        shefparm: Optional[str] = None,
+        use_defaults: bool = True,
+        shefit_times: bool = False,
+        reject_problematic: bool = False,
+        loader_spec: Optional[str] = None,
+        unload: bool = False,) :
     '''
     Either parse incoming SHEF (optionally loading into a datastore) or unload from a datastore into SHEF text
 
@@ -3567,6 +3566,8 @@ def parse(
     #--------------------------------#
     loader = None
     if loader_spec :
+        if loaders.error_modules :
+            logger.warning("    Errors importing the following modules:\n\t{}\n".format("\n\t".join(loaders.error_modules)))
         try :
             pos = loader_spec.find('[')
             if pos == -1 :
@@ -3823,6 +3824,8 @@ Loading SHEF data to data stores:''')
         if not available_loaders :
             print("    The 'loaders' package was not found or it contained no valid loaders.")
         else :
+            if loaders.error_modules :
+                print("\n    Errors importing the following modules:\n\t{}\n".format("\n\t".join(loaders.error_modules)))
             for loader_name in sorted(available_loaders) :
                 if loader_name == "base_loader" :
                     continue
