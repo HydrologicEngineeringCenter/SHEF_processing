@@ -117,8 +117,8 @@ def exc_info(e: Exception) -> str :
     Get exception info for logging
     '''
     info = f"{e.__class__.__name__}: {str(e)}"
-    if e.args :
-        info += f"args = {e.args}"
+    if e.args and " ".join(e.args) != str(e):
+        info += f" args = {e.args}"
     return info
 
 def make_shef_value(format_1_line: str) -> ShefValue :

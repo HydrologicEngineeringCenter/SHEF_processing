@@ -183,30 +183,30 @@ class CdaLoader(base_loader.BaseLoader):
         """
         Store SHEF values as CDA POST payloads grouped by time series ID
         """
-        self.assert_value_is_set()
-        sv = cast(shared.ShefValue, self._shef_value)
-        if self._logger:
-            self._logger.debug(f"ts_name: {self.get_time_series_name(sv)}")
-            self._logger.debug(f"shef_value: {sv}")
-            self._logger.debug(f"time_series: {self._time_series}")
-        if self._time_series:
-            time_series: list[CdaValue] = []
-            for ts in self._time_series:
-                time = self.get_unix_timestamp(ts[0])
-                time_series.append(CdaValue(time, ts[1], 0))
-            post_data: TimeseriesPayload = {
-                "name": self.get_time_series_name(sv) + "-sheftest",
-                "office-id": "LRL",
-                "units": self.transform.units,
-                "values": time_series,
-            }
-            match_index = self.find_matching_payload_index(post_data)
-            if not match_index:
-                self._payloads.append(post_data)
-            else:
-                match_payload = self._payloads[match_index]
-                match_payload["values"].append(*time_series)
-        self._time_series = []
+        if self._shef_value and self._time_series :
+            sv = cast(shared.ShefValue, self._shef_value)
+            if self._logger:
+                self._logger.debug(f"ts_name: {self.get_time_series_name(sv)}")
+                self._logger.debug(f"shef_value: {sv}")
+                self._logger.debug(f"time_series: {self._time_series}")
+            if self._time_series:
+                time_series: list[CdaValue] = []
+                for ts in self._time_series:
+                    time = self.get_unix_timestamp(ts[0])
+                    time_series.append(CdaValue(time, ts[1], 0))
+                post_data: TimeseriesPayload = {
+                    "name": self.get_time_series_name(sv) + "-sheftest",
+                    "office-id": "LRL",
+                    "units": self.transform.units,
+                    "values": time_series,
+                }
+                match_index = self.find_matching_payload_index(post_data)
+                if not match_index:
+                    self._payloads.append(post_data)
+                else:
+                    match_payload = self._payloads[match_index]
+                    match_payload["values"].append(*time_series)
+            self._time_series = []
 
     def create_write_task(self, post_data: TimeseriesPayload) -> Coroutine:
         """

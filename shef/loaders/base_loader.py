@@ -88,33 +88,37 @@ class BaseLoader :
         '''
         Sets the current ShefValue for the loader loading any data accumulated if the time series name has changed
         '''
-        shef_value = shared.make_shef_value(value_str)
-        if self._shef_value is None :
-            #-------------#
-            # first value #
-            #-------------#
-            self._shef_value = shef_value
-            if self.use_value :
-                self._time_series.append([self.date_time, self.value, self.data_qualifier, self.forecast_date_time])
-        else :
-            #-------------------#
-            # subsequent values #
-            #-------------------#
-            if self.get_time_series_name(shef_value) == self.time_series_name :
-                #------------------#
-                # same time series #
-                #------------------#
+        try :
+            shef_value = shared.make_shef_value(value_str)
+            if self._shef_value is None :
+                #-------------#
+                # first value #
+                #-------------#
                 self._shef_value = shef_value
                 if self.use_value :
                     self._time_series.append([self.date_time, self.value, self.data_qualifier, self.forecast_date_time])
             else :
-                #-----------------#
-                # new time series #
-                #-----------------#
-                self.load_time_series()
-                self._shef_value = shef_value
-                if self.use_value :
-                    self._time_series.append([self.date_time, self.value, self.data_qualifier, self.forecast_date_time])
+                #-------------------#
+                # subsequent values #
+                #-------------------#
+                if self.get_time_series_name(shef_value) == self.time_series_name :
+                    #------------------#
+                    # same time series #
+                    #------------------#
+                    self._shef_value = shef_value
+                    if self.use_value :
+                        self._time_series.append([self.date_time, self.value, self.data_qualifier, self.forecast_date_time])
+                else :
+                    #-----------------#
+                    # new time series #
+                    #-----------------#
+                    self.load_time_series()
+                    self._shef_value = shef_value
+                    if self.use_value :
+                        self._time_series.append([self.date_time, self.value, self.data_qualifier, self.forecast_date_time])
+        except Exception as e :
+            if self._logger :
+                self._logger.error(shared.exc_info(e))
 
     def load_time_series(self) -> None :
         '''
