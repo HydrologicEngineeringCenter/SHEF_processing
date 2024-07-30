@@ -152,7 +152,7 @@ class DSSVueLoader(base_loader.BaseLoader) :
                         make_sensor(location, pe_code, duration_str, a_part, b_part, f_part)
         except Exception as e :
             if self._logger :
-                self._logger.error(f"{str(e)} on line [{line_number}] in {sensorfile_name}")
+                self._logger.error(f"{shared.exc_info(e)} on line [{line_number}] in {sensorfile_name}")
             raise
         #-------------------------#
         # load the parameter file #
@@ -185,7 +185,7 @@ class DSSVueLoader(base_loader.BaseLoader) :
                         transform = line[47:56].strip()
                         make_parameter(pe_code, c_part, unit, data_type, transform)
         except Exception as e :
-            raise shared.LoaderException(f"{str(e)} on line [{line_number}] in [{parameterfile_name}]")
+            raise shared.LoaderException(f"{shared.exc_info(e)} on line [{line_number}] in [{parameterfile_name}]")
         #--------------------------------------------------------------------#
         # verify all the PE codes in the sensors have an entry in parameters #
         #--------------------------------------------------------------------#
@@ -382,8 +382,8 @@ class DSSVueLoader(base_loader.BaseLoader) :
                 self._time_series_count += 1
             except shared.LoaderException as e :
                 if self._logger :
-                    self._logger.error(str(e))
-                self.output(f":     <{str(e)}>\n")
+                    self._logger.error(shared.exc_info(e))
+                self.output(f":     <{shared.exc_info(e)}>\n")
                 self._pathname = None
                 self._sensor = None
                 self._parameter = None
@@ -509,78 +509,78 @@ class DSSVueLoader(base_loader.BaseLoader) :
         '''
         Output the timeseries for HEC-DSSVue
         '''
-        self.assert_value_is_set()
-        sv = cast(shared.ShefValue, self._shef_value)
-        value_count = time_series_count = 0
-        if self._time_series :
-            if self._logger :
-                self._logger.info(f"Outputting [{len(self._time_series)}] values to be stored to [{self.time_series_name}]")
-            time_series = []
-            for ts in self._time_series :
-                if ts[1] is None or ts[1] == -9999. :
-                    if self._logger :
-                        self._logger.debug(f"Discarding missing value at [{ts[0]}] for [{self.time_series_name}]")
-                else :
-                    time_series.append([ts[0], ts[1]])
-            if time_series :
-                time_series.sort()
-                load_individually = False
-                dur_intvl = None
-                if len(time_series) > 1 :
-                    dur_intvl = shared.duration_interval(sv.parameter_code)
-                    if dur_intvl :
-                        #---------------------------------------------------#
-                        # see if we the value times agree with the duration #
-                        #---------------------------------------------------#
-                        intervals = set()
-                        for i in range(1, len(time_series)) :
-                            intervals.add(shared.get_datetime(time_series[i][0]) - shared.get_datetime(time_series[i-1][0]))
-                        for intvl in sorted(intervals) :
-                            if intvl / dur_intvl != intvl // dur_intvl :
-                                if dur_intvl == DSSVueLoader.month_interval and DSSVueLoader.month_tolerance[0] <= intvl <= DSSVueLoader.month_tolerance[1] :
-                                    pass
-                                elif dur_intvl == DSSVueLoader.year_interval and DSSVueLoader.year_tolerance[0] <= intvl <= DSSVueLoader.year_tolerance[1] :
-                                    pass
-                                else :
-                                    if self._logger :
-                                        self._logger.warning(
-                                            f"Data interval of [{str(intvl)}] does not agree with duration of [{str(dur_intvl)}]"
-                                            f"\n\ton [{self.time_series_name}]\n\tWill attempt to load [{len(self._time_series)}] values individually")
-                                    load_individually = True
-                if load_individually :
-                    #------------------------------------------#
-                    # load values one at a time, some may fail #
-                    #------------------------------------------#
-                    for tsv in time_series :
-                        self.output(f"{self.time_series_name}\n\t{self.loading_info}\n")
-                        self.output(f"\t{list([tsv[0],tsv[1]])}\n")
-                    time_series_count = len(time_series)
-                else :
-                    #---------------------------------------------#
-                    # load values in one or more chunks, skipping #
-                    # gaps to prevent overriting with missing     #
-                    #---------------------------------------------#
-                    slices = []
-                    start = 0
-                    if dur_intvl :
-                        for i in range(1, len(time_series)) :
-                            interval = shared.get_datetime(time_series[i][0]) - shared.get_datetime(time_series[i-1][0])
-                            if interval > dur_intvl * 1.5 :
-                                slices.append(slice(start, i, 1))
-                                start = i
-                    slices.append(slice(start, len(time_series), 1))
-                    for i in range(len(slices)) :
-                        self.output(f"{self.time_series_name}\n\t{self.loading_info}\n")
-                        for tsv in time_series[slices[i]] :
-                            self.output(f"\t{list([tsv[0],tsv[1]])}\n")
-                    time_series_count = len(slices)
-                value_count = len(time_series)
-            else :
+        if self._shef_value and self._time_series :
+            sv = cast(shared.ShefValue, self._shef_value)
+            value_count = time_series_count = 0
+            if self._time_series :
                 if self._logger :
-                    self._logger.info(f"No values for [{self.time_series_name}]")
-        self._value_count += value_count
-        self._time_series_count += time_series_count
-        self._time_series = []
+                    self._logger.info(f"Outputting [{len(self._time_series)}] values to be stored to [{self.time_series_name}]")
+                time_series = []
+                for ts in self._time_series :
+                    if ts[1] is None or ts[1] == -9999. :
+                        if self._logger :
+                            self._logger.debug(f"Discarding missing value at [{ts[0]}] for [{self.time_series_name}]")
+                    else :
+                        time_series.append([ts[0], ts[1]])
+                if time_series :
+                    time_series.sort()
+                    load_individually = False
+                    dur_intvl = None
+                    if len(time_series) > 1 :
+                        dur_intvl = shared.duration_interval(sv.parameter_code)
+                        if dur_intvl :
+                            #---------------------------------------------------#
+                            # see if we the value times agree with the duration #
+                            #---------------------------------------------------#
+                            intervals = set()
+                            for i in range(1, len(time_series)) :
+                                intervals.add(shared.get_datetime(time_series[i][0]) - shared.get_datetime(time_series[i-1][0]))
+                            for intvl in sorted(intervals) :
+                                if intvl / dur_intvl != intvl // dur_intvl :
+                                    if dur_intvl == DSSVueLoader.month_interval and DSSVueLoader.month_tolerance[0] <= intvl <= DSSVueLoader.month_tolerance[1] :
+                                        pass
+                                    elif dur_intvl == DSSVueLoader.year_interval and DSSVueLoader.year_tolerance[0] <= intvl <= DSSVueLoader.year_tolerance[1] :
+                                        pass
+                                    else :
+                                        if self._logger :
+                                            self._logger.warning(
+                                                f"Data interval of [{str(intvl)}] does not agree with duration of [{str(dur_intvl)}]"
+                                                f"\n\ton [{self.time_series_name}]\n\tWill attempt to load [{len(self._time_series)}] values individually")
+                                        load_individually = True
+                    if load_individually :
+                        #------------------------------------------#
+                        # load values one at a time, some may fail #
+                        #------------------------------------------#
+                        for tsv in time_series :
+                            self.output(f"{self.time_series_name}\n\t{self.loading_info}\n")
+                            self.output(f"\t{list([tsv[0],tsv[1]])}\n")
+                        time_series_count = len(time_series)
+                    else :
+                        #---------------------------------------------#
+                        # load values in one or more chunks, skipping #
+                        # gaps to prevent overriting with missing     #
+                        #---------------------------------------------#
+                        slices = []
+                        start = 0
+                        if dur_intvl :
+                            for i in range(1, len(time_series)) :
+                                interval = shared.get_datetime(time_series[i][0]) - shared.get_datetime(time_series[i-1][0])
+                                if interval > dur_intvl * 1.5 :
+                                    slices.append(slice(start, i, 1))
+                                    start = i
+                        slices.append(slice(start, len(time_series), 1))
+                        for i in range(len(slices)) :
+                            self.output(f"{self.time_series_name}\n\t{self.loading_info}\n")
+                            for tsv in time_series[slices[i]] :
+                                self.output(f"\t{list([tsv[0],tsv[1]])}\n")
+                        time_series_count = len(slices)
+                    value_count = len(time_series)
+                else :
+                    if self._logger :
+                        self._logger.info(f"No values for [{self.time_series_name}]")
+            self._value_count += value_count
+            self._time_series_count += time_series_count
+            self._time_series = []
 
     def done(self) -> None :
         '''
@@ -801,13 +801,21 @@ class DSSVueLoader(base_loader.BaseLoader) :
             #-----------------------------#
             factor: float
             expected_pe_codes = ("VK", "VL", "VM", "VR")
-            duration = self._sensors[self.sensor]["duration"]
+            try :
+                duration = self._sensors[self.sensor]["duration"]
+            except KeyError :
+                duration = ""
             m = shared.VALUE_UNITS_PATTERN.match(duration)
             if not m :
                 if self._logger :
-                    self._logger.warning(
-                        f"Cannot use transform [{transform}] on duration [{duration}] for sensor [{self.sensor}]"
-                        f"\n\tUsing data value [{val}] as MWh")
+                    if duration :
+                        self._logger.warning(
+                            f"Cannot use transform [{transform}] on duration [{duration}] for sensor [{self.sensor}]"
+                            f"\n\tUsing data value [{val}] as MWh")
+                    else :
+                        self._logger.warning(
+                            f"Cannot use transform [{transform}] on missing duration for sensor [{self.sensor}]"
+                            f"\n\tUsing data value [{val}] as MWh")
                 factor = 1
             else :
                 duration_value = float(m.group(1))

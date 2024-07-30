@@ -68,7 +68,7 @@ SHEF_ENGLISH_UNITS : dict[str, str] = {
     "IT": "in",      "LA": "kac",     "LC": "kaf",     "LS": "kaf",     "MD": "code",    "MI": "in",      "ML": "in",
     "MM": "%",       "MN": "code",    "MS": "code",    "MT": "F",       "MU": "in",      "MV": "code",    "MW": "%",
     "NC": "code",    "NG": "ft",      "NL": "unit",    "NN": "unit",    "NO": "code",    "NS": "unit",    "PA": "in-hg",
-    "PC": "in",      "PD": "in-hg",   "PE": "code",    "PF": "in",      "PJ": "in",      "PL": "in-hg",   "PM": "code",
+    "PC": "in",      "PD": "in-hg",   "PE": "code",    "PF": "in",      "PJ": "in",      "PL": "mb",      "PM": "code",
     "PN": "in",      "PP": "in",      "PR": "in/day",  "PT": "code",    "PY": "in",      "QA": "kcfs",    "QB": "in",
     "QC": "kaf",     "QD": "kcfs",    "QE": "%",       "QF": "mph",     "QG": "kcfs",    "QI": "kcfs",    "QL": "kcfs",
     "QM": "kcfs",    "QN": "kcfs",    "QP": "kcfs",    "QR": "kcfs",    "QS": "kcfs",    "QT": "kcfs",    "QU": "kcfs",
@@ -111,6 +111,15 @@ FORMAT_1_PATTERN: re.Pattern = re.compile(
 #                                                  1      1        1                1
 #     7               8      9                     0      1        2                3
     r"([ 0-9.+-]{15}) ([A-Z])([ 0-9.+-]{9})  \d{4} ([01]) ([012])  ((?: |\w){8})  \"(.+)\"")
+
+def exc_info(e: Exception) -> str :
+    '''
+    Get exception info for logging
+    '''
+    info = f"{e.__class__.__name__}: {str(e)}"
+    if e.args and " ".join(e.args) != str(e):
+        info += f" args = {e.args}"
+    return info
 
 def make_shef_value(format_1_line: str) -> ShefValue :
     '''

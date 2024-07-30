@@ -118,6 +118,8 @@ See https://github.com/HydrologicEngineeringCenter/SHEF_processing/blob/master/s
 
 __all__ : list = []
 
+from . shared import LoaderException
+
 error_modules = []
 try    : from . import base_loader
 except : raise Exception("ERROR|Cannot import base_loader")
