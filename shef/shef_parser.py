@@ -127,7 +127,7 @@ if script_dir not in sys.path :
 #-----------------------------------------------------#
 available_loaders = {}
 try :
-    from . import loaders
+    from shef import loaders
 except Exception as e:
     msg = str(e)
     parts = msg.split("|", 1)

@@ -1,3 +1,3 @@
 __all__ : list = []
-from . import shef_parser
+from shef import shef_parser
 

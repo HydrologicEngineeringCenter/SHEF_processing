@@ -1,6 +1,6 @@
 import csv, os, re, traceback
-from .        import base_loader
-from .        import shared
+from loaders  import base_loader
+from loaders  import shared
 from datetime import timedelta
 from logging  import Logger
 from io       import BufferedRandom
