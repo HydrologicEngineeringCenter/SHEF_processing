@@ -194,7 +194,7 @@ class CdaLoader(base_loader.BaseLoader):
                     time = self.get_unix_timestamp(ts[0])
                     time_series.append(CdaValue(time, ts[1], 0))
                 post_data: TimeseriesPayload = {
-                    "name": self.get_time_series_name(sv) + "-sheftest",
+                    "name": self.get_time_series_name(sv),
                     "office-id": "LRL",
                     "units": self.transform.units,
                     "values": time_series,
