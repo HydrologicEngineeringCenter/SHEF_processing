@@ -17,8 +17,7 @@ from typing import (
     Union,
     cast,
 )
-from . import shared
-from . import base_loader
+from loaders import base_loader, shared
 import cwms # type: ignore
 
 
