@@ -70,8 +70,7 @@ class CdaLoader(base_loader.BaseLoader):
         Constructor
         """
         super().__init__(logger, output_object, append)
-        # self._cda_url = "https://cwms-data-test.cwbi.us/cwms-data/"
-        self._cda_url = "https://wm.lrl.ds.usace.army.mil:8243/lrl-data/"
+        self._cda_url = "https://cwms-data-test.cwbi.us/cwms-data/"
         self._parsed_payloads: list[TimeseriesPayload] = []
         self._payloads: list[TimeseriesPayload] = []
         self._time_series_error_count: int = 0
