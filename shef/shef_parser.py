@@ -2994,7 +2994,10 @@ class ShefParser :
                 elif interval_unit == 'Y' :
                     duration_code += 4000
                 try :
-                    duration_id = self._duration_ids[duration_code]
+                    if parameter_code[2] == "I":
+                        duration_id = "I"
+                    else:
+                        duration_id = self._duration_ids[duration_code]
                 except KeyError :
                     self.error(f"No valid duration code for time interval [{token}]")
                     return [] if self._reject_problematic else outrecs
