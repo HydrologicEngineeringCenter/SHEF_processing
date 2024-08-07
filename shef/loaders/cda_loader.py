@@ -18,7 +18,7 @@ from typing import (
     cast,
 )
 from loaders import base_loader, shared
-import cwms # type: ignore
+import cwms  # type: ignore
 
 
 class ShefTransform(NamedTuple):
@@ -70,8 +70,7 @@ class CdaLoader(base_loader.BaseLoader):
         Constructor
         """
         super().__init__(logger, output_object, append)
-        # self._cda_url = "https://cwms-data-test.cwbi.us/cwms-data/"
-        self._cda_url = "https://wm.lrl.ds.usace.army.mil:8243/lrl-data/"
+        self._cda_url = "https://cwms-data-test.cwbi.us/cwms-data/"
         self._parsed_payloads: list[TimeseriesPayload] = []
         self._payloads: list[TimeseriesPayload] = []
         self._time_series_error_count: int = 0
@@ -182,7 +181,7 @@ class CdaLoader(base_loader.BaseLoader):
         """
         Store SHEF values as CDA POST payloads grouped by time series ID
         """
-        if self._shef_value and self._time_series :
+        if self._shef_value and self._time_series:
             sv = cast(shared.ShefValue, self._shef_value)
             if self._logger:
                 self._logger.debug(f"ts_name: {self.get_time_series_name(sv)}")
@@ -194,7 +193,7 @@ class CdaLoader(base_loader.BaseLoader):
                     time = self.get_unix_timestamp(ts[0])
                     time_series.append(CdaValue(time, ts[1], 0))
                 post_data: TimeseriesPayload = {
-                    "name": self.get_time_series_name(sv) + "-sheftest",
+                    "name": self.get_time_series_name(sv),
                     "office-id": "LRL",
                     "units": self.transform.units,
                     "values": time_series,
@@ -231,7 +230,10 @@ class CdaLoader(base_loader.BaseLoader):
                 self._value_error_count += value_count
                 self._time_series_error_count += 1
                 if self._logger:
-                    self._logger.error(f"Failed to store {value_count} values in {tsid}", exc_info=result)
+                    self._logger.error(
+                        f"Failed to store {value_count} values in {tsid}",
+                        exc_info=result,
+                    )
             else:
                 self._value_count += value_count
                 self._time_series_count += 1
@@ -243,7 +245,9 @@ class CdaLoader(base_loader.BaseLoader):
                 f"CWMS-Data-API POST tasks complete ({process_time:.2f} seconds)"
             )
 
-    def find_matching_payload_index(self, payload: TimeseriesPayload) -> Union[int, None]:
+    def find_matching_payload_index(
+        self, payload: TimeseriesPayload
+    ) -> Union[int, None]:
         """
         Get index of matching payload for tsid, office, and units
         """
@@ -296,7 +300,9 @@ class CdaLoader(base_loader.BaseLoader):
 
             return group_values
 
-        def remove_duplicate_timestamps(tsid: str, values: list[CdaValue]) -> list[CdaValue]:
+        def remove_duplicate_timestamps(
+            tsid: str, values: list[CdaValue]
+        ) -> list[CdaValue]:
             """
             Return a list of CdaValues with no duplicate timestamps
             """
