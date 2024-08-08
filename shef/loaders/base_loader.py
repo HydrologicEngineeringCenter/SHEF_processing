@@ -96,13 +96,13 @@ class BaseLoader :
                 #-------------#
                 self._shef_value = shef_value
                 try:
-                    self.time_series_name
+                    self.time_series_name  # Test for valid time_series_name property
                     if self.use_value :
                         self._time_series.append([self.date_time, self.value, self.data_qualifier, self.forecast_date_time])
                 except (KeyError, shared.LoaderException) as e:
                     if self._logger:
                         self._logger.error(shared.exc_info(e))
-                    self._shef_value = None
+                    self._shef_value = None  # Reset _shef_value until valid value found
             else :
                 #-------------------#
                 # subsequent values #
