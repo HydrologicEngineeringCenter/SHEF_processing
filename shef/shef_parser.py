@@ -91,14 +91,20 @@ versions = '''
 |       |           |     |   * Can be called directly from other scripts                           |
 |       |           |     | Improved exception handling and logging                                 |
 +-------+-----------+-----+-------------------------------------------------------------------------+
+| 1.3.1 | 08Aug2024 | JBK | Two bug fixes:                                                          |
+|       |           |     | * Instantaneous SHEF values no longer parsed as averaged in .E files    |
+|       |           |     | * Error in first SHEF value time_series_name no longer causes errors    |
+|       |           |     |   for all following values.
++-------+-----------+-----+-------------------------------------------------------------------------+
 
 Authors:
     MDP  Mike Perryman, USACE IWR-HEC
+    JBK  Brandon Kolze, USACE LRL-WM
 '''
 
 progname     = Path(sys.argv[0]).stem
-version      = "1.3.0"
-version_date = "26Jul2024"
+version      = "1.3.1"
+version_date = "08Aug2024"
 logger       = logging.getLogger()
 
 def exc_info(e: Exception) -> str :
