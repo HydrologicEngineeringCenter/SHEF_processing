@@ -94,7 +94,9 @@ versions = '''
 | 1.3.1 | 08Aug2024 | JBK | Two bug fixes:                                                          |
 |       |           |     | * Instantaneous SHEF values no longer parsed as averaged in .E files    |
 |       |           |     | * Error in first SHEF value time_series_name no longer causes errors    |
-|       |           |     |   for all following values.
+|       |           |     |   for all following values.                                             |
++-------+-----------+-----+-------------------------------------------------------------------------+
+| 1.4.0 | 12Aug2024 | JBK | Add input_stream argument to parse() function                           |
 +-------+-----------+-----+-------------------------------------------------------------------------+
 
 Authors:
@@ -103,8 +105,8 @@ Authors:
 '''
 
 progname     = Path(sys.argv[0]).stem
-version      = "1.3.1"
-version_date = "08Aug2024"
+version      = "1.4.0"
+version_date = "12Aug2024"
 logger       = logging.getLogger()
 
 def exc_info(e: Exception) -> str :
@@ -1922,6 +1924,9 @@ class ShefParser :
         if isinstance(input_object, TextIOWrapper) :
             self._input = input_object
             self._input_name = input_object.name
+        elif isinstance(input_object, StringIO) :
+            self._input = input_object
+            self._input_name = "in-memory stream"
         elif isinstance(input_object, str) :
             self._input = open(input_object)
             self._input_name = input_object
@@ -3469,6 +3474,7 @@ class ShefParser :
         return outrecs
     
 def parse(
+        input_stream: Optional[StringIO] = None,
         input_name: Optional[str] = None,
         output_name: Optional[str] = None,
         output_format: int = 1,
@@ -3486,6 +3492,7 @@ def parse(
     '''
     Either parse incoming SHEF (optionally loading into a datastore) or unload from a datastore into SHEF text
 
+        input_stream        : An in-memory stream of SHEF data (StringIO). Overrides input_name
         input_name          : Name of input file (SHEF text for parsing, possibly intermediate data for unloading). Use None or "" for <stdin>
         output_name         : Name of output file (shefit -1 or shefit -2 for parsing or possibly intermediate data for loading). Use None or "" for <stdout>
         output_format       : 1 for shefit -1 or 2 for shefit -2 (not used with a loader)
@@ -3506,7 +3513,7 @@ def parse(
     #-------------------------------------------------------#
     # assign input and output streams if no filenames given #
     #-------------------------------------------------------#
-    input:  Union[TextIO, str] = sys.stdin  if not input_name  else input_name
+    input:  Union[TextIO, str, StringIO] = input_stream or input_name or sys.stdin
     output: Union[TextIO, str] = sys.stdout if not output_name else output_name
     log:    Union[TextIO, str] = sys.stderr if not log_name    else log_name
     #-----------------------------------------------------------------#
@@ -3548,7 +3555,7 @@ def parse(
     #------------------#
     # log startup info #
     #------------------#
-    infile_name = input if isinstance(input,  str) else input.name
+    infile_name = input if isinstance(input,  str) else input.name if isinstance(input, TextIO) else "in-memory stream"
     outfile_name = output if isinstance(output, str) else output.name
     if len(sys.argv) == 1 :
         logger.info("")
