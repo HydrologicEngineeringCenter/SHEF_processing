@@ -3,7 +3,6 @@ from shef.loaders import shared
 from datetime import timedelta
 from logging  import Logger
 from io       import BufferedRandom
-from io       import TextIOWrapper
 from typing   import cast
 from typing   import Optional
 from typing   import TextIO
@@ -29,16 +28,14 @@ class BaseLoader :
             self._output = None
             self._output_name = None
             self._output_opened = False
-        elif isinstance(output_object, (BufferedRandom, TextIOWrapper)) :
-            self._output = output_object
-            self._output_name = output_object.name
-            self._output_opened = False
         elif isinstance(output_object, str) :
             self._output = open(output_object, "a+b" if append else "w+b")
             self._output_name = output_object
             self._output_opened = True
         else :
-            raise shared.LoaderException(f"Unexpected object type for output device: [{output_object.__class__.__name__}]")
+            self._output = output_object
+            self._output_name = output_object.name
+            self._output_opened = False
         if self._logger :
             self._logger.info(f"{self.loader_name} v{self.loader_version} instatiated")
 
@@ -79,10 +76,13 @@ class BaseLoader :
         Write a string to the loader output device
         '''
         if self._output is not None :
-            if isinstance(self._output, TextIOWrapper) :
-                self._output.write(s)
-            elif isinstance(self._output, BufferedRandom) :
-                self._output.write(s.encode("utf-8"))
+            try:
+                if isinstance(self._output, BufferedRandom) :
+                    self._output.write(s.encode("utf-8"))
+                else :
+                    self._output.write(s)
+            except Exception as e:
+                raise shared.LoaderException(f"Unexpected output device type: {self._output.__class__.__name__}") from e
 
     def set_shef_value(self, value_str: str) -> None :
         '''
