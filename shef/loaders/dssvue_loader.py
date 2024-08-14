@@ -1,6 +1,6 @@
 import csv, os, re, traceback
-from loaders  import base_loader
-from loaders  import shared
+from shef.loaders  import base_loader
+from shef.loaders  import shared
 from datetime import timedelta
 from logging  import Logger
 from io       import BufferedRandom

@@ -17,7 +17,7 @@ from typing import (
     Union,
     cast,
 )
-from loaders import base_loader, shared
+from shef.loaders import base_loader, shared
 import cwms  # type: ignore
 
 
