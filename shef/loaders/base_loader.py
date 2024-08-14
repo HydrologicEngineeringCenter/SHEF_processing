@@ -1,5 +1,5 @@
 import re
-from loaders  import shared
+from shef.loaders import shared
 from datetime import timedelta
 from logging  import Logger
 from io       import BufferedRandom

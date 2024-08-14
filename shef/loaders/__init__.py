@@ -118,17 +118,17 @@ See https://github.com/HydrologicEngineeringCenter/SHEF_processing/blob/master/s
 
 __all__ : list = []
 
-from loaders.shared import LoaderException
+from shef.loaders.shared import LoaderException
 
 error_modules = []
-try    : from loaders import base_loader
+try    : from shef.loaders import base_loader
 except : raise Exception("ERROR|Cannot import base_loader")
 
-try    : from loaders import cda_loader
+try    : from shef.loaders import cda_loader
 except : error_modules.append("cda_loader")
 
-try    : from loaders import dssvue_loader
+try    : from shef.loaders import dssvue_loader
 except : error_modules.append("dssvue_loader")
 
-try    : from loaders import shefdss_util
+try    : from shef.loaders import shefdss_util
 except : error_modules.append("shefdss_util")
