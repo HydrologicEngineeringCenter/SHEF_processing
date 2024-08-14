@@ -98,6 +98,8 @@ versions = '''
 +-------+-----------+-----+-------------------------------------------------------------------------+
 | 1.4.0 | 12Aug2024 | JBK | Add input_stream argument to parse() function                           |
 +-------+-----------+-----+-------------------------------------------------------------------------+
+| 1.4.1 | 14Aug2024 | JBK | Support custom output objects that implement TextIO                     |
++-------+-----------+-----+-------------------------------------------------------------------------+
 
 Authors:
     MDP  Mike Perryman, USACE IWR-HEC
@@ -105,8 +107,8 @@ Authors:
 '''
 
 progname     = Path(sys.argv[0]).stem
-version      = "1.4.0"
-version_date = "12Aug2024"
+version      = "1.4.1"
+version_date = "14Aug2024"
 logger       = logging.getLogger()
 
 def exc_info(e: Exception) -> str :
