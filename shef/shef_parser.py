@@ -98,6 +98,8 @@ versions = '''
 +-------+-----------+-----+-------------------------------------------------------------------------+
 | 1.4.0 | 12Aug2024 | JBK | Add input_stream argument to parse() function                           |
 +-------+-----------+-----+-------------------------------------------------------------------------+
+| 1.4.1 | 14Aug2024 | JBK | Support custom output objects that implement TextIO                     |
++-------+-----------+-----+-------------------------------------------------------------------------+
 
 Authors:
     MDP  Mike Perryman, USACE IWR-HEC
@@ -105,8 +107,8 @@ Authors:
 '''
 
 progname     = Path(sys.argv[0]).stem
-version      = "1.4.0"
-version_date = "12Aug2024"
+version      = "1.4.1"
+version_date = "14Aug2024"
 logger       = logging.getLogger()
 
 def exc_info(e: Exception) -> str :
@@ -1957,14 +1959,13 @@ class ShefParser :
         '''
         if self._output :
             self.close_output()
-        if isinstance(output_object, (BufferedRandom, TextIOWrapper)) :
-            self._output = output_object
-            self._output_name = output_object.name
         elif isinstance(output_object, str) :
             self._output = open(output_object, "a+b" if append else "w+b")
             self._output_name = output_object
         else :
-            raise ShefParser.OutputException(f"Expected BufferedRandom or str object, got [{output_object.__class__.__name__}]")
+            # IO typing is wonky -- see https://github.com/python/typeshed/issues/6077
+            self._output = output_object  # type: ignore
+            self._output_name = output_object.name
         logger.debug(f"Data output set to {self._output_name}")
 
     def output(self, outrec : OutputRecord) -> None :
@@ -1975,12 +1976,13 @@ class ShefParser :
             if not self._output :
                 raise ShefParser.OutputException("Cannot output record; output is closed or never opened")
             outstr = f"{outrec.format(self._output_format)}\n"
-            if isinstance(self._output, TextIOWrapper) :
-                self._output.write(outstr)
-            elif isinstance(self._output, BufferedRandom) :
-                self._output.write(outstr.encode("utf-8"))
-            else :
-                raise ShefParser.OutputException(f"Unexpected output device type: {self._output.__class__.__name__}")
+            try:
+                if isinstance(self._output, BufferedRandom) :
+                    self._output.write(outstr.encode("utf-8"))
+                else :
+                    self._output.write(outstr)
+            except Exception as e:
+                raise ShefParser.OutputException(f"Unexpected output device type: {self._output.__class__.__name__}") from e
 
     def remove_comment_fields(self, line: str) -> str :
         '''
