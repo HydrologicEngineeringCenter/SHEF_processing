@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 from io import BufferedRandom
 from itertools import groupby
 from logging import Logger
-import os
 import re
 import time
 from typing import (
@@ -80,19 +79,20 @@ class CdaLoader(base_loader.BaseLoader):
 
     def set_options(self, options_str: Union[str, None]) -> None:
         """
-        Set the crit file name and CDA apiKey
+        Set the CDA apikey
         """
         if not options_str:
             raise shared.LoaderException(
                 f"Empty options on {self.loader_name}.set_options()"
             )
 
-        def make_shef_transform(crit: str) -> ShefTransform:
+        def make_shef_transform(crit: dict) -> ShefTransform:
             """
-            Create a ShefTransform object based on the provided criteria line
+            Create a ShefTransform object based on the provided SHEF time series group item
             """
-            base, *options = crit.split(";")
-            shef, timeseries_id = base.split("=")
+            time_series_id = crit["timeseries-id"]
+            shef, options_str = crit["alias-id"].split(":")
+            options = options_str.split(";")
             location, pe_code, type_code, duration_value = shef.split(".")
             duration_code = shared.DURATION_CODES[int(duration_value)]
             parameter_code = pe_code + duration_code + type_code
@@ -112,35 +112,33 @@ class CdaLoader(base_loader.BaseLoader):
                     if self._logger:
                         self._logger.warning("Unhandled option for {shef}: {option}")
             return ShefTransform(
-                location, parameter_code, timeseries_id, units, timezone, dl_time
+                location, parameter_code, time_series_id, units, timezone, dl_time
             )
 
         options = tuple(re.findall(r"\[(.*?)\]", options_str))
-        if len(options) == 2:
-            (critfile_name, cda_api_key) = options
+        if len(options) == 1:
+            cda_api_key = options[0]
         else:
             raise shared.LoaderException(
-                f"{self.loader_name} expected 2 options, got [{len(options)}]"
+                f"{self.loader_name} expected 1 option, got [{len(options)}]"
             )
-        if not os.path.exists(critfile_name) or not os.path.isfile(critfile_name):
-            raise shared.LoaderException(f"Crit file [{critfile_name}] does not exist")
 
+        cwms.init_session(api_root=self._cda_url, api_key=f"apikey {cda_api_key}")
+
+        shef_group = cwms.get_timeseries_group(
+            "SHEF Data Acquisition", "Data Acquisition", "CWMS"
+        ).json
         try:
-            with open(critfile_name) as f:
-                for line_number, line in enumerate(f):
-                    line = line.strip()
-                    if line == "" or line[0] == "#":
-                        continue
-                    transform = make_shef_transform(line)
-                    transform_key = f"{transform.location}.{transform.parameter_code}"
-                    self._transforms[transform_key] = transform
+            for time_series in shef_group["assigned-time-series"]:
+                transform = make_shef_transform(time_series)
+                transform_key = f"{transform.location}.{transform.parameter_code}"
+                self._transforms[transform_key] = transform
         except Exception as e:
             if self._logger:
                 self._logger.error(
-                    f"{str(e)} on line [{line_number}] in {critfile_name}"
+                    f"{str(e)} occurred while processing SHEF criteria for {time_series['timeseries-id']}"
                 )
                 raise
-        cwms.init_session(api_root=self._cda_url, api_key=f"apikey {cda_api_key}")
 
     @property
     def transform_key(self) -> str:
@@ -378,11 +376,10 @@ class CdaLoader(base_loader.BaseLoader):
 
 
 loader_options = (
-    "--loader cda[crit_file_path][cda_api_key]\n"
-    "crit_file_path = the name of the SHEF-crit criteria file\n"
-    "cda_api_key    = the api_key to use for CDA POST requests\n"
+    "--loader cda[cda_api_key]\n"
+    "cda_api_key = the api_key to use for CDA POST requests\n"
 )
-loader_description = "Used by CDA to import SHEF data using a criteria file.  Requires cwms-python v0.3.0 or greater."
-loader_version = "0.1.1"
+loader_description = "Used to import SHEF data through cwms-data-api.  Requires cwms-python v0.3.0 or greater."
+loader_version = "0.2"
 loader_class = CdaLoader
 can_unload = False
