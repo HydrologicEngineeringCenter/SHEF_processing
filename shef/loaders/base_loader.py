@@ -47,7 +47,7 @@ class BaseLoader :
         positional options (e.g., [key1=val2][key2=val2]) and the process into a dictionary
         '''
         if options_str :
-            options = tuple(re.findall("\[(.*?)\]", options_str))
+            options = tuple(re.findall(r"\[(.*?)\]", options_str))
             if self._logger :
                 self._logger.info(f"{self.loader_name} initialized with {str(options)}")
 

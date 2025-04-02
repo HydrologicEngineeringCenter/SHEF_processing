@@ -115,7 +115,7 @@ class CdaLoader(base_loader.BaseLoader):
                 location, parameter_code, timeseries_id, units, timezone, dl_time
             )
 
-        options = tuple(re.findall("\[(.*?)\]", options_str))
+        options = tuple(re.findall(r"\[(.*?)\]", options_str))
         if len(options) == 2:
             (critfile_name, cda_api_key) = options
         else:
