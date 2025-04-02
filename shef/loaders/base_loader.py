@@ -267,6 +267,6 @@ class BaseLoader :
 
 loader_options = "--loader dummy"
 loader_description = "Base class for other SHEF data loaders. Writes SHEF information to output"
-loader_version = "1.1"
+loader_version = "1.1.1"
 loader_class = BaseLoader
 can_unload = False
