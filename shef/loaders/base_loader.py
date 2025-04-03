@@ -47,7 +47,7 @@ class BaseLoader :
         positional options (e.g., [key1=val2][key2=val2]) and the process into a dictionary
         '''
         if options_str :
-            options = tuple(re.findall("\[(.*?)\]", options_str))
+            options = tuple(re.findall(r"\[(.*?)\]", options_str))
             if self._logger :
                 self._logger.info(f"{self.loader_name} initialized with {str(options)}")
 
@@ -267,6 +267,6 @@ class BaseLoader :
 
 loader_options = "--loader dummy"
 loader_description = "Base class for other SHEF data loaders. Writes SHEF information to output"
-loader_version = "1.1"
+loader_version = "1.1.1"
 loader_class = BaseLoader
 can_unload = False

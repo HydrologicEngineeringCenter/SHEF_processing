@@ -115,7 +115,7 @@ class CdaLoader(base_loader.BaseLoader):
                 location, parameter_code, timeseries_id, units, timezone, dl_time
             )
 
-        options = tuple(re.findall("\[(.*?)\]", options_str))
+        options = tuple(re.findall(r"\[(.*?)\]", options_str))
         if len(options) == 2:
             (critfile_name, cda_api_key) = options
         else:
@@ -383,6 +383,6 @@ loader_options = (
     "cda_api_key    = the api_key to use for CDA POST requests\n"
 )
 loader_description = "Used by CDA to import SHEF data using a criteria file.  Requires cwms-python v0.3.0 or greater."
-loader_version = "0.1"
+loader_version = "0.1.1"
 loader_class = CdaLoader
 can_unload = False

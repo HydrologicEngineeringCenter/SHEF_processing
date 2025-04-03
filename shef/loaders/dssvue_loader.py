@@ -33,7 +33,7 @@ class DSSVueLoader(base_loader.BaseLoader) :
     pathname_line_pattern = re.compile(r"^/(.*?)/(.+?)/(.+?)/(.*?)/(.+?)/(.*?)/$")
     load_info_line_pattern = re.compile(r"^\s+(\{.+?\})$")
     time_value_line_pattern = re.compile(r"^\s+\['(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})', ([+-]?\d*(\.(\d*))?)\]$")
-    forecast_time_pattern = re.compile("T:(\d{8})-(\d{4})\|")
+    forecast_time_pattern = re.compile(r"T:(\d{8})-(\d{4})\|")
 
     def __init__(self, logger: Optional[Logger], output_object: Optional[Union[BufferedRandom, TextIO, str]] = None, append: bool = False) -> None :
         '''
@@ -106,7 +106,7 @@ class DSSVueLoader(base_loader.BaseLoader) :
                 "type"      : data_type.strip(),
                 "transform" : transform.strip()}
 
-        options = tuple(re.findall("\[(.*?)\]", options_str))
+        options = tuple(re.findall(r"\[(.*?)\]", options_str))
         if len(options) == 2 :
             sensorfile_name, parameterfile_name = options
         else :
@@ -851,6 +851,6 @@ loader_options     = "--loader dssvue[sensor_file_path][parameter_file_path]\n" 
                      "parameter_file_path = the name of the ShefDss-style parameter file to use \n"
 loader_description = "Used by HEC-DSSVue to import/export SHEF data. Uses ShefDss-style configuration.\n" \
                      "As of v1.2 .csv sensor and parameter files can be used to handle long pathname parts."
-loader_version     = "1.4"
+loader_version     = "1.4.1"
 loader_class       = DSSVueLoader
 can_unload         = True
