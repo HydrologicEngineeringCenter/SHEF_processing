@@ -127,7 +127,11 @@ class CdaLoader(base_loader.BaseLoader):
         cwms.init_session(api_root=self._cda_url, api_key=f"apikey {cda_api_key}")
 
         shef_group = cwms.get_timeseries_group(
-            "SHEF Data Acquisition", "Data Acquisition", "CWMS"
+            office_id="LRL",
+            group_office_id="CWMS",
+            category_office_id="CWMS",
+            group_id="SHEF Data Acquisition",
+            category_id="Data Acquisition",
         ).json
         try:
             for time_series in shef_group["assigned-time-series"]:
@@ -383,7 +387,7 @@ loader_options = (
     "--loader cda[cda_api_key]\n"
     "cda_api_key = the api_key to use for CDA POST requests\n"
 )
-loader_description = "Used to import SHEF data through cwms-data-api.  Requires cwms-python v0.3.0 or greater."
+loader_description = "Used to import SHEF data through cwms-data-api.  Requires cwms-python v0.6.0 or greater."
 loader_version = "0.2"
 loader_class = CdaLoader
 can_unload = False
