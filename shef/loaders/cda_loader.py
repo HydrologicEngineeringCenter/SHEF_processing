@@ -71,6 +71,7 @@ class CdaLoader(base_loader.BaseLoader):
         """
         super().__init__(logger, output_object, append)
         self._cda_url = "https://cwms-data-test.cwbi.us/cwms-data/"
+        self._office_code: str = ""
         self._parsed_payloads: list[TimeseriesPayload] = []
         self._payloads: list[TimeseriesPayload] = []
         self._time_series_error_count: int = 0
@@ -80,7 +81,7 @@ class CdaLoader(base_loader.BaseLoader):
 
     def set_options(self, options_str: Union[str, None]) -> None:
         """
-        Set the CDA apikey
+        Set the office code and CDA apikey
         """
         if not options_str:
             raise shared.LoaderException(
@@ -117,17 +118,18 @@ class CdaLoader(base_loader.BaseLoader):
             )
 
         options = tuple(re.findall(r"\[(.*?)\]", options_str))
-        if len(options) == 1:
-            cda_api_key = options[0]
+        if len(options) == 2:
+            self._office_code = options[0]
+            cda_api_key = options[1]
         else:
             raise shared.LoaderException(
-                f"{self.loader_name} expected 1 option, got [{len(options)}]"
+                f"{self.loader_name} expected 2 options, got [{len(options)}]"
             )
 
         cwms.init_session(api_root=self._cda_url, api_key=f"apikey {cda_api_key}")
 
         shef_group = cwms.get_timeseries_group(
-            office_id="LRL",
+            office_id=self._office_code,
             group_office_id="CWMS",
             category_office_id="CWMS",
             group_id="SHEF Data Acquisition",
@@ -197,7 +199,7 @@ class CdaLoader(base_loader.BaseLoader):
                     time_series.append(CdaValue(time, ts[1], 0))
                 post_data: TimeseriesPayload = {
                     "name": self.get_time_series_name(sv),
-                    "office-id": "LRL",
+                    "office-id": self._office_code,
                     "units": self.transform.units,
                     "values": time_series,
                 }
@@ -384,7 +386,8 @@ class CdaLoader(base_loader.BaseLoader):
 
 
 loader_options = (
-    "--loader cda[cda_api_key]\n"
+    "--loader cda[office_code][cda_api_key]\n"
+    "office_code = the 3-letter code of the office owning the time series data\n"
     "cda_api_key = the api_key to use for CDA POST requests\n"
 )
 loader_description = "Used to import SHEF data through cwms-data-api.  Requires cwms-python v0.6.0 or greater."
