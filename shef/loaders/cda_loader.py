@@ -6,6 +6,7 @@ from logging import Logger
 import re
 import time
 from typing import (
+    Any,
     Callable,
     Coroutine,
     NamedTuple,
@@ -208,8 +209,11 @@ class CdaLoader(base_loader.BaseLoader):
         """
         Create an async CDA POST request coroutine for provided post_data
         """
+        post_data_dict = cast(dict[str, Any], post_data)
         return asyncio.to_thread(
-            cwms.store_timeseries, data=post_data, store_rule="REPLACE WITH NON MISSING"
+            cwms.store_timeseries,
+            data=post_data_dict,
+            store_rule="REPLACE WITH NON MISSING",
         )
 
     async def process_write_tasks(self) -> None:
