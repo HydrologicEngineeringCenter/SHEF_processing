@@ -54,6 +54,8 @@ CWMS_INTERVAL_SECONDS: dict[str, int] = {
     "Days": 86400,
 }
 
+MAX_CONNECTIONS = 10
+
 
 class CdaLoader(base_loader.BaseLoader):
     """
@@ -217,11 +219,16 @@ class CdaLoader(base_loader.BaseLoader):
         Create an async CDA POST request coroutine for provided post_data
         """
         post_data_dict = cast(dict[str, Any], post_data)
-        return asyncio.to_thread(
-            cwms.store_timeseries,
-            data=post_data_dict,
-            store_rule="REPLACE WITH NON MISSING",
-        )
+
+        async def limited_task():
+            async with self._semaphore:
+                return await asyncio.to_thread(
+                    cwms.store_timeseries,
+                    data=post_data_dict,
+                    store_rule="REPLACE WITH NON MISSING",
+                )
+
+        return limited_task()
 
     async def process_write_tasks(self) -> None:
         """
@@ -350,13 +357,17 @@ class CdaLoader(base_loader.BaseLoader):
                 task = self.create_write_task(this_payload)
                 self._write_tasks.append(task)
 
+    async def store_cda_data(self):
+        self._semaphore = asyncio.Semaphore(MAX_CONNECTIONS)
+        self.parse_payload_tasks()
+        await self.process_write_tasks()
+
     def done(self) -> None:
         """
         Submit all collected CDA POST requests
         """
         super().done()
-        self.parse_payload_tasks()
-        asyncio.run(self.process_write_tasks())
+        asyncio.run(self.store_cda_data())
         if self._logger:
             self._logger.info(
                 "--[Summary]-----------------------------------------------------------"
