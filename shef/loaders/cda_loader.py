@@ -128,13 +128,12 @@ class CdaLoader(base_loader.BaseLoader):
             )
 
         options = tuple(re.findall(r"\[(.*?)\]", options_str))
-        if len(options) == 3:
-            self._office_code = options[0]
-            self._cda_url = options[1]
-            cda_api_key = options[2]
+        if len(options) == 2:
+            self._cda_url = options[0]
+            cda_api_key = options[1]
         else:
             raise shared.LoaderException(
-                f"{self.loader_name} expected 3 options, got [{len(options)}]"
+                f"{self.loader_name} expected 2 options, got [{len(options)}]"
             )
 
         cwms.init_session(api_root=self._cda_url, api_key=f"apikey {cda_api_key}")
@@ -405,8 +404,7 @@ class CdaLoader(base_loader.BaseLoader):
 
 
 loader_options = (
-    "--loader cda[office_code][cda_api_key]\n"
-    "office_code = the 3-letter code of the office owning the time series data\n"
+    "--loader cda[cda_url][cda_api_key]\n"
     "cda_url     = the url of the CDA instance to be used, e.g. https://cwms-data.usace.army.mil/cwms-data/\n"
     "cda_api_key = the api_key to use for CDA POST requests\n"
 )
