@@ -409,6 +409,6 @@ loader_options = (
     "cda_api_key = the api_key to use for CDA POST requests\n"
 )
 loader_description = "Used to import SHEF data through cwms-data-api.  Requires cwms-python v0.6.0 or greater."
-loader_version = "0.2"
+loader_version = "0.3"
 loader_class = CdaLoader
 can_unload = False
