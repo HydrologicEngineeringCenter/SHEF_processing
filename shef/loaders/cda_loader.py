@@ -22,6 +22,7 @@ import cwms  # type: ignore
 
 
 class ShefTransform(NamedTuple):
+    office: str
     location: str
     parameter_code: str
     timeseries_id: str
@@ -94,6 +95,7 @@ class CdaLoader(base_loader.BaseLoader):
             """
             Create a ShefTransform object based on the provided SHEF time series group item
             """
+            office = crit["office-id"]
             time_series_id = crit["timeseries-id"]
             shef, options_str = crit["alias-id"].split(":")
             options = options_str.split(";")
@@ -116,7 +118,13 @@ class CdaLoader(base_loader.BaseLoader):
                     if self._logger:
                         self._logger.warning("Unhandled option for {shef}: {option}")
             return ShefTransform(
-                location, parameter_code, time_series_id, units, timezone, dl_time
+                office,
+                location,
+                parameter_code,
+                time_series_id,
+                units,
+                timezone,
+                dl_time,
             )
 
         options = tuple(re.findall(r"\[(.*?)\]", options_str))
@@ -132,7 +140,6 @@ class CdaLoader(base_loader.BaseLoader):
         cwms.init_session(api_root=self._cda_url, api_key=f"apikey {cda_api_key}")
 
         shef_group = cwms.get_timeseries_group(
-            office_id=self._office_code,
             group_office_id="CWMS",
             category_office_id="CWMS",
             group_id="SHEF Data Acquisition",
@@ -202,7 +209,7 @@ class CdaLoader(base_loader.BaseLoader):
                     time_series.append(CdaValue(time, ts[1], 0))
                 post_data: TimeseriesPayload = {
                     "name": self.get_time_series_name(sv),
-                    "office-id": self._office_code,
+                    "office-id": self.transform.office,
                     "units": self.transform.units,
                     "values": time_series,
                 }
