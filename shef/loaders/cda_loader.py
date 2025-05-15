@@ -217,7 +217,7 @@ class CdaLoader(base_loader.BaseLoader):
                     self._payloads.append(post_data)
                 else:
                     match_payload = self._payloads[match_index]
-                    match_payload["values"].append(*time_series)
+                    match_payload["values"].extend(time_series)
             self._time_series = []
 
     def create_write_task(self, post_data: TimeseriesPayload) -> Coroutine:
