@@ -1,7 +1,8 @@
 import asyncio
 from datetime import datetime, timezone
-from io import BufferedRandom
+from io import BufferedRandom, TextIOWrapper
 from itertools import groupby
+import json
 from logging import Logger
 import re
 import time
@@ -35,6 +36,11 @@ class CdaValue(NamedTuple):
     timestamp: int
     value: float
     quality: int
+
+
+class TimeSeriesResponse(TypedDict):
+    name: str
+    values: list[CdaValue]
 
 
 TimeseriesPayload = TypedDict(
@@ -74,6 +80,7 @@ class CdaLoader(base_loader.BaseLoader):
         """
         super().__init__(logger, output_object, append)
         self._cda_url: str = ""
+        self._input: Optional[Union[BufferedRandom, TextIOWrapper]] = None
         self._office_code: str = ""
         self._parsed_payloads: list[TimeseriesPayload] = []
         self._payloads: list[TimeseriesPayload] = []
@@ -190,6 +197,10 @@ class CdaLoader(base_loader.BaseLoader):
             tzinfo=timezone.utc
         )
         return int(dt.timestamp() * 1000)
+
+    @staticmethod
+    def get_python_datetime(unix_time: int) -> datetime:
+        return datetime.fromtimestamp(unix_time / 1000, tz=timezone.utc)
 
     def load_time_series(self) -> None:
         """
@@ -385,6 +396,97 @@ class CdaLoader(base_loader.BaseLoader):
                 self._logger.info(
                     f"Errors occurred for {self._value_error_count} values in {self._time_series_error_count} time series"
                 )
+
+    def set_input(self, input_object: Union[TextIO, str]) -> None:
+        """
+        Attach the message unload input stream
+        """
+        if self._input:
+            raise shared.LoaderException("Input has already been set")
+        if isinstance(input_object, TextIOWrapper):
+            self._input = input_object
+        elif isinstance(input_object, str):
+            self._input = open(input_object)
+        else:
+            raise shared.LoaderException(
+                f"Expected TextIOWrapper or str object, got [{input_object.__class__.__name__}]"
+            )
+
+    def unload(self) -> None:
+        """
+        Read a list of CDA time series response objects in JSON format and output SHEF
+        """
+        if not self._input:
+            raise shared.LoaderException(
+                "No input file specified before calling unload() method"
+            )
+        if self._logger:
+            self._logger.info(
+                f"Generating SHEF text from CDA Time Series responses via file [{self._input.name}]"
+            )
+
+        # -------------------------------------------#
+        # read the input stream and output SHEF text #
+        # -------------------------------------------#
+        input_data = self._input.read()
+        input_json = json.loads(input_data)
+        cda_data = cast(list[TimeSeriesResponse], input_json)
+        for ts_response in cda_data:
+            values = ts_response["values"]
+            intervals = self.get_timestamp_differences(values)
+            if len(values) == 1 or len(intervals) > 1:
+                # ---------------------------------#
+                # process time series as .A format #
+                # ---------------------------------#
+                self.output_time_series_as_shef_a(ts_response)
+            else:
+                # ---------------------------------#
+                # process time series as .E format #
+                # ---------------------------------#
+                # TODO: replace with .E format output method
+                self.output_time_series_as_shef_a(ts_response)
+
+    def output_time_series_as_shef_a(self, time_series: TimeSeriesResponse):
+        """
+        Output all time series values in SHEF .A format
+        """
+        transform = self.get_transform_for_tsid(time_series["name"])
+        if not transform:
+            if self._logger:
+                self._logger.warning(
+                    f"No transform found for {time_series['name']} -- skipping..."
+                )
+            return
+        for value in time_series["values"]:
+            timestamp = self.get_python_datetime(value[0])
+            date_str = timestamp.strftime("%Y%m%d")
+            time_str = timestamp.strftime("%H%M%S")
+            message = [".A"]
+            message.append(transform.location)
+            message.append(date_str)
+            message.append("Z")
+            message.append("DH" + time_str + "/" + transform.parameter_code)
+            message.append("%.10g\n" % value[1])
+            self.output(" ".join(message))
+
+    def get_transform_for_tsid(self, tsid: str):
+        """
+        Return the ShefTransform for a given time series id (or None)
+        """
+        matching_transforms = [
+            x for x in self._transforms.values() if x.timeseries_id == tsid
+        ]
+        return matching_transforms[0] if matching_transforms else None
+
+    @staticmethod
+    def get_timestamp_differences(values: list[CdaValue]) -> set[int]:
+        """
+        For a list of time series values, return all unique timestamp deltas
+        """
+        diff = []
+        for i in range(1, len(values)):
+            diff.append(values[i][0] - values[i - 1][0])
+        return set(diff)
 
     @property
     def loader_version(self) -> str:
