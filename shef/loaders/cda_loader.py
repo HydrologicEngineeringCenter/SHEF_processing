@@ -21,6 +21,11 @@ from typing import (
 from shef.loaders import base_loader, shared
 import cwms  # type: ignore
 
+MS_DAY = 86400 * 1000
+MS_HOUR = 3600 * 1000
+MS_MINUTE = 60 * 1000
+MS_SECOND = 1 * 1000
+
 
 class ShefTransform(NamedTuple):
     office: str
@@ -59,6 +64,13 @@ CWMS_INTERVAL_SECONDS: dict[str, int] = {
     "Hours": 3600,
     "Day": 86400,
     "Days": 86400,
+}
+
+SHEF_INTERVAL_MS: dict[str, int] = {
+    "DID": 86400 * 1000,
+    "DIH": 3600 * 1000,
+    "DIN": 60 * 1000,
+    "DIS": 1 * 1000,
 }
 
 MAX_CONNECTIONS = 10
@@ -432,23 +444,17 @@ class CdaLoader(base_loader.BaseLoader):
         input_json = json.loads(input_data)
         cda_data = cast(list[TimeSeriesResponse], input_json)
         for ts_response in cda_data:
-            values = ts_response["values"]
-            intervals = self.get_timestamp_differences(values)
-            if len(values) == 1 or len(intervals) > 1:
-                # ---------------------------------#
-                # process time series as .A format #
-                # ---------------------------------#
-                self.output_time_series_as_shef_a(ts_response)
-            else:
-                # ---------------------------------#
-                # process time series as .E format #
-                # ---------------------------------#
-                # TODO: replace with .E format output method
-                self.output_time_series_as_shef_a(ts_response)
+            self.output_time_series_as_shef(ts_response)
 
-    def output_time_series_as_shef_a(self, time_series: TimeSeriesResponse):
+        if self._input.name != "<stdin>":
+            self._input.close()
+
+    def output_time_series_as_shef(self, time_series: TimeSeriesResponse):
         """
-        Output all time series values in SHEF .A format
+        Output all time series values in SHEF format
+
+        Uses .E format if the time series has multiple values with a consistent
+        interval. Otherwise uses .A format.
         """
         transform = self.get_transform_for_tsid(time_series["name"])
         if not transform:
@@ -457,6 +463,21 @@ class CdaLoader(base_loader.BaseLoader):
                     f"No transform found for {time_series['name']} -- skipping..."
                 )
             return
+        values = time_series["values"]
+        intervals = self.get_timestamp_differences(values)
+        if len(values) == 1 or len(intervals) > 1:
+            shef_messages = self.build_shef_a_from_time_series(time_series, transform)
+        else:
+            shef_messages = self.build_shef_e_from_time_series(time_series, transform)
+        self.output(shef_messages + "\n")
+
+    def build_shef_a_from_time_series(
+        self, time_series: TimeSeriesResponse, transform: ShefTransform
+    ):
+        """
+        Return a SHEF .A string for a time series
+        """
+        shef_lines = []
         for value in time_series["values"]:
             timestamp = self.get_python_datetime(value[0])
             date_str = timestamp.strftime("%Y%m%d")
@@ -467,7 +488,58 @@ class CdaLoader(base_loader.BaseLoader):
             message.append("Z")
             message.append("DH" + time_str + "/" + transform.parameter_code)
             message.append("%.10g\n" % value[1])
-            self.output(" ".join(message))
+            shef_lines.append(" ".join(message))
+        return "".join(shef_lines)
+
+    def build_shef_e_from_time_series(
+        self, time_series: TimeSeriesResponse, transform: ShefTransform
+    ):
+        """
+        Return a SHEF .E string for a time series
+        """
+        max_message_len = 132
+        shef_lines: list[str] = []
+        interval_ms = self.get_timestamp_differences(time_series["values"]).pop()
+        interval_str = self.get_shef_interval_from_ms(interval_ms)
+        timestamp = self.get_python_datetime(time_series["values"][0][0])
+        date_str = timestamp.strftime("%Y%m%d")
+        time_str = timestamp.strftime("%H%M%S")
+        header = [".E"]
+        header.append(transform.location)
+        header.append(date_str)
+        header.append("Z")
+        header.append(f"DH{time_str}/{transform.parameter_code}/{interval_str}")
+        shef_lines.append(" ".join(header))
+
+        line_num = 1
+        line = self.start_continuation_line("E", line_num)
+        for value in time_series["values"]:
+            value_str = f"{value[1]:.6g}/"
+            if len(line + value_str) > max_message_len:
+                shef_lines.append(line)
+                line_num += 1
+                line = self.start_continuation_line("E", line_num)
+            line += value_str
+        shef_lines.append(line)
+
+        return "\n".join(shef_lines) + "\n"
+
+    @staticmethod
+    def start_continuation_line(format: str, number: int):
+        """
+        Return the beginning of a SHEF continuation line, e.g. ".E1 "
+        """
+        return f".{format}{number:.3g} "
+
+    @staticmethod
+    def get_shef_interval_from_ms(time_series_ms: int):
+        """
+        Return SHEF interval code (e.g. DIH01) for an interval in ms
+        """
+        for interval_code, interval_ms in SHEF_INTERVAL_MS.items():
+            if time_series_ms % interval_ms == 0:
+                num_units = time_series_ms / interval_ms
+                return f"{interval_code}{int(num_units):02}"
 
     def get_transform_for_tsid(self, tsid: str):
         """
