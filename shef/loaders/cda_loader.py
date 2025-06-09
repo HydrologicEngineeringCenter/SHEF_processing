@@ -93,6 +93,7 @@ class CdaLoader(base_loader.BaseLoader):
         super().__init__(logger, output_object, append)
         self._cda_url: str = ""
         self._input: Optional[Union[BufferedRandom, TextIOWrapper]] = None
+        self._message_count: int = 0
         self._office_code: str = ""
         self._parsed_payloads: list[TimeseriesPayload] = []
         self._payloads: list[TimeseriesPayload] = []
@@ -457,6 +458,14 @@ class CdaLoader(base_loader.BaseLoader):
         if self._input.name != "<stdin>":
             self._input.close()
 
+        if self._logger:
+            self._logger.info(
+                "--[Summary]-----------------------------------------------------------"
+            )
+            self._logger.info(
+                f"{self._value_count} values output in {self._message_count} messages from {self._time_series_count} time series"
+            )
+
     def output_time_series_as_shef(self, time_series: TimeSeriesResponse):
         """
         Output all time series values in SHEF format
@@ -484,6 +493,7 @@ class CdaLoader(base_loader.BaseLoader):
             shef_messages = self.build_shef_a_from_time_series(time_series, transform)
         else:
             shef_messages = self.build_shef_e_from_time_series(time_series, transform)
+        self._time_series_count += 1
         self.output(shef_messages + "\n")
 
     def build_shef_a_from_time_series(
@@ -504,6 +514,8 @@ class CdaLoader(base_loader.BaseLoader):
             message.append("DH" + time_str + "/" + transform.parameter_code)
             message.append("%.10g\n" % value[1])
             shef_lines.append(" ".join(message))
+            self._value_count += 1
+            self._message_count += 1
         return "".join(shef_lines)
 
     def build_shef_e_from_time_series(
@@ -535,8 +547,10 @@ class CdaLoader(base_loader.BaseLoader):
                 line_num += 1
                 line = self.start_continuation_line("E", line_num)
             line += value_str
+            self._value_count += 1
         shef_lines.append(line)
 
+        self._message_count += 1
         return "\n".join(shef_lines) + "\n"
 
     @staticmethod
