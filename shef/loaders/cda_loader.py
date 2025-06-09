@@ -441,7 +441,15 @@ class CdaLoader(base_loader.BaseLoader):
         # read the input stream and output SHEF text #
         # -------------------------------------------#
         input_data = self._input.read()
-        input_json = json.loads(input_data)
+        try:
+            input_json = json.loads(input_data)
+        except json.JSONDecodeError as e:
+            if self._logger:
+                self._logger.error(
+                    "Error encountered while parsing CDA Time Series response JSON object:"
+                )
+                raise e
+
         cda_data = cast(list[TimeSeriesResponse], input_json)
         for ts_response in cda_data:
             self.output_time_series_as_shef(ts_response)
