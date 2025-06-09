@@ -590,7 +590,11 @@ loader_options = (
     "cda_url     = the url of the CDA instance to be used, e.g. https://cwms-data.usace.army.mil/cwms-data/\n"
     "cda_api_key = the api_key to use for CDA POST requests\n"
 )
-loader_description = "Used to import SHEF data through cwms-data-api.  Requires cwms-python v0.6.3 or greater."
-loader_version = "0.3.1"
+loader_description = (
+    "Used to import and export SHEF data through cwms-data-api.\n"
+    "For unloading, input a list of CDA /timeseries responses.\n"
+    "Requires cwms-python v0.6.3 or greater."
+)
+loader_version = "0.4"
 loader_class = CdaLoader
-can_unload = False
+can_unload = True
