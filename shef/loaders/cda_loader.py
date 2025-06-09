@@ -464,7 +464,14 @@ class CdaLoader(base_loader.BaseLoader):
         Uses .E format if the time series has multiple values with a consistent
         interval. Otherwise uses .A format.
         """
-        transform = self.get_transform_for_tsid(time_series["name"])
+        try:
+            transform = self.get_transform_for_tsid(time_series["name"])
+        except TypeError as e:
+            if self._logger:
+                self._logger.error(
+                    "Input must be a list of CDA Time Series response objects"
+                )
+            raise e
         if not transform:
             if self._logger:
                 self._logger.warning(
