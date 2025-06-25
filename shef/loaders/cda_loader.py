@@ -22,6 +22,7 @@ import cwms  # type: ignore
 
 
 class ShefTransform(NamedTuple):
+    office: str
     location: str
     parameter_code: str
     timeseries_id: str
@@ -94,6 +95,7 @@ class CdaLoader(base_loader.BaseLoader):
             """
             Create a ShefTransform object based on the provided SHEF time series group item
             """
+            office = crit["office-id"]
             time_series_id = crit["timeseries-id"]
             shef, options_str = crit["alias-id"].split(":")
             options = options_str.split(";")
@@ -116,23 +118,27 @@ class CdaLoader(base_loader.BaseLoader):
                     if self._logger:
                         self._logger.warning("Unhandled option for {shef}: {option}")
             return ShefTransform(
-                location, parameter_code, time_series_id, units, timezone, dl_time
+                office,
+                location,
+                parameter_code,
+                time_series_id,
+                units,
+                timezone,
+                dl_time,
             )
 
         options = tuple(re.findall(r"\[(.*?)\]", options_str))
-        if len(options) == 3:
-            self._office_code = options[0]
-            self._cda_url = options[1]
-            cda_api_key = options[2]
+        if len(options) == 2:
+            self._cda_url = options[0]
+            cda_api_key = options[1]
         else:
             raise shared.LoaderException(
-                f"{self.loader_name} expected 3 options, got [{len(options)}]"
+                f"{self.loader_name} expected 2 options, got [{len(options)}]"
             )
 
         cwms.init_session(api_root=self._cda_url, api_key=f"apikey {cda_api_key}")
 
         shef_group = cwms.get_timeseries_group(
-            office_id=self._office_code,
             group_office_id="CWMS",
             category_office_id="CWMS",
             group_id="SHEF Data Acquisition",
@@ -202,7 +208,7 @@ class CdaLoader(base_loader.BaseLoader):
                     time_series.append(CdaValue(time, ts[1], 0))
                 post_data: TimeseriesPayload = {
                     "name": self.get_time_series_name(sv),
-                    "office-id": self._office_code,
+                    "office-id": self.transform.office,
                     "units": self.transform.units,
                     "values": time_series,
                 }
@@ -211,7 +217,7 @@ class CdaLoader(base_loader.BaseLoader):
                     self._payloads.append(post_data)
                 else:
                     match_payload = self._payloads[match_index]
-                    match_payload["values"].append(*time_series)
+                    match_payload["values"].extend(time_series)
             self._time_series = []
 
     def create_write_task(self, post_data: TimeseriesPayload) -> Coroutine:
@@ -398,12 +404,11 @@ class CdaLoader(base_loader.BaseLoader):
 
 
 loader_options = (
-    "--loader cda[office_code][cda_api_key]\n"
-    "office_code = the 3-letter code of the office owning the time series data\n"
+    "--loader cda[cda_url][cda_api_key]\n"
     "cda_url     = the url of the CDA instance to be used, e.g. https://cwms-data.usace.army.mil/cwms-data/\n"
     "cda_api_key = the api_key to use for CDA POST requests\n"
 )
-loader_description = "Used to import SHEF data through cwms-data-api.  Requires cwms-python v0.6.0 or greater."
-loader_version = "0.2"
+loader_description = "Used to import SHEF data through cwms-data-api.  Requires cwms-python v0.6.3 or greater."
+loader_version = "0.3.1"
 loader_class = CdaLoader
 can_unload = False
