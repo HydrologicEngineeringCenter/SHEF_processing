@@ -1,7 +1,8 @@
 import asyncio
 from datetime import datetime, timezone
-from io import BufferedRandom
+from io import BufferedRandom, TextIOWrapper
 from itertools import groupby
+import json
 from logging import Logger
 import re
 import time
@@ -20,6 +21,11 @@ from typing import (
 from shef.loaders import base_loader, shared
 import cwms  # type: ignore
 
+MS_DAY = 86400 * 1000
+MS_HOUR = 3600 * 1000
+MS_MINUTE = 60 * 1000
+MS_SECOND = 1 * 1000
+
 
 class ShefTransform(NamedTuple):
     office: str
@@ -35,6 +41,11 @@ class CdaValue(NamedTuple):
     timestamp: int
     value: float
     quality: int
+
+
+class TimeSeriesResponse(TypedDict):
+    name: str
+    values: list[CdaValue]
 
 
 TimeseriesPayload = TypedDict(
@@ -53,6 +64,13 @@ CWMS_INTERVAL_SECONDS: dict[str, int] = {
     "Hours": 3600,
     "Day": 86400,
     "Days": 86400,
+}
+
+SHEF_INTERVAL_MS: dict[str, int] = {
+    "DID": 86400 * 1000,
+    "DIH": 3600 * 1000,
+    "DIN": 60 * 1000,
+    "DIS": 1 * 1000,
 }
 
 MAX_CONNECTIONS = 10
@@ -74,6 +92,8 @@ class CdaLoader(base_loader.BaseLoader):
         """
         super().__init__(logger, output_object, append)
         self._cda_url: str = ""
+        self._input: Optional[Union[BufferedRandom, TextIOWrapper]] = None
+        self._message_count: int = 0
         self._office_code: str = ""
         self._parsed_payloads: list[TimeseriesPayload] = []
         self._payloads: list[TimeseriesPayload] = []
@@ -190,6 +210,10 @@ class CdaLoader(base_loader.BaseLoader):
             tzinfo=timezone.utc
         )
         return int(dt.timestamp() * 1000)
+
+    @staticmethod
+    def get_python_datetime(unix_time: int) -> datetime:
+        return datetime.fromtimestamp(unix_time / 1000, tz=timezone.utc)
 
     def load_time_series(self) -> None:
         """
@@ -386,6 +410,185 @@ class CdaLoader(base_loader.BaseLoader):
                     f"Errors occurred for {self._value_error_count} values in {self._time_series_error_count} time series"
                 )
 
+    def set_input(self, input_object: Union[TextIO, str]) -> None:
+        """
+        Attach the message unload input stream
+        """
+        if self._input:
+            raise shared.LoaderException("Input has already been set")
+        if isinstance(input_object, TextIOWrapper):
+            self._input = input_object
+        elif isinstance(input_object, str):
+            self._input = open(input_object)
+        else:
+            raise shared.LoaderException(
+                f"Expected TextIOWrapper or str object, got [{input_object.__class__.__name__}]"
+            )
+
+    def unload(self) -> None:
+        """
+        Read a list of CDA time series response objects in JSON format and output SHEF
+        """
+        if not self._input:
+            raise shared.LoaderException(
+                "No input file specified before calling unload() method"
+            )
+        if self._logger:
+            self._logger.info(
+                f"Generating SHEF text from CDA Time Series responses via file [{self._input.name}]"
+            )
+
+        # -------------------------------------------#
+        # read the input stream and output SHEF text #
+        # -------------------------------------------#
+        input_data = self._input.read()
+        try:
+            input_json = json.loads(input_data)
+        except json.JSONDecodeError as e:
+            if self._logger:
+                self._logger.error(
+                    "Error encountered while parsing CDA Time Series response JSON object:"
+                )
+                raise e
+
+        cda_data = cast(list[TimeSeriesResponse], input_json)
+        for ts_response in cda_data:
+            self.output_time_series_as_shef(ts_response)
+
+        if self._input.name != "<stdin>":
+            self._input.close()
+
+        if self._logger:
+            self._logger.info(
+                "--[Summary]-----------------------------------------------------------"
+            )
+            self._logger.info(
+                f"{self._value_count} values output in {self._message_count} messages from {self._time_series_count} time series"
+            )
+
+    def output_time_series_as_shef(self, time_series: TimeSeriesResponse):
+        """
+        Output all time series values in SHEF format
+
+        Uses .E format if the time series has multiple values with a consistent
+        interval. Otherwise uses .A format.
+        """
+        try:
+            transform = self.get_transform_for_tsid(time_series["name"])
+        except TypeError as e:
+            if self._logger:
+                self._logger.error(
+                    "Input must be a list of CDA Time Series response objects"
+                )
+            raise e
+        if not transform:
+            if self._logger:
+                self._logger.warning(
+                    f"No transform found for {time_series['name']} -- skipping..."
+                )
+            return
+        values = time_series["values"]
+        intervals = self.get_timestamp_differences(values)
+        if len(values) == 1 or len(intervals) > 1:
+            shef_messages = self.build_shef_a_from_time_series(time_series, transform)
+        else:
+            shef_messages = self.build_shef_e_from_time_series(time_series, transform)
+        self._time_series_count += 1
+        self.output(shef_messages + "\n")
+
+    def build_shef_a_from_time_series(
+        self, time_series: TimeSeriesResponse, transform: ShefTransform
+    ):
+        """
+        Return a SHEF .A string for a time series
+        """
+        shef_lines = []
+        for value in time_series["values"]:
+            timestamp = self.get_python_datetime(value[0])
+            date_str = timestamp.strftime("%Y%m%d")
+            time_str = timestamp.strftime("%H%M%S")
+            message = [".A"]
+            message.append(transform.location)
+            message.append(date_str)
+            message.append("Z")
+            message.append("DH" + time_str + "/" + transform.parameter_code)
+            message.append("%.10g\n" % value[1])
+            shef_lines.append(" ".join(message))
+            self._value_count += 1
+            self._message_count += 1
+        return "".join(shef_lines)
+
+    def build_shef_e_from_time_series(
+        self, time_series: TimeSeriesResponse, transform: ShefTransform
+    ):
+        """
+        Return a SHEF .E string for a time series
+        """
+        max_message_len = 132
+        shef_lines: list[str] = []
+        interval_ms = self.get_timestamp_differences(time_series["values"]).pop()
+        interval_str = self.get_shef_interval_from_ms(interval_ms)
+        timestamp = self.get_python_datetime(time_series["values"][0][0])
+        date_str = timestamp.strftime("%Y%m%d")
+        time_str = timestamp.strftime("%H%M%S")
+        header = [".E"]
+        header.append(transform.location)
+        header.append(date_str)
+        header.append("Z")
+        header.append(f"DH{time_str}/{transform.parameter_code}/{interval_str}")
+        shef_lines.append(" ".join(header))
+
+        line_num = 1
+        line = self.start_continuation_line("E", line_num)
+        for value in time_series["values"]:
+            value_str = f"{value[1]:.6g}/"
+            if len(line + value_str) > max_message_len:
+                shef_lines.append(line)
+                line_num += 1
+                line = self.start_continuation_line("E", line_num)
+            line += value_str
+            self._value_count += 1
+        shef_lines.append(line)
+
+        self._message_count += 1
+        return "\n".join(shef_lines) + "\n"
+
+    @staticmethod
+    def start_continuation_line(format: str, number: int):
+        """
+        Return the beginning of a SHEF continuation line, e.g. ".E1 "
+        """
+        return f".{format}{number:.3g} "
+
+    @staticmethod
+    def get_shef_interval_from_ms(time_series_ms: int):
+        """
+        Return SHEF interval code (e.g. DIH01) for an interval in ms
+        """
+        for interval_code, interval_ms in SHEF_INTERVAL_MS.items():
+            if time_series_ms % interval_ms == 0:
+                num_units = time_series_ms / interval_ms
+                return f"{interval_code}{int(num_units):02}"
+
+    def get_transform_for_tsid(self, tsid: str):
+        """
+        Return the ShefTransform for a given time series id (or None)
+        """
+        matching_transforms = [
+            x for x in self._transforms.values() if x.timeseries_id == tsid
+        ]
+        return matching_transforms[0] if matching_transforms else None
+
+    @staticmethod
+    def get_timestamp_differences(values: list[CdaValue]) -> set[int]:
+        """
+        For a list of time series values, return all unique timestamp deltas
+        """
+        diff = []
+        for i in range(1, len(values)):
+            diff.append(values[i][0] - values[i - 1][0])
+        return set(diff)
+
     @property
     def loader_version(self) -> str:
         """
@@ -408,7 +611,11 @@ loader_options = (
     "cda_url     = the url of the CDA instance to be used, e.g. https://cwms-data.usace.army.mil/cwms-data/\n"
     "cda_api_key = the api_key to use for CDA POST requests\n"
 )
-loader_description = "Used to import SHEF data through cwms-data-api.  Requires cwms-python v0.6.3 or greater."
-loader_version = "0.3.1"
+loader_description = (
+    "Used to import and export SHEF data through cwms-data-api.\n"
+    "For unloading, input a list of CDA /timeseries responses.\n"
+    "Requires cwms-python v0.6.3 or greater."
+)
+loader_version = "0.4"
 loader_class = CdaLoader
-can_unload = False
+can_unload = True
