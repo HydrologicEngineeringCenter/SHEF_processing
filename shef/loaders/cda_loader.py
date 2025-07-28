@@ -124,16 +124,22 @@ class CdaLoader(base_loader.BaseLoader):
             parameter_code = pe_code + duration_code + type_code
             timezone = dl_time = units = None
             for option in options:
-                param, value = option.split("=")
-                if param == "TZ":
-                    timezone = value
-                elif param == "DLTime":
-                    if value == "true":
-                        dl_time = True
+                if len(option.split("=")) == 2:
+                    param, value = option.split("=")
+                    if param == "TZ":
+                        timezone = value
+                    elif param == "DLTime":
+                        if value == "true":
+                            dl_time = True
+                        else:
+                            dl_time = False
+                    elif param == "Units":
+                        units = value
                     else:
-                        dl_time = False
-                elif param == "Units":
-                    units = value
+                        if self._logger:
+                            self._logger.warning(
+                                "Unhandled option for {shef}: {option}"
+                            )
                 else:
                     if self._logger:
                         self._logger.warning("Unhandled option for {shef}: {option}")
@@ -171,10 +177,9 @@ class CdaLoader(base_loader.BaseLoader):
                 self._transforms[transform_key] = transform
         except Exception as e:
             if self._logger:
-                self._logger.error(
+                self._logger.warning(
                     f"{str(e)} occurred while processing SHEF criteria for {time_series['timeseries-id']}"
                 )
-                raise
 
     @property
     def transform_key(self) -> str:
@@ -616,6 +621,6 @@ loader_description = (
     "For unloading, input a list of CDA /timeseries responses.\n"
     "Requires cwms-python v0.6.3 or greater."
 )
-loader_version = "0.4"
+loader_version = "0.5"
 loader_class = CdaLoader
 can_unload = True
