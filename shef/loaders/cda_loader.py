@@ -50,8 +50,7 @@ class TimeSeriesResponse(TypedDict):
 
 TimeseriesPayload = TypedDict(
     "TimeseriesPayload",
-    {"name": str, "office-id": str,
-        "units": Optional[str], "values": list[CdaValue]},
+    {"name": str, "office-id": str, "units": Optional[str], "values": list[CdaValue]},
 )
 
 CWMS_INTERVAL_PATTERN: str = r"([0-9]+)(\w+)"
@@ -139,11 +138,11 @@ class CdaLoader(base_loader.BaseLoader):
                     else:
                         if self._logger:
                             self._logger.warning(
-                                "Unhandled option for {shef}: {option}")
+                                "Unhandled option for {shef}: {option}"
+                            )
                 else:
                     if self._logger:
-                        self._logger.warning(
-                            "Unhandled option for {shef}: {option}")
+                        self._logger.warning("Unhandled option for {shef}: {option}")
             return ShefTransform(
                 office,
                 location,
@@ -163,8 +162,7 @@ class CdaLoader(base_loader.BaseLoader):
                 f"{self.loader_name} expected 2 options, got [{len(options)}]"
             )
 
-        cwms.init_session(api_root=self._cda_url,
-                          api_key=f"apikey {cda_api_key}")
+        cwms.init_session(api_root=self._cda_url, api_key=f"apikey {cda_api_key}")
 
         shef_group = cwms.get_timeseries_group(
             group_office_id="CWMS",
@@ -204,8 +202,7 @@ class CdaLoader(base_loader.BaseLoader):
         Get the time series ID for the current SHEF value
         """
         if shef_value is None:
-            raise shared.LoaderException(
-                "Empty SHEF value in get_time_series_name()")
+            raise shared.LoaderException("Empty SHEF value in get_time_series_name()")
         transform_key = f"{shef_value.location}.{shef_value.parameter_code[:-1]}"
         return self._transforms[transform_key].timeseries_id
 
@@ -498,11 +495,9 @@ class CdaLoader(base_loader.BaseLoader):
         values = time_series["values"]
         intervals = self.get_timestamp_differences(values)
         if len(values) == 1 or len(intervals) > 1:
-            shef_messages = self.build_shef_a_from_time_series(
-                time_series, transform)
+            shef_messages = self.build_shef_a_from_time_series(time_series, transform)
         else:
-            shef_messages = self.build_shef_e_from_time_series(
-                time_series, transform)
+            shef_messages = self.build_shef_e_from_time_series(time_series, transform)
         self._time_series_count += 1
         self.output(shef_messages + "\n")
 
@@ -536,8 +531,7 @@ class CdaLoader(base_loader.BaseLoader):
         """
         max_message_len = 132
         shef_lines: list[str] = []
-        interval_ms = self.get_timestamp_differences(
-            time_series["values"]).pop()
+        interval_ms = self.get_timestamp_differences(time_series["values"]).pop()
         interval_str = self.get_shef_interval_from_ms(interval_ms)
         timestamp = self.get_python_datetime(time_series["values"][0][0])
         date_str = timestamp.strftime("%Y%m%d")
@@ -546,8 +540,7 @@ class CdaLoader(base_loader.BaseLoader):
         header.append(transform.location)
         header.append(date_str)
         header.append("Z")
-        header.append(
-            f"DH{time_str}/{transform.parameter_code}/{interval_str}")
+        header.append(f"DH{time_str}/{transform.parameter_code}/{interval_str}")
         shef_lines.append(" ".join(header))
 
         line_num = 1
@@ -628,6 +621,6 @@ loader_description = (
     "For unloading, input a list of CDA /timeseries responses.\n"
     "Requires cwms-python v0.6.3 or greater."
 )
-loader_version = "0.4"
+loader_version = "0.5"
 loader_class = CdaLoader
 can_unload = True
