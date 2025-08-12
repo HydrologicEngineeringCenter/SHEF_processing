@@ -1,3 +1,0 @@
-#!/bin/python3
-import shef
-shef.shef_parser.main() # will have same sys.argv

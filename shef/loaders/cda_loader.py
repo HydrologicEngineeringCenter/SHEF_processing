@@ -1,11 +1,11 @@
 import asyncio
+import json
+import re
+import time
 from datetime import datetime, timezone
 from io import BufferedRandom, TextIOWrapper
 from itertools import groupby
-import json
 from logging import Logger
-import re
-import time
 from typing import (
     Any,
     Callable,
@@ -18,8 +18,10 @@ from typing import (
     Union,
     cast,
 )
-from shef.loaders import base_loader, shared
+
 import cwms  # type: ignore
+
+from shef.loaders import base_loader, shared
 
 MS_DAY = 86400 * 1000
 MS_HOUR = 3600 * 1000

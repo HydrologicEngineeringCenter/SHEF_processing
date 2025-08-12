@@ -1,4 +1,4 @@
-'''
+"""
 # Package shef_loader
 
 This package includes modules to be used for loading (storing) SHEF data (as parsed by the `shefParser` program) to specific data stores, and optionally unloading (generating SHEF text) from specific data stores. Each module is responsible for one data store type. Note that depending on the purpose of the loader, loading may consist only of outputting parsed SHEF data to an output stream in a loader-specific format to be used by a non-Python program to perform the actual loading. If a loader supports unloading, the inverse may be true (i.e., a non-Python program unloads the data store into a data stream which the loader then reads to generate the SHEF text).
@@ -114,21 +114,29 @@ The class `base_loader.BaseLoader` provides the following fields and methods:
 |`duration_interval: datetime.timedelta`|The duration of the current `ShefValue` object as a `datetime.timedelta` object. Calls `assert_value_is_set()`. Calls `shared.durtion_interval()`. **Should not need to override.**|__all__: list = []
 
 See https://github.com/HydrologicEngineeringCenter/SHEF_processing/blob/master/shef_loader/Readme.md for formatted version
-'''
+"""
 
-__all__ : list = []
+__all__: list = []
 
 from shef.loaders.shared import LoaderException
 
 error_modules = []
-try    : from shef.loaders import base_loader
-except : raise Exception("ERROR|Cannot import base_loader")
+try:
+    from shef.loaders import base_loader
+except:
+    raise Exception("ERROR|Cannot import base_loader")
 
-try    : from shef.loaders import cda_loader
-except : error_modules.append("cda_loader")
+try:
+    from shef.loaders import cda_loader
+except:
+    error_modules.append("cda_loader")
 
-try    : from shef.loaders import dssvue_loader
-except : error_modules.append("dssvue_loader")
+try:
+    from shef.loaders import dssvue_loader
+except:
+    error_modules.append("dssvue_loader")
 
-try    : from shef.loaders import shefdss_util
-except : error_modules.append("shefdss_util")
+try:
+    from shef.loaders import shefdss_util
+except:
+    error_modules.append("shefdss_util")
