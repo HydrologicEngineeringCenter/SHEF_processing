@@ -9,16 +9,16 @@ pip install git+https://github.com/HydrologicEngineeringCenter/SHEF_processing.g
 ```
 
 ## Command line implementation
-'''sh
+```sh
 #base loader
 shefParser -i input_filename -o output_filename
 
 #CWMS cda loader
 shefParser -i input_filename --loader cda[$API_ROOT][$API_KEY]
-'''
+```
 
 ## Module implementation
-'''python
+```python
 from shef import shef_parser
 
 #base loader
@@ -32,4 +32,4 @@ shef_parser.parse(
     input_name=input_filename,
     loader_spec=f"cda[{CDA_URL}][{CDA_API_KEY}]",
 )
-'''
+```
