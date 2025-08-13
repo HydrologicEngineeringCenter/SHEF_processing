@@ -8,7 +8,7 @@ version = "1.4.1"
 packages = [
     { include = "shef" },
 ]
-description = "Corps water management systems (CWMS) REST API for Data Retrieval of USACE water data"
+description = "Module to extract data from SHEF formated files with ability to save output as flat file, dss file, or directly into Corps water management systems (CWMS) database"
 readme = "README.md"
 license = "LICENSE"
 keywords = ["SHEF","USACE", "CWMS"]
