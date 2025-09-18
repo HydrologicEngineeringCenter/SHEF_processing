@@ -3514,6 +3514,22 @@ class ShefParser:
                         new_tokens[-1] += [subtoken]
                     else:
                         new_tokens.append([subtoken])
+            token_count = len(new_tokens)
+            interval_pos = [
+                i
+                for i in range(token_count)
+                if self._interval_pattern.match(new_tokens[i][0])
+            ][0]
+            parameter_pos = [
+                i
+                for i in range(token_count)
+                if self._parameter_code_pattern.match(new_tokens[i][0])
+            ][0]
+            if interval_pos < parameter_pos:
+                new_tokens[interval_pos], new_tokens[parameter_pos] = (
+                    new_tokens[parameter_pos],
+                    new_tokens[interval_pos],
+                )
             return new_tokens
 
         # -----------------------------#
