@@ -1867,10 +1867,10 @@ class ShefParser:
         """
         value = int(line[:4].replace(" ", ""))
         if value != self._max_error_count:
+            self._max_error_count = value
             self.info(
                 f"{self._shefparm_pathname}: Maximum error count set to [{self._max_error_count}]"
             )
-        self._max_error_count = value
 
     def debug(self, message_text: str) -> None:
         """
