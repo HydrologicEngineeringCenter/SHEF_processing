@@ -437,6 +437,7 @@ def make_shef_value(format_1_line: str) -> ShefValue:
         raise ValueError(
             f"Expected length location group to be 10, got {len(m.group(1))}"
         )
+    value = float(m.group(7))
     return ShefValue(
         location=m.group(1).strip(),
         obs_date=m.group(2),
@@ -444,7 +445,7 @@ def make_shef_value(format_1_line: str) -> ShefValue:
         create_date=m.group(4),
         create_time=m.group(5),
         parameter_code=f"{m.group(6)}{probability_code}",
-        value=float(m.group(7)),
+        value=value if value != -9999.0 else None,
         data_qualifier=m.group(8),
         revised_code=m.group(10),
         time_series_code=m.group(11),
