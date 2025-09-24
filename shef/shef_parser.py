@@ -113,6 +113,12 @@ versions = """
 +-------+-----------+-----+-------------------------------------------------------------------------+
 | 1.4.1 | 14Aug2024 | JBK | Support custom output objects that implement TextIO                     |
 +-------+-----------+-----+-------------------------------------------------------------------------+
+| 1.4.2 | 18Sep2025 | MDP | Allow out-of-order .E header tokens à la shefit                         |
++-------+-----------+-----+-------------------------------------------------------------------------+
+| 1.4.3 | 18Sep2025 | MDP | Update base loader to skip missing (-9999) values                       |
++-------+-----------+-----+-------------------------------------------------------------------------+
+| 1.4.4 | 24Sep2025 | MDP | Fix line beginning with : inside a message terminates the message       |
++-------+-----------+-----+-------------------------------------------------------------------------+
 
 Authors:
     MDP  Mike Perryman, USACE IWR-HEC
@@ -120,8 +126,8 @@ Authors:
 """
 
 progname = Path(sys.argv[0]).stem
-version = "1.4.1"
-version_date = "14Aug2024"
+version = "1.4.4"
+version_date = "24Sep2025"
 logger = logging.getLogger()
 
 
@@ -2230,6 +2236,8 @@ class ShefParser:
                 message_line = (
                     self.remove_comment_fields(line).rstrip("=").rstrip("&").rstrip("=")
                 )
+                if not message_line:
+                    continue
                 if not message_type:
                     # -----------------------------------#
                     # looking for first line of message #
