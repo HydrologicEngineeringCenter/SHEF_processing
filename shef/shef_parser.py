@@ -119,6 +119,8 @@ versions = """
 +-------+-----------+-----+-------------------------------------------------------------------------+
 | 1.4.4 | 24Sep2025 | MDP | Fix line beginning with : inside a message terminates the message       |
 +-------+-----------+-----+-------------------------------------------------------------------------+
+| 1.5.0 | 25Sep2025 | MDP | Add --processed command line option to read pre-processed input         |
++-------+-----------+-----+-------------------------------------------------------------------------+
 
 Authors:
     MDP  Mike Perryman, USACE IWR-HEC
@@ -126,8 +128,8 @@ Authors:
 """
 
 progname = Path(sys.argv[0]).stem
-version = "1.4.4"
-version_date = "24Sep2025"
+version = "1.5.0"
+version_date = "25Sep2025"
 logger = logging.getLogger()
 
 
@@ -1124,6 +1126,27 @@ class ShefParser:
                     "Z" if parser.shefit_times else ShefParser.UTC
                 )
 
+        def copy(self) -> "ShefParser.OutputRecord":
+            """
+            Returns a copy of the current output record
+            """
+            return ShefParser.OutputRecord(
+                parser=self._parser,
+                location=self._location,
+                obstime=self.obstime,
+                create_time=self._creation_time,
+                parameter_code=self._parameter_code,
+                orig_parameter_code=self._orig_parameter_code,
+                en_value=self.value,
+                qualifier=self._qualifier,
+                revised=self._revised,
+                duration_unit=self._duration_unit,
+                duration_value=self._duration_value,
+                message_source=self._message_source,
+                time_series_code=self._time_series_code,
+                comment=self._comment,
+            )
+
         def format(self, fmt: str) -> str:
             """
             Generate the output in the specified format
@@ -1495,6 +1518,7 @@ class ShefParser:
         shefparm_pathname: Union[None, str] = None,
         shefit_times: bool = False,
         reject_problematic: bool = False,
+        processed: bool = False,
     ):
         """
         ShefParser Constructor
@@ -1505,6 +1529,7 @@ class ShefParser:
         ]
         self._shefit_times: bool = shefit_times
         self._reject_problematic: bool = reject_problematic
+        self._processed: bool = processed
         self._message: Union[None, str] = None
         self._message_location: Union[None, int] = None
         self._log_line_len: int = 100
@@ -1535,7 +1560,7 @@ class ShefParser:
         self._default_source_code = "Z"  # May not be modified by SHEFPARM file
         self._default_extremum_code = "Z"  # May not be modified by SHEFPARM file
         self._default_probability_code = "Z"  # May not be modified by SHEFPARM file
-        self._input: Union[None, TextIOWrapper] = None
+        self._input: Union[None, TextIOWrapper, StringIO] = None
         self._input_name: Union[None, str] = None
         self._line_number = 0
         self._output: Union[None, BufferedRandom, TextIOWrapper] = None
@@ -1621,6 +1646,18 @@ class ShefParser:
         self._duration_ids = {}
         for key in self._duration_codes:
             self._duration_ids[self._duration_codes[key]] = key
+
+        self._probability_ids = {}
+        for key in self._probability_codes:
+            self._probability_ids[self._probability_codes[key]] = key
+        self._output_rec: Optional[ShefParser.OutputRecord] = None
+
+    @property
+    def processed(self) -> bool:
+        """
+        Get whether we are reading pre-processed data
+        """
+        return self._processed
 
     @property
     def shefit_times(self) -> bool:
@@ -2145,7 +2182,7 @@ class ShefParser:
             self._input = input_object
             self._input_name = "in-memory stream"
         elif isinstance(input_object, str):
-            self._input = open(input_object)
+            self._input = open(input_object, encoding="utf-8")
             self._input_name = input_object
         else:
             raise ShefParser.InputException(
@@ -2177,7 +2214,7 @@ class ShefParser:
         if self._output:
             self.close_output()
         elif isinstance(output_object, str):
-            self._output = open(output_object, "a+b" if append else "w+b")
+            self._output = open(output_object, "a" if append else "w", encoding="utf-8")
             self._output_name = output_object
         else:
             # IO typing is wonky -- see https://github.com/python/typeshed/issues/6077
@@ -2218,6 +2255,230 @@ class ShefParser:
                 chars.append(c)
         message_line = "".join(chars)
         return message_line
+
+    def get_next_processed_line(self) -> Optional[OutputRecord]:
+        """
+        Retrieve next processed message line from input
+        """
+        while True:
+            while self._input_lines:
+                line = self._input_lines.popleft()
+                self._line_number += 1
+                self.debug(f"Removed line from input queue [{line}]")
+                if not line.strip():
+                    output_rec = self._output_rec.copy() if self._output_rec else None
+                    self._output_rec = None
+                    return output_rec
+                if (
+                    self._output_rec is not None
+                    and line.startswith("        ")
+                    and line[8 == '"' and line.strip()[-1] == '"']
+                ):
+                    output_rec = self._output_rec.copy()
+                    self._output_rec = None
+                    output_rec._comment = line.strip()[1:-1]
+                    return output_rec
+                format = 0
+                location: str
+                parameter_code: str
+                obstime: "ShefParser.DateTime"
+                create_time: Optional["ShefParser.DateTime"]
+                value: float
+                qualifier: str
+                revised: bool
+                message_source: Optional[str]
+                time_series_code: int
+                comment: Optional[str] = None
+                parse_portion: Optional[str] = None
+                if len(line) > 109:
+                    # ----------------- #
+                    # possibly format 1 #
+                    # ----------------- #
+                    for _ in (1,):
+                        try:
+                            parse_portion = "location"
+                            location = line[:8].strip()
+
+                            parse_portion = "observation time"
+                            y = int(line[10:14])
+                            m, d, h, n, s = list(
+                                map(
+                                    int, [line[i : i + 2] for i in (15, 18, 21, 24, 27)]
+                                )
+                            )
+                            obstime = ShefParser.DateTime(
+                                y, m, d, h, n, s, tzinfo=ZoneInfo("UTC")
+                            )
+
+                            parse_portion = "creation time"
+                            _y = int(line[31:35])
+                            _m, _d, _h, _n, _s = [
+                                line[i : i + 2] for i in (36, 39, 42, 45, 48)
+                            ]
+                            if all([_y, _m, _d, _h, _n, _s]):
+                                y, m, d, h, n, s = list(
+                                    map(int, [_y, _m, _d, _h, _n, _s])
+                                )
+                                create_time = ShefParser.DateTime(
+                                    y, m, d, h, n, s, tzinfo=ZoneInfo("UTC")
+                                )
+                            else:
+                                assert not any([_y, _m, _d, _h, _n, _s])
+                                create_time = None
+
+                            parse_portion = "parameter code"
+                            parameter_code = line[52:59]
+                            assert parameter_code.isascii()
+
+                            parse_portion = "value"
+                            value = float(line[59:74])
+
+                            parse_portion = "value qualifier"
+                            qualifier = line[75]
+                            assert qualifier in self._qualifier_codes
+
+                            parse_portion = "revised code"
+                            revised_num = int(line[92])
+                            assert revised_num in (0, 1)
+                            revised = bool(revised_num)
+
+                            parse_portion = "time series code"
+                            time_series_code = int(line[94])
+                            assert time_series_code in (0, 1, 2)
+
+                            parse_portion = "message source"
+                            message_source = line[97:105].strip()
+                            if not message_source:
+                                message_source = None
+
+                            parse_portion = "comment"
+                            assert line[107] == '"' and line[-1] == '"'
+                            comment = line[108:-1].strip()
+                            if not comment:
+                                comment = None
+                        except:
+                            break
+                        format = 1
+                elif len(line) == 79:
+                    # ----------------- #
+                    # possibly format 2 #
+                    # ----------------- #
+                    for _ in (1,):
+                        try:
+                            parse_portion = "location"
+                            location = line[:8].strip()
+
+                            parse_portion = "observation time"
+                            y = int(line[8:12])
+                            m, d, h, n, s = list(
+                                map(
+                                    int, [line[i : i + 2] for i in (12, 14, 16, 18, 20)]
+                                )
+                            )
+                            obstime = ShefParser.DateTime(
+                                y, m, d, h, n, s, tzinfo=ZoneInfo("UTC")
+                            )
+
+                            parse_portion = "creation time"
+                            _y = int(line[23:27])
+                            _m, _d, _h, _n, _s = [
+                                line[i : i + 2] for i in (27, 29, 31, 33, 35)
+                            ]
+                            if all([_y, _m, _d, _h, _n, _s]):
+                                y, m, d, h, n, s = list(
+                                    map(int, [_y, _m, _d, _h, _n, _s])
+                                )
+                                create_time = ShefParser.DateTime(
+                                    y, m, d, h, n, s, tzinfo=ZoneInfo("UTC")
+                                )
+                            else:
+                                assert not any([_y, _m, _d, _h, _n, _s])
+
+                            parse_portion = "parameter code"
+                            pe_code = line[38:40]
+                            ts_code = line[41:43]
+                            extremum_code = line[43]
+                            probability_code = self._probability_ids[float(line[56:62])]
+                            duration_code = self._duration_ids[int(line[62:67])]
+                            parameter_code = f"{pe_code}{duration_code}{ts_code}{extremum_code}{probability_code}"
+                            assert parameter_code.isascii()
+
+                            parse_portion = "value"
+                            value = float(line[44:54])
+
+                            parse_portion = "value qualifier"
+                            qualifier = line[55]
+                            assert qualifier in self._qualifier_codes
+
+                            parse_portion = "revised code"
+                            revised_num = int(line[68])
+                            assert revised_num in (0, 1)
+                            revised = bool(revised_num)
+
+                            parse_portion = "message source"
+                            message_source = line[70:78].strip()
+
+                            parse_portion = "time series code"
+                            time_series_code = int(line[78])
+                            assert time_series_code in (0, 1, 2)
+                        except:
+                            break
+                        format = 2
+                if format == 0:
+                    if parse_portion:
+                        self.error(
+                            f"Error parsing {parse_portion} for pre-processed input: {line}"
+                        )
+                    else:
+                        self.error(f"Unrecognized line for pre-processed input: {line}")
+                else:
+                    output_rec = ShefParser.OutputRecord(
+                        self,
+                        location=location,
+                        parameter_code=parameter_code,
+                        orig_parameter_code=parameter_code,
+                        obstime=obstime,
+                        create_time=create_time,
+                        en_value=value,
+                        qualifier=qualifier,
+                        revised=revised,
+                        duration_unit="Z",
+                        message_source=message_source,
+                        time_series_code=time_series_code,
+                        comment=comment,
+                    )
+                    if format == 1:
+                        return output_rec
+                    else:
+                        last_output_rec = self._output_rec if self._output_rec else None
+                        self._output_rec = output_rec
+                        if last_output_rec:
+                            return last_output_rec
+
+            # ----------------#
+            # read more data #
+            # ----------------#
+            if not self._input:
+                return self._output_rec if self._output_rec else None
+            for i in range(100):
+                try:
+                    line = self._input.readline()
+                except Exception as e:
+                    self.error(f"Line read error: {exc_info(e)}")
+                    continue
+                if line:
+                    if line[-1] == "\n":
+                        self._input_lines.append(line[:-1])
+                    else:
+                        self._input_lines.append(line)
+                        self.close_input()
+                        break
+                else:
+                    self.close_input()
+                    break
+            self.debug(
+                f"Put {len(self._input_lines)} lines from {self._input_name} into input queue"
+            )
 
     def get_next_message(self) -> str:
         """
@@ -4334,6 +4595,7 @@ def parse(
     reject_problematic: bool = False,
     loader_spec: Optional[str] = None,
     unload: bool = False,
+    processed: bool = False,
 ):
     """
     Either parse incoming SHEF (optionally loading into a datastore) or unload from a datastore into SHEF text
@@ -4353,6 +4615,7 @@ def parse(
         reject_problematic  : Whether to reject all data from messages that generate parsing errors
         loader_spec         : Name of loader and options for loading to data store
         unload              : Whether to use loader to unload from data store
+        processed           : If the input is pre-processed (format 1 or 2) data
     """
     global logger
     start_time = datetime.now()
@@ -4423,7 +4686,7 @@ def parse(
     logger.info(
         "----------------------------------------------------------------------"
     )
-    logger.debug(f"Input file set to {infile_name}")
+    logger.debug(f"Input file set to {infile_name} (pre-processed={processed})")
     logger.debug(f"Output file set to {outfile_name}")
     logger.debug(f"Log file set to {logfile_name}")
     logger.debug(f"Log level set to {log_level}")
@@ -4480,9 +4743,6 @@ def parse(
             logger.critical(exc_info(e))
             raise
     else:
-        # ----------------#
-        # read SHEF text #
-        # ----------------#
         # -------------------#
         # create the parser #
         # -------------------#
@@ -4491,6 +4751,7 @@ def parse(
             shefparm,
             shefit_times=shefit_times,
             reject_problematic=reject_problematic,
+            processed=processed,
         )
         parser.set_input(input)
         parser.set_output(output, append_output)
@@ -4510,31 +4771,49 @@ def parse(
                 parser._output.write(
                     'aaaaaaaa  yyyy mm dd hh nn ss  yyyy mm dd hh nn ss  pedtsep     rrrrr.dddd a  rrr.ddd iiiii i i  aaaaaaaa  "aa..."\n\n'
                 )
-        # --------------------------------------------------------------------------------#
-        # parse the messages on the input and either generate output or pass to a loader #
-        # --------------------------------------------------------------------------------#
+        # ----------------------------------------------------------------#
+        # parse the input and either generate output or pass to a loader #
+        # ----------------------------------------------------------------#
         message_count = 0
         value_count = 0
         while True:
-            message = parser.get_next_message()
-            if not message:
-                break
-            message_count += 1
-            outrecs = None
-            try:
-                outrecs = parser.parse_message()
-                value_count += len(outrecs)
-                if outrecs:
-                    for outrec in outrecs:
-                        if loader:
-                            format_1_str = outrec.format(
-                                ShefParser.OutputRecord.SHEFIT_TEXT_V1
-                            )
-                            loader.set_shef_value(format_1_str)
-                        else:
-                            parser.output(outrec)
-            except (ShefParser.Exc, loaders.LoaderException) as e:
-                parser.error(exc_info(e))
+            if parser.processed:
+                # --------------------------- #
+                # read pre-processed messages #
+                # --------------------------- #
+                outrec = parser.get_next_processed_line()
+                message_count += 1
+                if not outrec:
+                    break
+                value_count += 1
+                if loader:
+                    format_1_str = outrec.format(ShefParser.OutputRecord.SHEFIT_TEXT_V1)
+                    loader.set_shef_value(format_1_str)
+                else:
+                    parser.output(outrec)
+            else:
+                # ----------------------- #
+                # read SHEF text messages #
+                # ----------------------- #
+                message = parser.get_next_message()
+                if not message:
+                    break
+                message_count += 1
+                outrecs = None
+                try:
+                    outrecs = parser.parse_message()
+                    value_count += len(outrecs)
+                    if outrecs:
+                        for outrec in outrecs:
+                            if loader:
+                                format_1_str = outrec.format(
+                                    ShefParser.OutputRecord.SHEFIT_TEXT_V1
+                                )
+                                loader.set_shef_value(format_1_str)
+                            else:
+                                parser.output(outrec)
+                except (ShefParser.Exc, loaders.LoaderException) as e:
+                    parser.error(exc_info(e))
         # -------------------#
         # clean up and exit #
         # -------------------#
@@ -4553,7 +4832,8 @@ def parse(
             logger.info(
                 f"{parser._line_number:6d} lines read from {parser._input_name}"
             )
-            logger.info(f"{message_count:6d} messages processed")
+            if not parser.processed:
+                logger.info(f"{message_count:6d} messages processed")
             if loader:
                 logger.info(f"{value_count:6d} values passed to {loader.loader_name}")
             else:
@@ -4627,6 +4907,11 @@ def main() -> None:
         metavar="<ts_loader>",
         action="store",
         help="allows loading time series to various data stores (more info in --description)",
+    )
+    group.add_argument(
+        "--processed",
+        action="store_true",
+        help="input is pre-processed (format 1 or 2) instead of SHEF text",
     )
     group.add_argument(
         "--defaults",
@@ -4723,6 +5008,13 @@ SHEFPARM file:
     be useful if it is necessary to override the program defaults. Either redirect <stdout> or
     use the -o/--out option to capture the SHEFPARM data to a file in order to modify it for use.
 
+Input format:
+    Unless --processed is specified, the program reads SHEF text and processes it into the (default
+    or specified) output format, optionally passing the output to a loader. If --processed is 
+    specified, the program reads pre-processed data in either output format 1 or 2 and outputs it in
+    the (default or specified) format. It can thus be used to change the format of a pre-processed
+    file or to pass pre-processed data to a loader.
+
 Output format:
     Like shefit, the default output format is the shefit text version 1. The output formats
     -f/--format 1 and -f/--format 2 are equivalent to the shefit -1 and -2 options, respectively.
@@ -4796,6 +5088,7 @@ Loading SHEF data to data stores:"""
         reject_problematic=args.reject_problematic,
         loader_spec=args.loader,
         unload=args.unload,
+        processed=args.processed,
     )
 
 
