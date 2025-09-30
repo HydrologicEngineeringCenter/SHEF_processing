@@ -3975,9 +3975,14 @@ class ShefParser:
                     )
                 if interval_unit == "S":
                     interval = timedelta(seconds=interval_value)
-                    duration_code += 7000
+                    if duration_code % 60 == 0:
+                        duration_code = int(duration_code / 60)
+                    else:
+                        duration_code += 7000
                 elif interval_unit == "N":
                     interval = timedelta(minutes=interval_value)
+                    if duration_code % 60 == 0:
+                        duration_code = 1000 + int(duration_code / 60)
                 elif interval_unit == "H":
                     interval = timedelta(hours=interval_value)
                     if interval_value % 24 == 0:
@@ -3989,7 +3994,10 @@ class ShefParser:
                     duration_code += 2000
                 elif interval_unit == "M":
                     interval = MonthsDelta(interval_value)
-                    duration_code += 3000
+                    if duration_code / 12 == 0:
+                        duration_code = 4000 + int(duration_code / 12)
+                    else:
+                        duration_code += 3000
                 elif interval_unit == "E":
                     interval = MonthsDelta(interval_value, eom=True)
                     duration_code += 3000
