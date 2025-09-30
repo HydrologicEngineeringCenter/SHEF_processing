@@ -121,6 +121,10 @@ versions = """
 +-------+-----------+-----+-------------------------------------------------------------------------+
 | 1.5.0 | 25Sep2025 | MDP | Add --processed command line option to read pre-processed input         |
 +-------+-----------+-----+-------------------------------------------------------------------------+
+| 1.5.1 | 30Sep2025 | MDP | Two bug fixes fo Jira issue CWMS-2275:                                  |
+|       |           |     | * .E messages with intervals specified in minutes (e.g., DIN15)         |
+|       |           |     | * .E messages with day intervals specified in hours (e.g., DIH24)       |
++-------+-----------+-----+-------------------------------------------------------------------------+
 
 Authors:
     MDP  Mike Perryman, USACE IWR-HEC
@@ -3973,10 +3977,13 @@ class ShefParser:
                     interval = timedelta(seconds=interval_value)
                     duration_code += 7000
                 elif interval_unit == "N":
-                    pass
+                    interval = timedelta(minutes=interval_value)
                 elif interval_unit == "H":
                     interval = timedelta(hours=interval_value)
-                    duration_code += 1000
+                    if interval_value % 24 == 0:
+                        duration_code = 2000 + int(duration_code / 24)
+                    else:
+                        duration_code += 1000
                 elif interval_unit == "D":
                     interval = timedelta(days=interval_value)
                     duration_code += 2000
