@@ -121,6 +121,10 @@ versions = """
 +-------+-----------+-----+-------------------------------------------------------------------------+
 | 1.5.0 | 25Sep2025 | MDP | Add --processed command line option to read pre-processed input         |
 +-------+-----------+-----+-------------------------------------------------------------------------+
+| 1.5.1 | 30Sep2025 | MDP | Two bug fixes fo Jira issue CWMS-2275:                                  |
+|       |           |     | * .E messages with intervals specified in minutes (e.g., DIN15)         |
+|       |           |     | * .E messages with day intervals specified in hours (e.g., DIH24)       |
++-------+-----------+-----+-------------------------------------------------------------------------+
 
 Authors:
     MDP  Mike Perryman, USACE IWR-HEC
@@ -3971,18 +3975,29 @@ class ShefParser:
                     )
                 if interval_unit == "S":
                     interval = timedelta(seconds=interval_value)
-                    duration_code += 7000
+                    if duration_code % 60 == 0:
+                        duration_code = int(duration_code / 60)
+                    else:
+                        duration_code += 7000
                 elif interval_unit == "N":
-                    pass
+                    interval = timedelta(minutes=interval_value)
+                    if duration_code % 60 == 0:
+                        duration_code = 1000 + int(duration_code / 60)
                 elif interval_unit == "H":
                     interval = timedelta(hours=interval_value)
-                    duration_code += 1000
+                    if interval_value % 24 == 0:
+                        duration_code = 2000 + int(duration_code / 24)
+                    else:
+                        duration_code += 1000
                 elif interval_unit == "D":
                     interval = timedelta(days=interval_value)
                     duration_code += 2000
                 elif interval_unit == "M":
                     interval = MonthsDelta(interval_value)
-                    duration_code += 3000
+                    if duration_code / 12 == 0:
+                        duration_code = 4000 + int(duration_code / 12)
+                    else:
+                        duration_code += 3000
                 elif interval_unit == "E":
                     interval = MonthsDelta(interval_value, eom=True)
                     duration_code += 3000
