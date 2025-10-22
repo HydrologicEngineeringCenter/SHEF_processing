@@ -5121,5 +5121,4 @@ Loading SHEF data to data stores:"""
 
 
 if __name__ == "__main__":
-    # main()
-    parse(input_name=f"T:\KTOP-63-2025-10-08-15.53.shef.2025.10.08.446.2025.10.08.163809.txt", processed=True)
+    main()
