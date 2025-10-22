@@ -125,6 +125,8 @@ versions = """
 |       |           |     | * .E messages with intervals specified in minutes (e.g., DIN15)         |
 |       |           |     | * .E messages with day intervals specified in hours (e.g., DIH24)       |
 +-------+-----------+-----+-------------------------------------------------------------------------+
+| 1.5.2 | 22Oct2025 | MDP | Fix bugs processing pre-processed format 2 files                        |
++-------+-----------+-----+-------------------------------------------------------------------------+
 
 Authors:
     MDP  Mike Perryman, USACE IWR-HEC
@@ -132,7 +134,7 @@ Authors:
 """
 
 progname = Path(sys.argv[0]).stem
-version = "1.5.0"
+version = "1.5.2"
 version_date = "25Sep2025"
 logger = logging.getLogger()
 
@@ -2286,7 +2288,7 @@ class ShefParser:
                 location: str
                 parameter_code: str
                 obstime: "ShefParser.DateTime"
-                create_time: Optional["ShefParser.DateTime"]
+                create_time: Optional["ShefParser.DateTime"] = None
                 value: float
                 qualifier: str
                 revised: bool
@@ -2315,17 +2317,20 @@ class ShefParser:
                             )
 
                             parse_portion = "creation time"
-                            _y = int(line[31:35])
+                            _y = line[31:35].strip()
                             _m, _d, _h, _n, _s = [
-                                line[i : i + 2] for i in (36, 39, 42, 45, 48)
+                                line[i : i + 2].strip() for i in (36, 39, 42, 45, 48)
                             ]
                             if all([_y, _m, _d, _h, _n, _s]):
                                 y, m, d, h, n, s = list(
                                     map(int, [_y, _m, _d, _h, _n, _s])
                                 )
-                                create_time = ShefParser.DateTime(
-                                    y, m, d, h, n, s, tzinfo=ZoneInfo("UTC")
-                                )
+                                if all([y, m, d, h, n, s]) :
+                                    create_time = ShefParser.DateTime(
+                                        y, m, d, h, n, s, tzinfo=ZoneInfo("UTC")
+                                    )
+                                else:
+                                    assert not any([y, m, d, h, n, s])
                             else:
                                 assert not any([_y, _m, _d, _h, _n, _s])
                                 create_time = None
@@ -2384,17 +2389,20 @@ class ShefParser:
                             )
 
                             parse_portion = "creation time"
-                            _y = int(line[23:27])
+                            _y = line[23:27].strip()
                             _m, _d, _h, _n, _s = [
-                                line[i : i + 2] for i in (27, 29, 31, 33, 35)
+                                line[i : i + 2].strip() for i in (27, 29, 31, 33, 35)
                             ]
                             if all([_y, _m, _d, _h, _n, _s]):
                                 y, m, d, h, n, s = list(
                                     map(int, [_y, _m, _d, _h, _n, _s])
                                 )
-                                create_time = ShefParser.DateTime(
-                                    y, m, d, h, n, s, tzinfo=ZoneInfo("UTC")
-                                )
+                                if all([y, m, d, h, n, s]):
+                                    create_time = ShefParser.DateTime(
+                                        y, m, d, h, n, s, tzinfo=ZoneInfo("UTC")
+                                    )
+                                else:
+                                    assert not any([y, m, d, h, n, s])
                             else:
                                 assert not any([_y, _m, _d, _h, _n, _s])
 
@@ -2463,7 +2471,12 @@ class ShefParser:
             # read more data #
             # ----------------#
             if not self._input:
-                return self._output_rec if self._output_rec else None
+                if self._output_rec:
+                    output_rec = self._output_rec
+                    self._output_rec = None
+                    return output_rec
+                else:
+                    return None
             for i in range(100):
                 try:
                     line = self._input.readline()
