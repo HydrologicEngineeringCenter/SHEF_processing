@@ -125,6 +125,8 @@ versions = """
 |       |           |     | * .E messages with intervals specified in minutes (e.g., DIN15)         |
 |       |           |     | * .E messages with day intervals specified in hours (e.g., DIH24)       |
 +-------+-----------+-----+-------------------------------------------------------------------------+
+| 1.5.2 | 22Oct2025 | MDP | Fix bugs processing pre-processed format 2 files                        |
++-------+-----------+-----+-------------------------------------------------------------------------+
 
 Authors:
     MDP  Mike Perryman, USACE IWR-HEC
@@ -132,7 +134,7 @@ Authors:
 """
 
 progname = Path(sys.argv[0]).stem
-version = "1.5.0"
+version = "1.5.2"
 version_date = "25Sep2025"
 logger = logging.getLogger()
 
