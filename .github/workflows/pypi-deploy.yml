@@ -46,6 +46,9 @@ jobs:
     name: Publish Release Distribution
     runs-on: ubuntu-latest
 
+    # The distribution will only be published if the tests have passed.
+    needs: [tests] # require tests to pass before deploy runs
+
     # Set up the environment for trusted publishing on PyPI.
     environment:
       name: release

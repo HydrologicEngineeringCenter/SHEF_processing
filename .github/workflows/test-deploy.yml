@@ -6,7 +6,7 @@ name: Deployment
 on:
   push:
     branches:
-      - main
+      - master
 
   # Allow the workflow to be manually triggered from the Actions tab.
   workflow_dispatch:
