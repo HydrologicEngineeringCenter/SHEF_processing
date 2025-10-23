@@ -5,7 +5,7 @@ A python based package to parser SHEF files and then loads them into various fil
 ## Install
 
 ```sh
-pip install git+https://github.com/HydrologicEngineeringCenter/SHEF_processing.git@master
+pip install shef-parser
 ```
 
 ## Command line implementation
