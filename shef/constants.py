@@ -690,27 +690,27 @@ EXTREMUM_CODES = set(
         #
         # May be modified by SHEFPARM file
         #
-        "D",
-        "E",
-        "F",
-        "G",
-        "H",
-        "I",
-        "J",
-        "K",
-        "L",
-        "M",
-        "N",
-        "P",
-        "R",
-        "S",
-        "T",
-        "U",
-        "V",
-        "W",
-        "X",
-        "Y",
-        "Z",
+        "D",  # Minimum of record
+        "E",  # Minimum of year (calendar)
+        "F",  # Minimum of month
+        "G",  # Minimum of week
+        "H",  # Minimum of day
+        "I",  # Minimum of 1 hour
+        "J",  # Minimum of 3 hours
+        "K",  # Minimum of 6 hours
+        "L",  # Minimum of 12 hours
+        "M",  # Minimum of 18 hours
+        "N",  # Maximum of record
+        "P",  # Maximum of year (calendar)
+        "R",  # Maximum of month
+        "S",  # Maximum of week
+        "T",  # Maximum of day
+        "U",  # Maximum of 1 hour
+        "V",  # Maximum of 3 hours
+        "W",  # Maximum of 6 hours
+        "X",  # Maximum of 12 hours
+        "Y",  # Maximum of 18 hours
+        "Z",  # Null character (filler)
     )
 )
 
@@ -758,24 +758,28 @@ QUALIFIER_CODES = set(
         #
         # May be modified by SHEFPARM file
         #
-        "B",
-        "D",
-        "E",
-        "F",
-        "G",
-        "L",
-        "M",
-        "N",
-        "P",
-        "Q",
-        "R",
-        "S",
-        "T",
-        "V",
-        "W",
-        "Z",
+        "B",  # Bad, Manual QC
+        "D",  # Partial (qual = 4) – A 24 hour period was missing because 1 to 3 of the 6 hour periods was missing. The 24 hour amount is estimated using available/estimated 6 hour periods.
+        "E",  # Estimated (qual = 5)
+        "F",  # Flagged (qual = 1) – Flagged by sensor or telemetry (parity errors, for example)
+        "G",  # Good, Manual QC
+        "L",  # Lumped (qual = 6) - Estimated from the gages that have 6 hourly data with the constraint that the sum of the four 6 hourly periods is equal to the 24 hour amount.
+        "M",  # Manual Edit
+        "N",  # Reserved
+        "P",  # Passed Level1, Level2, Level3
+        "Q",  # Questioned in Level2, Level3 (qual = 3)
+        "R",  # Rejected by Level1
+        "S",  # Screened Level1 (qual = 0)(data value tested using preliminary criteria)
+        "T",  # Triggered (tells database to start some additional function)
+        "V",  # Verified Level1, Level2 (qual = 8)(data value verified using a more rigorous method)
+        "W",  # Withheld (qual = 2) – The precipitation amount was manually input by the user (the measured precipitation was withheld).
+        "Z",  # No QC Performed (null character)
     )
 )
+
+# Level1 = validity checks (i.e. range checking)
+# Level2 = internal and temporal consistency checks (i.e. rate of change checks)
+# Level3 = spatial consistency checks (e.g. temperature and precipitation field outliers)
 
 DEFAULT_DURATION_CODES = {
     #

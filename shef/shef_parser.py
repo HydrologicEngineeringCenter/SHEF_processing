@@ -2325,7 +2325,7 @@ class ShefParser:
                                 y, m, d, h, n, s = list(
                                     map(int, [_y, _m, _d, _h, _n, _s])
                                 )
-                                if all([y, m, d, h, n, s]) :
+                                if all([y, m, d, h, n, s]):
                                     create_time = ShefParser.DateTime(
                                         y, m, d, h, n, s, tzinfo=ZoneInfo("UTC")
                                     )
