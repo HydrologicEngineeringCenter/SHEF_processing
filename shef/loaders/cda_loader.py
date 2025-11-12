@@ -1,9 +1,10 @@
 import asyncio
 import json
+import math
 import re
 import time
 from datetime import datetime, timezone
-from io import BufferedRandom, TextIOWrapper
+from io import BufferedRandom, StringIO, TextIOWrapper
 from itertools import groupby
 from logging import Logger
 from typing import (
@@ -94,15 +95,59 @@ class CdaLoader(base_loader.BaseLoader):
         """
         super().__init__(logger, output_object, append)
         self._cda_url: str = ""
+        self._export_groups: dict[str, dict[str, Any]] = {}
         self._input: Optional[Union[BufferedRandom, TextIOWrapper]] = None
         self._message_count: int = 0
-        self._office_code: str = ""
+        self._office_id: str = ""
         self._parsed_payloads: list[TimeseriesPayload] = []
         self._payloads: list[TimeseriesPayload] = []
         self._time_series_error_count: int = 0
         self._transforms: dict[str, ShefTransform] = {}
         self._value_error_count: int = 0
         self._write_tasks: list[Coroutine] = []
+
+    def make_shef_transform(self, crit: dict) -> ShefTransform:
+        """
+        Create a ShefTransform object based on the provided SHEF time series group item
+        """
+        office = crit["office-id"]
+        time_series_id = crit["timeseries-id"]
+        try:
+            shef, options_str = crit["alias-id"].split(":")
+            options = options_str.split(";")
+        except:
+            shef, options = crit["alias-id"], []
+        location, pe_code, type_code, duration_value = shef.split(".")
+        duration_code = shared.DURATION_CODES[int(duration_value)]
+        parameter_code = pe_code + duration_code + type_code
+        timezone = dl_time = units = None
+        for option in options:
+            if len(option.split("=")) == 2:
+                param, value = option.split("=")
+                if param == "TZ":
+                    timezone = value
+                elif param == "DLTime":
+                    if value == "true":
+                        dl_time = True
+                    else:
+                        dl_time = False
+                elif param == "Units":
+                    units = value
+                else:
+                    if self._logger:
+                        self._logger.warning(f"Unhandled option for {shef}: {option}")
+            else:
+                if self._logger:
+                    self._logger.warning(f"Unhandled option for {shef}: {option}")
+        return ShefTransform(
+            office,
+            location,
+            parameter_code,
+            time_series_id,
+            units,
+            timezone,
+            dl_time,
+        )
 
     def set_options(self, options_str: Union[str, None]) -> None:
         """
@@ -113,75 +158,21 @@ class CdaLoader(base_loader.BaseLoader):
                 f"Empty options on {self.loader_name}.set_options()"
             )
 
-        def make_shef_transform(crit: dict) -> ShefTransform:
-            """
-            Create a ShefTransform object based on the provided SHEF time series group item
-            """
-            office = crit["office-id"]
-            time_series_id = crit["timeseries-id"]
-            shef, options_str = crit["alias-id"].split(":")
-            options = options_str.split(";")
-            location, pe_code, type_code, duration_value = shef.split(".")
-            duration_code = shared.DURATION_CODES[int(duration_value)]
-            parameter_code = pe_code + duration_code + type_code
-            timezone = dl_time = units = None
-            for option in options:
-                if len(option.split("=")) == 2:
-                    param, value = option.split("=")
-                    if param == "TZ":
-                        timezone = value
-                    elif param == "DLTime":
-                        if value == "true":
-                            dl_time = True
-                        else:
-                            dl_time = False
-                    elif param == "Units":
-                        units = value
-                    else:
-                        if self._logger:
-                            self._logger.warning(
-                                "Unhandled option for {shef}: {option}"
-                            )
-                else:
-                    if self._logger:
-                        self._logger.warning("Unhandled option for {shef}: {option}")
-            return ShefTransform(
-                office,
-                location,
-                parameter_code,
-                time_series_id,
-                units,
-                timezone,
-                dl_time,
-            )
-
         options = tuple(re.findall(r"\[(.*?)\]", options_str))
-        if len(options) == 2:
+        if len(options) > 2:
+            self._office_id = options[2]
+        if len(options) > 1:
             self._cda_url = options[0]
             cda_api_key = options[1]
         else:
             raise shared.LoaderException(
-                f"{self.loader_name} expected 2 options, got [{len(options)}]"
+                f"{self.loader_name} expected 2 or 3 options, got [{len(options)}]"
             )
 
-        cwms.init_session(api_root=self._cda_url, api_key=f"apikey {cda_api_key}")
-
-        shef_group = cwms.get_timeseries_group(
-            group_office_id="CWMS",
-            category_office_id="CWMS",
-            group_id="SHEF Data Acquisition",
-            category_id="Data Acquisition",
-        ).json
-        try:
-            for time_series in shef_group["assigned-time-series"]:
-                transform = make_shef_transform(time_series)
-                transform_key = f"{transform.location}.{transform.parameter_code}"
-                self._transforms[transform_key] = transform
-        except Exception as e:
-            if self._logger:
-                self._logger.warning(
-                    f"{str(e)} occurred while processing SHEF criteria for {time_series['timeseries-id']}"
-                )
+        if cda_api_key:
+            cwms.init_session(api_root=self._cda_url, api_key=f"apikey {cda_api_key}")
+        else:
+            cwms.init_session(api_root=self._cda_url, api_key=None) # don't need api key if unloading
 
     @property
     def transform_key(self) -> str:
@@ -226,6 +217,24 @@ class CdaLoader(base_loader.BaseLoader):
         """
         Store SHEF values as CDA POST payloads grouped by time series ID
         """
+        if not self._transforms:
+            shef_group = cwms.get_timeseries_group(
+                group_office_id="CWMS",
+                category_office_id="CWMS",
+                group_id="SHEF Data Acquisition",
+                category_id="Data Acquisition",
+            ).json
+            try:
+                for assigned_ts in shef_group["assigned-time-series"]:
+                    transform = self.make_shef_transform(assigned_ts)
+                    transform_key = f"{transform.location}.{transform.parameter_code}"
+                    self._transforms[transform_key] = transform
+            except Exception as e:
+                if self._logger:
+                    self._logger.warning(
+                        f"{str(e)} occurred while processing SHEF criteria for {assigned_ts['timeseries-id']}"
+                    )
+
         if self._shef_value and self._time_series:
             sv = cast(shared.ShefValue, self._shef_value)
             if self._logger:
@@ -417,14 +426,14 @@ class CdaLoader(base_loader.BaseLoader):
                     f"Errors occurred for {self._value_error_count} values in {self._time_series_error_count} time series"
                 )
 
-    def set_input(self, input_object: Union[TextIO, str]) -> None:
+    def set_input(self, input_object: Union[StringIO, TextIO, str]) -> None:
         """
         Attach the message unload input stream
         """
         if self._input:
             raise shared.LoaderException("Input has already been set")
-        if isinstance(input_object, TextIOWrapper):
-            self._input = input_object
+        if isinstance(input_object, (StringIO, TextIOWrapper)):
+            self._input = input_object # type: ignore
         elif isinstance(input_object, str):
             self._input = open(input_object)
         else:
@@ -432,10 +441,58 @@ class CdaLoader(base_loader.BaseLoader):
                 f"Expected TextIOWrapper or str object, got [{input_object.__class__.__name__}]"
             )
 
+    def make_export_transforms(self) -> None:
+        if not self._office_id:
+            raise shared.LoaderException(
+                f"Cannot unload without office specified, use options [api_root][api_key][office]"
+            )
+        if not self._transforms:
+            tsids_used = {}
+            group_list = cwms.get_timeseries_groups(
+                office_id=self._office_id,
+                include_assigned=True,
+                timeseries_category_like="SHEF Export",
+                timeseries_group_like="^.+$",
+                category_office_id="CWMS",
+            ).json
+            for shef_group in group_list:
+                group_id = shef_group["id"]
+                self._export_groups[group_id] = {
+                    "description": shef_group["description"],
+                    "timeseries": [],
+                }
+                try:
+                    for time_series in shef_group["assigned-time-series"]:
+                        transform = self.make_shef_transform(time_series)
+                        transform_key = (
+                            f"{transform.location}.{transform.parameter_code}"
+                        )
+                        self._transforms[transform_key] = transform
+                        if transform.timeseries_id in tsids_used:
+                            self._logger.warning(
+                                f"Tranform for time seires {transform.timeseries_id} specified in group(s) "
+                                f"{','.join(tsids_used[transform.timeseries_id])} is/are overriden by transform specified in group {group_id}"
+                            )
+                        self._export_groups[group_id]["timeseries"].append(
+                            transform.timeseries_id
+                        )
+                        tsids_used.setdefault(transform.timeseries_id, []).append(
+                            group_id
+                        )
+                        self._transforms[transform.timeseries_id] = (
+                            transform  # to be able to retrieve by time series ID
+                        )
+                except Exception as e:
+                    if self._logger:
+                        self._logger.warning(
+                            f"{str(e)} occurred while processing SHEF criteria for {time_series['timeseries-id']}"
+                        )
+
     def unload(self) -> None:
         """
         Read a list of CDA time series response objects in JSON format and output SHEF
         """
+        self.make_export_transforms()
         if not self._input:
             raise shared.LoaderException(
                 "No input file specified before calling unload() method"
@@ -548,7 +605,7 @@ class CdaLoader(base_loader.BaseLoader):
         line_num = 1
         line = self.start_continuation_line("E", line_num)
         for value in time_series["values"]:
-            value_str = f"{value[1]:.6g}/"
+            value_str = "-/" if value[1] is None or math.isnan(value[1]) else f"{value[1]:.6g}/"
             if len(line + value_str) > max_message_len:
                 shef_lines.append(line)
                 line_num += 1
