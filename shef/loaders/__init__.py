@@ -27,14 +27,14 @@ Normally, `shefLoader` parses SHEF text and outputs each value on a single line 
 Specifying the `--unload` option to `shefParser` changes the behavior so that instead of items 3 and 4 above, `shefParser` calls the loader method `unload(self) -> None` once.
 
 ## Module Requirements
-Each loader module must have several module-level variables and one module-level class that extends class `base_loader.BaseLoader`.
+Each loader module must have several module-level variables and one module-level class that extends class `abstract_loader.BaseLoader`.
 
 |variable|description|
 |--|--|
 |`loader_options: str`|Specifies how the user specifies the module to `shefParser`. This should be `--loader <module_name><options>`. <*module_name*> may the the full module name or *xxx* if the module is named *xxx*_loader. <*options*> is loader-specific, but <*module_name*><*options*> must be passed as a single string. `loader_options` may be a multi-line string.|
 |`loader_description: str`|Describes the loader. May be a multi-line string.|
 |`loader_version: str`|The version identifier of the loader module.|
-|`loader_class: class`|The class in the module that extends `base_loader.BaseLoader`.|
+|`loader_class: class`|The class in the module that extends `abstract_loader.BaseLoader`.|
 |`can_unload: bool`|Specifies whether the loader class has an `unload()` method.|
 
 These variables are typically defined at the bottom of the module since the loader class must be defined before the `loader_class` variable.
@@ -70,7 +70,7 @@ The packages contains a module name `shared` which provides the following items:
 
 ## Base Class Members
 
-The class `base_loader.BaseLoader` provides the following fields and methods:
+The class `abstract_loader.BaseLoader` provides the following fields and methods:
 
 #### Fields
 |field|description|
@@ -116,15 +116,17 @@ The class `base_loader.BaseLoader` provides the following fields and methods:
 See https://github.com/HydrologicEngineeringCenter/SHEF_processing/blob/master/shef_loader/Readme.md for formatted version
 """
 
-__all__: list = []
+__all__: list[str] = [
+    "LoaderException",
+]
 
 from shef.loaders.shared import LoaderException
 
 error_modules = []
 try:
-    from shef.loaders import base_loader
+    from shef.loaders import abstract_loader
 except:
-    raise Exception("ERROR|Cannot import base_loader")
+    raise Exception("ERROR|Cannot import abstract_loader")
 
 try:
     from shef.loaders import cda_loader
@@ -132,11 +134,11 @@ except:
     error_modules.append("cda_loader")
 
 try:
+    from shef.loaders import dss_loader
+except:
+    error_modules.append("dss_loader")
+
+try:
     from shef.loaders import dssvue_loader
 except:
     error_modules.append("dssvue_loader")
-
-try:
-    from shef.loaders import shefdss_util
-except:
-    error_modules.append("shefdss_util")

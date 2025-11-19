@@ -1,20 +1,19 @@
 import logging
 import sys
+from abc import ABC, abstractmethod
 from datetime import datetime
 from io import BufferedRandom, StringIO
 from typing import Optional, TextIO, Union
-from abc import ABC, abstractmethod
 
-import cwms
+import cwms  # type: ignore
 
-from shef import loaders
-from shef.loaders import shared
+from shef.loaders import abstract_loader, shared
 
 version = "1.0.0"
 version_date = "31Oct2025"
 
 
-class BaseExporter (ABC):
+class AbstractExporter(ABC):
     """
     Base class for SHEF exporters
 
@@ -25,7 +24,16 @@ class BaseExporter (ABC):
     * Specifying time series identifiers in loader-specific formats
     """
 
-    def __init__(self):
+    class NamedStringIO(StringIO):
+        """
+        A simple StringIO subclass that provides a name attribute (expected by loaders)
+        """
+
+        def __init__(self, content: Optional[str] = None):
+            super().__init__(content)
+            self.name = "<streamed input>"
+
+    def __init__(self) -> None:
         """
         Initializer for BaseExporter class
         """
@@ -59,6 +67,27 @@ class BaseExporter (ABC):
         Args:
             identifier (str): The identifier (time series ID, group ID, etc...)
         """
+
+    def get_export(self, identifier: str) -> str:
+        """
+        Exports SHEF text for the the specified identifier for the current time window and returns the data as a string
+
+        Args:
+            identifier (str): The identifier (time series ID, group ID, etc...)
+
+        Returns:
+            str: The exported data
+        """
+        with StringIO() as buf:
+            prev_output: Optional[Union[BufferedRandom, TextIO, StringIO]] = (
+                self._output
+            )
+            self.set_output(buf)
+            self.export(identifier)
+            s = buf.getvalue()
+            buf.close()
+            self.set_output(prev_output)
+            return s
 
     def set_output(
         self,
@@ -99,3 +128,10 @@ class BaseExporter (ABC):
     @start_time.setter
     def start_time(self, value: Optional[datetime]) -> None:
         self._start_time = value
+
+
+exporter_description = "Base exporter for all other exporters to inherit from"
+exporter_parameters = ""
+exporter_version = "1.0.0"
+exporter_class = AbstractExporter
+loader_class = abstract_loader.AbstractLoader

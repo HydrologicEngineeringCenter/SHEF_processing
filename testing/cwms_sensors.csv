@@ -1,0 +1,32 @@
+* SHEF ID  (required),,,,,
+* PE Code  (required),,,,,
+* Interval (optional),,,,,
+*          blank=irregular,,,,,
+*          * = use SHEF duration,,,,,
+*          nU where n = number and U in (M H D L Y),,,,,
+*              5M = 5Minutes,,,,,
+*              6H = 6Hours,,,,,
+*              1D = 1Day,,,,,
+*              1L = 1Month,,,,,
+*              1Y = 1Year,,,,,
+* A Part (optional) defaults to blank,,,,,
+* B Part (optional) defaults to SHEF ID,,,,,
+* F Part (optional) set to * for forecast time,,,,,
+***********************************************,,,,,
+* SHEF ID,PE_Code,Interval,A Part,B Part,F Part
+KEYO2,LS,*,,Keystone Lake,From CWMS
+KEYO2,HP,*,,Keystone Lake,From CWMS
+KEYO2,HT,*,,Keystone Lake,From CWMS
+KEYO2,US,*,,Keystone Lake,From CWMS
+KEYO2,UD,*,,Keystone Lake,From CWMS
+KEYO2,RI,*,,Keystone Lake,From CWMS
+KEYO2,XR,*,,Keystone Lake,From CWMS
+KEYO2,PC,*,,Keystone Lake,From CWMS
+KEYO2,YD,*,,Keystone Lake,From CWMS
+KEYO2,YL,*,,Keystone Lake,From CWMS
+KEYO2,YM,*,,Keystone Lake,From CWMS
+KEYO2,YE,*,,Keystone Lake,From CWMS
+KEYO2,TA,*,,Keystone Lake,From CWMS
+KEYO2,VB,*,,Keystone Lake,From CWMS
+KEYO2,YH,*,,Keystone Lake,From CWMS
+

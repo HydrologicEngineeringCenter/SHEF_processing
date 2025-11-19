@@ -5,14 +5,14 @@ import traceback
 from datetime import timedelta
 from io import BufferedRandom, TextIOWrapper
 from logging import Logger
-from typing import Optional, TextIO, Union, cast
+from typing import Any, Optional, TextIO, Union, cast
 
-from shef.loaders import base_loader, shared
+from shef.loaders import abstract_loader, shared
 
 UNDEFINED: float = -3.4028234663852886e38
 
 
-class DSSVueLoader(base_loader.BaseLoader):
+class DSSVueLoader(abstract_loader.AbstractLoader):
     """
     Loader used by HEC-DSSVue.
     This loader uses ShefDss-style sensor and parameter files and outputs time series for HEC-DSSVue to read and store
@@ -46,8 +46,8 @@ class DSSVueLoader(base_loader.BaseLoader):
         self._sensors: dict[str, dict[str, str]] = {}
         self._parameters: dict[str, dict[str, str]] = {}
         self._time_series = []
-        self._unknown_sensors: set = set()
-        self._unknown_pe_codes: set = set()
+        self._unknown_sensors: set[str] = set()
+        self._unknown_pe_codes: set[str] = set()
         # following are for unload()
         self._unload_sensors: dict[tuple[str, str, str, str], dict[str, str]] = {}
         self._unload_parameters: dict[tuple[str, str, str], dict[str, str]] = {}
@@ -111,7 +111,9 @@ class DSSVueLoader(base_loader.BaseLoader):
                 "f_part": f_part,
             }
 
-        def make_parameter(pe_code, c_part, unit, data_type, transform):
+        def make_parameter(
+            pe_code: str, c_part: str, unit: str, data_type: str, transform: str
+        ) -> None:
             if not pe_code.strip():
                 raise shared.LoaderException("Empty PE Code")
             self._parameters[pe_code] = {
@@ -241,7 +243,7 @@ class DSSVueLoader(base_loader.BaseLoader):
                     msg += f"\n\t[{sensor}]"
                 self._logger.warning(msg)
 
-    def get_additional_pe_codes(self, parser_recognized_pe_codes: set) -> set:
+    def get_additional_pe_codes(self, parser_recognized_pe_codes: set[str]) -> set[str]:
         """
         Return any PE codes recognized by this loader that aren't otherwised recognized by the parser
         """
@@ -376,22 +378,22 @@ class DSSVueLoader(base_loader.BaseLoader):
                     header += f"DC{self._forecast_time}/"
                 header += f"{self._parameter['pe_code']}"
                 duration_str = e_part.upper().replace("1WEEK", "7DAYS")
-                m = shared.VALUE_UNITS_PATTERN.match(duration_str)
-                if m:
-                    if m.group(2).startswith("SEC"):
-                        header += f"/DIS{int(m.group(1)):02d}"
-                    elif m.group(2).startswith("MIN"):
-                        header += f"/DIN{int(m.group(1)):02d}"
-                    elif m.group(2).startswith("HOUR"):
-                        header += f"/DIH{int(m.group(1)):02d}"
-                    elif m.group(2).startswith("DAY"):
-                        header += f"/DID{int(m.group(1)):02d}"
-                    elif m.group(2).startswith("MONTH"):
-                        header += f"/DIM{int(m.group(1)):02d}"
-                    elif m.group(2).startswith("YEAR"):
-                        header += f"/DIY{int(m.group(1)):02d}"
-                    elif m.group(2).startswith("DECADE"):
-                        header += f"/DIY{10*int(m.group(1)):02d}"
+                match = shared.VALUE_UNITS_PATTERN.match(duration_str)
+                if match:
+                    if match.group(2).startswith("SEC"):
+                        header += f"/DIS{int(match.group(1)):02d}"
+                    elif match.group(2).startswith("MIN"):
+                        header += f"/DIN{int(match.group(1)):02d}"
+                    elif match.group(2).startswith("HOUR"):
+                        header += f"/DIH{int(match.group(1)):02d}"
+                    elif match.group(2).startswith("DAY"):
+                        header += f"/DID{int(match.group(1)):02d}"
+                    elif match.group(2).startswith("MONTH"):
+                        header += f"/DIM{int(match.group(1)):02d}"
+                    elif match.group(2).startswith("YEAR"):
+                        header += f"/DIY{int(match.group(1)):02d}"
+                    elif match.group(2).startswith("DECADE"):
+                        header += f"/DIY{10*int(match.group(1)):02d}"
                     else:
                         header = None
                 else:
@@ -593,7 +595,7 @@ class DSSVueLoader(base_loader.BaseLoader):
         Output the timeseries for HEC-DSSVue
         """
         if self._shef_value and self._time_series:
-            sv = cast(shared.ShefValue, self._shef_value)
+            sv = self._shef_value
             value_count = time_series_count = 0
             if self._time_series:
                 if self._logger:
@@ -602,7 +604,7 @@ class DSSVueLoader(base_loader.BaseLoader):
                     )
                 time_series = []
                 for ts in self._time_series:
-                    if ts[1] is None or ts[1] == -9999.0:
+                    if ts[1] is None or ts[1] == "-9999.0":
                         if self._logger:
                             self._logger.debug(
                                 f"Discarding missing value at [{ts[0]}] for [{self.time_series_name}]"
@@ -837,7 +839,7 @@ class DSSVueLoader(base_loader.BaseLoader):
         return cast(dict[str, str], self._sensor)["b_bpart"]
 
     @property
-    def loading_info(self) -> dict:
+    def loading_info(self) -> dict[str, Any]:
         """
         Get the unit and data type
         """
@@ -876,7 +878,7 @@ class DSSVueLoader(base_loader.BaseLoader):
         return {"unit": unit, "type": data_type}
 
     @property
-    def value(self) -> float:
+    def value(self) -> Any:
         """
         Get the loader-specific data value of the current ShefValue
         """
@@ -977,8 +979,8 @@ class DSSVueLoader(base_loader.BaseLoader):
 
 loader_options = (
     "--loader dssvue[sensor_file_path][parameter_file_path]\n"
-    "sensor_file_path    = the name of the ShefDss-style sensor file to use \n"
-    "parameter_file_path = the name of the ShefDss-style parameter file to use \n"
+    "* sensor_file_path = the name of the ShefDss-style sensor file to use \n"
+    "* parameter_file_path = the name of the ShefDss-style parameter file to use \n"
 )
 loader_description = (
     "Used by HEC-DSSVue to import/export SHEF data. Uses ShefDss-style configuration.\n"

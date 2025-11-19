@@ -8,14 +8,20 @@ version = "1.5.3"
 packages = [
     { include = "shef" },
 ]
-description = "Module to extract data from SHEF formated files with ability to save output as flat file, dss file, or directly into Corps water management systems (CWMS) database"
+description = "Module to extract data from SHEF formated files with ability to save output as flat file, HEC-DSS file, or directly into Corps water management systems (CWMS) database"
 readme = "README.md"
 license = "LICENSE"
-keywords = ["SHEF","USACE", "CWMS"]
+keywords = ["SHEF","USACE", "CWMS", "DSS"]
 authors = ["Hydrologic Engineering Center"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
+sphinx = { version = "^7.0", optional = true }
+sphinx_rtd_theme = { version = "^2.0", optional = true }
+sphinx-design = { version = "^0.5", optional = true }
+
+[tool.poetry.extras]
+docs = ["sphinx", "sphinx_rtd_theme", "sphinx-design"]
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.2.0"
@@ -42,3 +48,4 @@ preserve_quotes = true
 
 [tool.poetry.scripts]
 shefParser = "shef.shef_parser:main"
+

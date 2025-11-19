@@ -386,11 +386,11 @@ SHEF_ENGLISH_UNITS: dict[str, str] = {
     "YY": "code",
 }
 
-VALUE_UNITS_PATTERN: re.Pattern = re.compile("([0-9]+)([a-z]+)", re.I)
+VALUE_UNITS_PATTERN: re.Pattern[str] = re.compile("([0-9]+)([a-z]+)", re.I)
 
-DATETIME_PATTERN: re.Pattern = re.compile("[ :-]")
+DATETIME_PATTERN: re.Pattern[str] = re.compile("[ :-]")
 
-FORMAT_1_PATTERN: re.Pattern = re.compile(
+FORMAT_1_PATTERN: re.Pattern[str] = re.compile(
     # groups:  1 - Location
     #          2 - Obs date
     #          3 - Obs time

@@ -8,9 +8,11 @@ import textwrap
 import types
 from collections import deque
 from datetime import datetime, timedelta, timezone
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as package_version
 from io import BufferedRandom, StringIO, TextIOWrapper
 from pathlib import Path
-from typing import Any, Optional, TextIO, Union
+from typing import Any, Optional, TextIO, Union, cast
 from zoneinfo import ZoneInfo
 
 from shef.constants import (
@@ -127,6 +129,19 @@ versions = """
 +-------+-----------+-----+-------------------------------------------------------------------------+
 | 1.5.2 | 22Oct2025 | MDP | Fix bugs processing pre-processed format 2 files                        |
 +-------+-----------+-----+-------------------------------------------------------------------------+
+| 1.5.3 | 31Oct2025 | MDP | Added exporters (base_exporter, cda_exporter)                           |
++-------+-----------+-----+-------------------------------------------------------------------------+
+| 1.6.0 | 19Nov2025 | MDP | 1. Move base_loader to abstract_loader and base_exporter                |
+|       |           |     |    to abstract_exporter and make truly abstract                         |
+|       |           |     | 2. Implement module validation scheme to enforce existence and type of  |
+|       |           |     |    specific variables for modules that define subclasses of             |
+|       |           |     |    AbstractLoader and AbstractExporter classes. Modules that fail the   |
+|       |           |     |    validation can't be imported                                         |
+|       |           |     | 3. Output exporter information on --description output                  |
+|       |           |     | 4. Add --version option to output PyPI package version                  |
+|       |           |     | 5. Improve type hinting to pass mypy --strict mode                      |
+|       |           |     | 6. More documentation                                                   |
++-------+-----------+-----+-------------------------------------------------------------------------+
 
 Authors:
     MDP  Mike Perryman, USACE IWR-HEC
@@ -134,8 +149,8 @@ Authors:
 """
 
 progname = Path(sys.argv[0]).stem
-version = "1.5.2"
-version_date = "25Sep2025"
+version = "1.6.0"
+version_date = "19Nov2025"
 logger = logging.getLogger()
 
 
@@ -197,6 +212,45 @@ else:
                 "version": vers,
                 "class": clazz,
                 "can_unload": unload,
+            }
+        except:
+            pass
+# ------------------------------------------------------- #
+# catalog the SHEF data exporters in the exporters module #
+# ------------------------------------------------------- #
+available_exporters = {}
+try:
+    from shef import exporters
+except Exception as e:
+    msg = str(e)
+    parts = msg.split("|", 1)
+    if parts[0] == "ERROR":
+        logger.error(parts[1])
+    elif parts[0] == "WARNING":
+        logger.warning(parts[1])
+    elif parts[0] == "INFO":
+        logger.info(parts[1])
+    else:
+        logger.error(exc_info(e))
+else:
+    for exporter in [
+        item
+        for item in dir(exporters)
+        if eval(f"exporters.{item}.__class__.__name__") == "module"
+    ]:
+        exec(f"from exporters import {exporter}")
+        try:
+            params = eval(f"{exporter}.exporter_parameters")
+            desc = eval(f"{exporter}.exporter_description")
+            vers = eval(f"{exporter}.exporter_version")
+            exp_class = eval(f"{exporter}.exporter_class")
+            ldr_class = eval(f"{exporter}.loader_class")
+            available_exporters[exporter] = {
+                "parameters": params,
+                "description": desc,
+                "version": vers,
+                "exporter_class": exp_class,
+                "loader_class": ldr_class,
             }
         except:
             pass
@@ -693,14 +747,14 @@ class ShefParser:
             Compare to another datetime
             """
             utc = "Z" if isinstance(self._tzinfo, str) else ShefParser.UTC
-            return self.astimezone(utc)._dt < other.astimezone(utc)._dt
+            return bool(self.astimezone(utc)._dt < other.astimezone(utc)._dt)
 
         def __le__(self, other: "ShefParser.DateTime") -> bool:
             """
             Compare to another datetime
             """
             utc = "Z" if isinstance(self._tzinfo, str) else ShefParser.UTC
-            return self.astimezone(utc)._dt <= other.astimezone(utc)._dt
+            return bool(self.astimezone(utc)._dt <= other.astimezone(utc)._dt)
 
         def __eq__(self, other: object) -> bool:
             """
@@ -711,21 +765,21 @@ class ShefParser:
                     f"Expected object type to be ShefParser.DateTime, got {other.__class__.__name__}"
                 )
             utc = "Z" if isinstance(self._tzinfo, str) else ShefParser.UTC
-            return self.astimezone(utc)._dt == other.astimezone(utc)._dt
+            return bool(self.astimezone(utc)._dt == other.astimezone(utc)._dt)
 
         def __ge__(self, other: "ShefParser.DateTime") -> bool:
             """
             Compare to another datetime
             """
             utc = "Z" if isinstance(self._tzinfo, str) else ShefParser.UTC
-            return self.astimezone(utc)._dt >= other.astimezone(utc)._dt
+            return bool(self.astimezone(utc)._dt >= other.astimezone(utc)._dt)
 
         def __gt__(self, other: "ShefParser.DateTime") -> bool:
             """
             Compare to another datetime
             """
             utc = "Z" if isinstance(self._tzinfo, str) else ShefParser.UTC
-            return self.astimezone(utc)._dt > other.astimezone(utc)._dt
+            return bool(self.astimezone(utc)._dt > other.astimezone(utc)._dt)
 
         def __str__(self) -> str:
             """
@@ -1444,7 +1498,7 @@ class ShefParser:
         out.write("SHEFPARM\n")
         out.write("*1                      PE CODES AND CONVERSION FACTORS\n")
         # get the non-send codes
-        conversions = dict(PE_CONVERSIONS)
+        conversions = {key: value[0] for key, value in PE_CONVERSIONS.items()}
         # add in the send codes
         for code in SEND_CODES:
             conversions[code] = conversions[SEND_CODES[code][0][:2]]
@@ -1544,7 +1598,8 @@ class ShefParser:
         # -----------------------------#
         # initialize program defaults #
         # -----------------------------#
-        self._pe_conversions = copy.deepcopy(PE_CONVERSIONS)
+        self._pe_conversions = {k: v[0] for k, v in PE_CONVERSIONS.items()}
+        self._pe_units = {k: v[1:] for k, v in PE_CONVERSIONS.items()}
         self._send_codes = copy.deepcopy(SEND_CODES)
         self._addional_pe_codes: set[str] = (
             set()
@@ -1571,7 +1626,7 @@ class ShefParser:
         self._line_number = 0
         self._output: Union[None, BufferedRandom, TextIOWrapper] = None
         self._output_name: Union[None, str] = None
-        self._input_lines: deque = deque()
+        self._input_lines: deque[str] = deque()
         self._msg_start_pattern = re.compile(r"^\.[ABE]R?\s", re.I)
         self._msg_continue_patterns = {
             "A": (re.compile(r"^\.A\d{1,2}", re.I), re.compile(r"^\.AR?\d{1,2}", re.I)),
@@ -1789,13 +1844,13 @@ class ShefParser:
                 )
         self._pe_conversions[key] = value
 
-    def get_recognized_pe_codes(self) -> set:
+    def get_recognized_pe_codes(self) -> set[str]:
         """
         Return the set of recognized PE codes
         """
         return set(self._pe_conversions.keys()).union(self._addional_pe_codes)
 
-    def set_additional_pe_codes(self, additional_pe_codes: set) -> None:
+    def set_additional_pe_codes(self, additional_pe_codes: set[str]) -> None:
         """
         Add to the set of recognized PE codes
         """
@@ -2278,7 +2333,8 @@ class ShefParser:
                 if (
                     self._output_rec is not None
                     and line.startswith("        ")
-                    and line[8 == '"' and line.strip()[-1] == '"']
+                    and line[8] == '"'
+                    and line.strip()[-1] == '"'
                 ):
                     output_rec = self._output_rec.copy()
                     self._output_rec = None
@@ -2501,8 +2557,8 @@ class ShefParser:
         """
         Retrieve the next complete message from the message input device
         """
-        raw_message_lines: deque = deque()
-        message_lines: deque = deque()
+        raw_message_lines: deque[str] = deque()
+        message_lines: deque[str] = deque()
         message_type: str = ""
         revised: bool = False
         in_header: bool = False
@@ -2645,7 +2701,7 @@ class ShefParser:
         datestr: str,
         time_zone: Union[timezone, ZoneInfo, str],
         shefit_times: bool = False,
-    ) -> tuple:
+    ) -> tuple[Any, ...]:
         """
         Parses the header observation date into a DateTime object.
         Returns a tuple of observation date and whether the century is specified in the date.
@@ -2720,7 +2776,7 @@ class ShefParser:
 
     def tokenize_a_e_data_string(
         self, datastr: str, message_type: str, is_revised: bool
-    ) -> list:
+    ) -> list[str]:
         """
         Common conversion of .A(R) or .E(R) data strings into tokens. Each type provides its own
         retokenization after this.
@@ -2783,7 +2839,7 @@ class ShefParser:
         token: str,
         century_specified: bool,
         dot_b: bool = False,
-    ) -> tuple:
+    ) -> tuple[Any, ...]:
         """
         Return the observation time from the base datetime as updated by the token. Only one of obstime and relative_time
         will be returned.
@@ -3313,7 +3369,9 @@ class ShefParser:
         except:
             raise ShefParser.ParseException(f"Bad creation time: [{token}]")
 
-    def parse_value_token_alt(self, token: str) -> tuple:
+    def parse_value_token_alt(
+        self, token: str
+    ) -> tuple[Optional[float], Optional[str]]:
         """
         Returns the numeric value and data qualifier from a token that the regex fails to match
         """
@@ -3355,7 +3413,9 @@ class ShefParser:
                 raise ShefParser.ParseException("Missing value")
         return value, qualifier
 
-    def parse_value_token(self, token: str, pe_code: str, units: str) -> tuple:
+    def parse_value_token(
+        self, token: str, pe_code: str, units: str
+    ) -> tuple[Optional[float], Optional[str]]:
         """
         Returns the numeric value and data qualifier for a specified physical element and units system from a token
         """
@@ -3447,7 +3507,7 @@ class ShefParser:
             value *= factor
         return value
 
-    def parse_message(self) -> list:
+    def parse_message(self) -> list[Any]:
         """
         Parse the next message on the input and return a list of OutputRecord objects
         """
@@ -3460,12 +3520,12 @@ class ShefParser:
                 return self.parse_dot_e_message(self._message)
         return []
 
-    def parse_dot_a_message(self, message: str) -> list:
+    def parse_dot_a_message(self, message: str) -> list[Any]:
         """
         Parse a .A or .AR message and return a list of OutputRecord objects
         """
 
-        def retokenize(tokens: list) -> list:
+        def retokenize(tokens: list[Any]) -> list[Any]:
             """
             Accomodates sloppy slash usage in .A message like shefit
             """
@@ -3774,7 +3834,7 @@ class ShefParser:
                         orig_parameter_code,
                         obstime,
                         createtime_str,
-                        value,
+                        cast(float, value),
                         qualifier,
                         revised,
                         duration_unit,
@@ -3784,12 +3844,12 @@ class ShefParser:
                 )
         return outrecs
 
-    def parse_dot_e_message(self, message: str) -> list:
+    def parse_dot_e_message(self, message: str) -> list[Any]:
         """
         Parse a .E or .ER message and return a list of OutputRecord objects
         """
 
-        def retokenize(tokens: list) -> list:
+        def retokenize(tokens: list[Any]) -> list[Any]:
             """
             Accomodates sloppy slash usage in .E message like shefit
             """
@@ -3801,22 +3861,24 @@ class ShefParser:
                     else:
                         new_tokens.append([subtoken])
             token_count = len(new_tokens)
-            interval_pos = [
-                i
-                for i in range(token_count)
-                if self._interval_pattern.match(new_tokens[i][0])
-            ][0]
-            parameter_pos = [
-                i
-                for i in range(token_count)
-                if self._parameter_code_pattern.match(new_tokens[i][0])
-            ][0]
-            if interval_pos < parameter_pos:
-                new_tokens[interval_pos], new_tokens[parameter_pos] = (
-                    new_tokens[parameter_pos],
-                    new_tokens[interval_pos],
-                )
-            return new_tokens
+            try:
+                interval_pos = [
+                    i
+                    for i in range(token_count)
+                    if self._interval_pattern.match(new_tokens[i][0])
+                ][0]
+                parameter_pos = [
+                    i
+                    for i in range(token_count)
+                    if self._parameter_code_pattern.match(new_tokens[i][0])
+                ][0]
+                if interval_pos < parameter_pos:
+                    new_tokens[interval_pos], new_tokens[parameter_pos] = (
+                        new_tokens[parameter_pos],
+                        new_tokens[interval_pos],
+                    )
+            finally:
+                return new_tokens
 
         # -----------------------------#
         # parse the positional fields #
@@ -4130,7 +4192,7 @@ class ShefParser:
                     obstime,
                     createtime_str,
                     value,
-                    qualifier,
+                    cast(str, qualifier),
                     revised,
                     duration_unit,
                     duration_value,
@@ -4147,12 +4209,12 @@ class ShefParser:
                     return [] if self._reject_problematic else outrecs
         return outrecs
 
-    def parse_dot_b_message(self, message: str) -> list:
+    def parse_dot_b_message(self, message: str) -> list[Any]:
         """
         Parses a .B or .BR message and return a list of OutputRecord objects
         """
 
-        def retokenize(tokens: list) -> list:
+        def retokenize(tokens: list[Any]) -> list[Any]:
             """
             Accomodates sloppy slash usage in .B message body like shefit
             """
@@ -4234,7 +4296,8 @@ class ShefParser:
         relativetime: Union[None, timedelta, MonthsDelta] = None
         createtime_str = None
         createtime = None
-        qualifier = "Z"
+        qualifier: Optional[str] = "Z"
+        default_qualifier: Optional[str]
         units = "EN"
         units_override = None
         duration_unit = "Z"
@@ -4356,7 +4419,7 @@ class ShefParser:
                                 createtime_str,
                                 None,
                                 units,
-                                qualifier,
+                                cast(str, qualifier),
                                 duration_unit,
                                 duration_value,
                             )
@@ -4379,7 +4442,7 @@ class ShefParser:
                                 None,
                                 createtime,
                                 units,
-                                qualifier,
+                                cast(str, qualifier),
                                 duration_unit,
                                 duration_value,
                             )
@@ -4522,7 +4585,7 @@ class ShefParser:
                                 p += 1
                                 outrec_pos += 1
                                 raise
-                            if default_qualifier and not qualifier:
+                            if not qualifier:
                                 qualifier = default_qualifier
                             if qualifier and qualifier not in self._qualifier_codes:
                                 self.warning(
@@ -4624,7 +4687,7 @@ def parse(
     loader_spec: Optional[str] = None,
     unload: bool = False,
     processed: bool = False,
-):
+) -> None:
     """
     Either parse incoming SHEF (optionally loading into a datastore) or unload from a datastore into SHEF text
 
@@ -4744,7 +4807,7 @@ def parse(
             else:
                 loader_name = loader_spec[:pos]
                 loader_args = loader_spec[pos:]
-            if loader_name in ["base", "base_loader"]:
+            if loader_name in ["abstract", "abstract_loader"]:
                 raise ShefParser.ParseException("Cannot directly use the base loader")
             if loader_name in available_loaders:
                 loader_info = available_loaders[loader_name]
@@ -4975,12 +5038,17 @@ def main() -> None:
     argparser.add_argument(
         "--make_shefparm",
         action="store_true",
-        help="write SHEFPARM data to <stdout> and exit (exclusive to other arguments except -o/--out)",
+        help="write SHEFPARM data to output file and exit",
     )
     argparser.add_argument(
         "--description",
         action="store_true",
         help="show a more detailed program description and exit",
+    )
+    argparser.add_argument(
+        "--version",
+        action="store_true",
+        help="print the version info and exit",
     )
     args = argparser.parse_args()
 
@@ -4995,6 +5063,7 @@ def main() -> None:
             or args.timestamps
             or args.reject_problematic
             or args.description
+            or args.version
         ):
             print(
                 "\nArgument --make_shefparm may not be used with any other argument except -o/--out\n"
@@ -5003,67 +5072,106 @@ def main() -> None:
         ShefParser.write_shefparm_data(args.out)
         exit(0)
 
+    if args.version:
+        if (
+            args.shefparm
+            or getattr(args, "in") != sys.stdin
+            or args.log != sys.stderr
+            or args.format != 1
+            or args.loglevel != "INFO"
+            or args.defaults
+            or args.timestamps
+            or args.reject_problematic
+            or args.make_shefparm
+            or args.description
+        ):
+            print(
+                "\nArgument --version may not be used with any other argument except -o/--out\n"
+            )
+            exit(-1)
+        try:
+            print(f"Package shef-parser v{package_version('shef-parser')}")
+        except:
+            print(f"{progname} {version}")
+        exit(0)
+
     if args.description:
         print(
             f"""
-{progname} is a pure Python replacement for the shefit program from NOAA/NWS.
+{progname} is a pure Python replacement for the shefit program from
+NOAA/NWS.
 
 SHEFPARM file:
-    Unlike shefit, {progname} doesn't require the use of a SHEFPARM file, although one may be used.
+    Unlike shefit, {progname} doesn't require the use of a SHEFPARM file,
+    although one may be used.
 
-    If --defaults is not specified, {progname} uses the same rules as shefit for locating the
-    SHEFPARM file:
+    If --defaults is not specified, {progname} uses the same rules as
+    shefit for locating the SHEFPARM file:
         1. the current directory is searched first
-        2. the directory specified by "rfs_sys_dir" environment variable is searched
+        2. the directory specified by "rfs_sys_dir" environment variable
+           is searched
 
-    However, unlike shefit which exits if no SHEFPARM file is found, {progname} will use program
-    defaults instead. The program defaults have the same behavior as using the SHEFPARM file
-    bundled with the latest source code for shefit.
+    However, unlike shefit which exits if no SHEFPARM file is found,
+    {progname} will use program defaults instead. The program defaults
+    have the same behavior as using the SHEFPARM file bundled with the
+    latest source code for shefit.
 
-    Also unlike shefit, the location of the SHEFPARM file can be specified the using -s/--shefparm
-    option, and doesn't need to be named SHEFPARM. Using -s/--shefparm overrides searching the
-    default locations for the file.
+    Also unlike shefit, the location of the SHEFPARM file can be specified
+    the using -s/--shefparm option, and doesn't need to be named SHEFPARM.
+    Using -s/--shefparm overrides searching the default locations for the
+    file.
 
-    If a SHEFPARM file is used, any modifications it makes to the program defaults are logged at
-    the INFO and/or WARNING levels on program startup.
+    If a SHEFPARM file is used, any modifications it makes to the program
+    defaults are logged at the INFO and/or WARNING levels on program
+    startup.
 
-    The --defaults option may be specified to force {progname} to use program defaults if a
-    SHEFPARM file exists in the current or $rfs_sys_dir directories.
+    The --defaults option may be specified to force {progname} to use
+    program defaults if a SHEFPARM file exists in the current or
+    $rfs_sys_dir directories.
 
     The --defaults and -s/--shefparm options are mutually exclusive.
 
-    The --make_shefparm option may be used to output program defaults in SHEFPARM format. This may
-    be useful if it is necessary to override the program defaults. Either redirect <stdout> or
-    use the -o/--out option to capture the SHEFPARM data to a file in order to modify it for use.
+    The --make_shefparm option may be used to output program defaults in
+    SHEFPARM format. This may be useful if it is necessary to override the
+    program defaults. Either redirect <stdout> or use the -o/--out option
+    to capture the SHEFPARM data to a file in order to modify it for use.
 
 Input format:
-    Unless --processed is specified, the program reads SHEF text and processes it into the (default
-    or specified) output format, optionally passing the output to a loader. If --processed is 
-    specified, the program reads pre-processed data in either output format 1 or 2 and outputs it in
-    the (default or specified) format. It can thus be used to change the format of a pre-processed
-    file or to pass pre-processed data to a loader.
+    Unless --processed is specified, the program reads SHEF text and
+    processes it into the (default or specified) output format, optionally
+    passing the output to a loader. If --processed is specified, the
+    program reads pre-processed data in either output format 1 or 2 and
+    outputs it in the (default or specified) format. It can thus be used
+    to change the format of a pre-processed file or to pass pre-processed
+    data to a loader.
 
 Output format:
-    Like shefit, the default output format is the shefit text version 1. The output formats
-    -f/--format 1 and -f/--format 2 are equivalent to the shefit -1 and -2 options, respectively.
-    There is no equivalent to the shefit -b (binary output) option.
+    Like shefit, the default output format is the shefit text version 1.
+    The output formats -f/--format 1 and -f/--format 2 are equivalent to
+    the shefit -1 and -2 options, respectively. There is no equivalent to
+    the shefit -b (binary output) option.
 
 Times and timezone processing:
-    By default, {progname} uses modern date/time and time zone objects to process times and time
-    zones, which do not always produce the same results as the logic used in shefit. Use the
-    --shefit_times option to force {progname} to use the same date/time logic as shefit. This is
-    helpful when comparing {progname} output to shefit output for a common input.
+    By default, {progname} uses modern date/time and time zone objects to
+    process times and time zones, which do not always produce the same
+    results as the logic used in shefit. Use the --shefit_times option to
+    force {progname} to use the same date/time logic as shefit. This is
+    helpful when comparing {progname} output to shefit output for a
+    common input.
 
-    Note that using --shefit_times causes {progname} to (like shefit) always generate incorrect UTC
-    times for SHEF time zones Y, YD, YS, and ND, and to generate incorrect UTC times for SHEF time
-    zone N during daylight saving time.
+    Note that using --shefit_times causes {progname} to (like shefit)
+    always generate incorrect UTC times for SHEF time zones Y, YD, YS, and
+    ND, and to generate incorrect UTC times for SHEF time zone N during
+    daylight saving time.
 
 Messages with errors:
-    In many circumstances {progname} is able to process valid portions of messages that occur
-    after an erroneous portion, where shefit normally stops further processing of a message when
-    it encounters an error. This usually results in parsing more valid values from problematic
-    messages than shefit. However, it can result treating invalid data as valid in certain messages
-    that are badly mangled. This behavior can be prevented by using the --reject_problematic option
+    In many circumstances {progname} is able to process valid portions
+    of messages that occur after an erroneous portion, where shefit
+    normally stops further processing of a message when it encounters an
+    error. This usually results in parsing more valid values from
+    problematic messages than shefit. However, it can result treating
+    invalid data as valid in certain messages that are badly mangled. This
+    behavior can be prevented by using the --reject_problematic option
     which discards all data from messages with errors.
 
 Loading SHEF data to data stores:"""
@@ -5073,30 +5181,61 @@ Loading SHEF data to data stores:"""
                 "    The 'loaders' package was not found or it contained no valid loaders."
             )
         else:
+            def output_lines(header, text) :
+                input_lines = text.split("\n")
+                output_lines = []
+                for input_line in input_lines:
+                    output_lines.extend(textwrap.fill(input_line.strip(), width=50, break_long_words=False).split("\n"))
+                print(f"    {header.ljust(14)}{': ' if header else '  '}{output_lines[0]}")
+                for line in output_lines[1:]:
+                    print(f"{20 * ' '}{line}")
+
             if loaders.error_modules:
                 print(
                     "\n    Errors importing the following modules:\n\t{}\n".format(
                         "\n\t".join(loaders.error_modules)
                     )
                 )
+            if exporters.error_modules:
+                print(
+                    "\n    Errors importing the following modules:\n\t{}\n".format(
+                        "\n\t".join(exporters.error_modules)
+                    )
+                )
             for loader_name in sorted(available_loaders):
-                if loader_name == "base_loader":
+                if loader_name == "abstract_loader":
                     continue
                 description = "\n                    ".join(
-                    available_loaders[loader_name]["description"].split(chr(10))
+                    available_loaders[loader_name]["description"].strip().split(chr(10))
                 )
                 options = "\n                    ".join(
-                    available_loaders[loader_name]["option_format"].split(chr(10))
+                    available_loaders[loader_name]["option_format"]
+                    .strip()
+                    .split(chr(10))
                 )
-                print(
-                    f"    loader        : {loader_name} v{available_loaders[loader_name]['version']}"
-                )
-                print(f"    Description   : {description}")
-                print(
-                    f"    Can unload    : {available_loaders[loader_name]['can_unload']}"
-                )
-                print(f"    Option Format : {options}")
-                print("")
+                loader_class_name = available_loaders[loader_name]["class"].__name__
+                print(f"    {70 * '='}")
+                output_lines("Loader", f"{loader_name}.{loader_class_name} v{available_loaders[loader_name]['version']}")
+                output_lines("Description", description)
+                output_lines("Option Format", options)
+                output_lines("Can unload", f"{available_loaders[loader_name]['can_unload']}")
+                if available_loaders[loader_name]["can_unload"]:
+                    has_exporter = False
+                    for exporter_name in [
+                        ex
+                        for ex in available_exporters
+                        if available_exporters[ex]["loader_class"].__name__
+                        == loader_class_name
+                    ]:
+                        has_exporter = True
+                        exporter_class_name = available_exporters[exporter_name][
+                            "exporter_class"
+                        ].__name__
+                        output_lines("Exporter", f"{exporter_name}.{exporter_class_name} v{available_exporters[exporter_name]['version']}")
+                        output_lines("", f"{available_exporters[exporter_name]['description']}")
+                        output_lines("", f"{exporter_class_name}({available_exporters[exporter_name]['parameters']})")
+                    if not has_exporter:
+                        output_lines("Exporter", "<None>")
 
         exit(0)
 

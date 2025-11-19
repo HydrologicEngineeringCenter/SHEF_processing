@@ -4,13 +4,14 @@ from datetime import datetime, timedelta
 from io import BufferedRandom, StringIO
 from typing import Any, Optional, TextIO, Union
 
-import cwms
+import cwms  # type: ignore
 
 from shef import loaders
-from shef.loaders import shared
-from shef.exporters import BaseExporter
+from shef.exporters import AbstractExporter
+from shef.loaders import abstract_loader, shared
 
-class CdaExporter(BaseExporter):
+
+class CdaExporter(AbstractExporter):
     """
     Helper class for using CdaLoader to export SHEF values.
 
@@ -19,15 +20,7 @@ class CdaExporter(BaseExporter):
     expected format.
     """
 
-    class NamedStringIO(StringIO):
-        """
-        A simple StringIO subclass that provides a name attribute (expected by CdaLoader)
-        """
-        def __init__(self, content: Optional[str] = None):
-            super().__init__(content)
-            self.name = "<streamed input>"
-
-    def __init__(self, api_root: str, office: str):
+    def __init__(self, cda_url: str, office: str):
         """
         Initializer for CdaExporter class
 
@@ -36,12 +29,12 @@ class CdaExporter(BaseExporter):
             office (str): The office id to use
         """
         super().__init__()
-        if not all([api_root, office]):
+        if not all([cda_url, office]):
             raise shared.LoaderException("Must specifiy api_root, api_key and office")
-        self._api_root = api_root
+        self._api_root = cda_url
         self._office = office
         self._cda_loader = loaders.cda_loader.CdaLoader(self._logger, sys.stdout)
-        self._cda_loader.set_options(f"[{api_root}][][{office}]")
+        self._cda_loader.set_options(f"[{cda_url}][][{office}]")
         self._cda_loader.make_export_transforms()
 
     def export(self, timeseries_or_group: str) -> None:
@@ -72,7 +65,7 @@ class CdaExporter(BaseExporter):
             )
             data.write(json.dumps(ts.json))
         data.write("]")
-        self._cda_loader.set_input(CdaExporter.NamedStringIO(data.getvalue()))
+        self._cda_loader.set_input(AbstractExporter.NamedStringIO(data.getvalue()))
         data.close()
         try:
             old_output = self._cda_loader._output
@@ -117,3 +110,10 @@ class CdaExporter(BaseExporter):
             Optional[str]: The unit as specified in the time series alias
         """
         return self._cda_loader._transforms[tsid].units
+
+
+exporter_description = "Outputs SHEF text from time series in CWMS database via CDA"
+exporter_parameters = "cda_url: str, office: str"
+exporter_version = "1.0.0"
+exporter_class = CdaExporter
+loader_class = loaders.cda_loader.CdaLoader
