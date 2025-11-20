@@ -5,128 +5,52 @@ Loaders
    :maxdepth: 1
    :caption: Contents:
 
+   loader-requirements
+   using-cda-loader
+   using-dss-loader
+
 .. role:: py(code)
     :language: python
 
-As stated in the main page, loaders are modules within the :py:`shef.loaders` module.
+Without the ``--loader`` command line option, :py:`shef.shef_parser` simply outputs the parsed text in one of the
+formats described on the :doc:`index` page. With the ``--loader`` command line option, the format is:
 
-Module Requirements
--------------------
+``--loader <loader_name><loader_options>``
 
-Any loader that fails to meet all of these requirements will raise and :py:`ImportError` on import.
+where:
 
-A loader module must be named ``<loader-name>_loader.py`` where <loader-name> will be used in the ``--loader`` command line option
+* ``<loader_name>`` is the name of the loader module without the ``_loader`` portion (e.g., ``abc`` for the module ``abc_loader``)
+* ``<loader_options>`` is zero or more loader options, each in square brackets (e.g., ``[opt1][opt2]``)
 
-A loader module must have the following global variable in order to be imported. Multi-line strings are acceptable
+An example would be ``python shef/shef_parser --loader abc[opt1][opt2]``
 
-* ``loader_options: str`` - The first line of this string should indicate the format of the ``--loader`` command line option.
-  Subsequent lines may document the loader arguments
-* ``loader_description: str`` - A description of what the loader is used for
-* ``loader_version: str`` - The version number of the loader as a string
-* ``loader_class: class`` - The class that is the loader. This class must be defined in the module and must be a subclass of :py:`shef.loaders.AbstractLoader`
-* ``can_unload: bool`` - Specifies whether ``loader_class`` has an ``unload()`` method
+Workflow Using a Loader
+-----------------------
 
-.. code-block:: python
+When using a loader, the following happens instead:
 
-    # abc_loader.py
-    from shef.loaders import AbstractLoader
-    class AbcLoader(AbstractLoader):
-        ...
-    ...
-    loader_options = "--loader abc[ds_name][usr_cred]\n"
-                     "* ds_name is the name of the ABC data store\n"
-                     "* usr_cred is the ABC user credential string"
-    loader_description = "Loads SHEF data to the specifed ABC data store\n"
-                         "Allows only encoded user credential string"
-    loader_version = "1.0.3"                         
-    loader_class = AbcLoader
-    can_unload = True
+1. The parser constructs a new loader object based on the loader name passed on the command line, passing 3 arguments:
 
-Loader Class Requirements
--------------------------
+   * the parser's logger
+   * the parser's output object (used if unloading)
+   * whether to append to the output object (used if unloading)
+2. The parser calls the loader's :py:`set_options(...)` method, passing the loader options specified on the command line
+3. If ``--unload`` is specified on the command line
 
-As stated above, the loader class must be a subclass of :py:`shef.loaders.AbstractLoader`. As such it *must*:
+   a. The parser calls the loader's :py:`unload()` method and exits
 
-* call the :py:`AbstractLoader.__init__(...)` method from its own :py:`__init__(...)` method.
-    .. code-block:: python
+   If ``--unload`` is *not* specified on the command line
 
-        #AbstractLoader.py
+   b. For each SHEF value [1]_, the parser calls the loader's :py:`set_shef_value(value_str: str)` method [2]_, which then:
 
-        from io import BufferedRandom
-        from logging import Logger
-        from typing import Optional, TextIO, Union
+   * Uses the loader's :py:`time_series_name` property to compare the loader-specific time seies identifier of the SHEF value
+     with that of the previous SHEF value (if any).
+   * If there was a previous SHEF value and the time series identifier is different, calls the loader's :py:`load_time_series()` method. [3]_
+   * Appends the SHEF value into the loader's :py:`_time_series` variable
+   c. Calls the loader's :py:`done()` method and exits. [4]_
 
-        def __init__(
-            self,
-            logger: Optional[Logger],
-            output_object: Optional[Union[BufferedRandom, TextIO, str]] = None,
-            append: bool = False,
-        ) -> None:
-
-    .. code-block:: python
-
-        #AbcLoader.py
-
-        from io import BufferedRandom
-        from logging import Logger
-        from typing import Optional, TextIO, Union
-
-        def __init__(
-            self,
-            logger: Optional[Logger],
-            output_object: Optional[Union[BufferedRandom, TextIO, str]] = None,
-            append: bool = False,
-        ) -> None:
-            super().__init__(logger, output_object, append)
-
-    where :py:`append: bool` specifies whether to append to the output if it is a file-like object
-
-* implement the method :py:`load_time_series(self) -> None:`
-    :py:`shef.loaders.AbstractLoader` has the following variables that are used in this method:
-
-    .. code-block:: python
-
-        self._time_series: list[list[str]] = []
-        self._value_count: int = 0
-        self._time_series_count: int = 0
-
-    The :py:`self._time_series` variable contains a list of lists, with each inner list containing
-    
-    .. code-block:: python
-
-        [
-            str,        # date_time
-            str | None, # value
-            str | None, # data_qualifier
-            str | None  # forecast date_time
-        ]
-
-    At the conclusion of the method, the variables :py:`self._value_count` and :py:`self._time_series_count` should be incremented
-    by the total number of values stored and the number of store operations, respectively
-
-In addition to implementing :py:`load_time_series(self) -> None` method, a loader will likely *want* to override the
-following methods of :py:`shef.loaders.AbstractLoader`:
-
-* :py:`get_time_series_name(self, shef_value: Optional[shared.ShefValue]) -> str`: This is used to get a loader-specific time series identifier
-    for the specified :py:`shared.ShefValue`, which is defined as:
-
-    .. code-block:: python
-
-        ShefValue = namedtuple(
-            "ShefValue",
-            [
-                "location",
-                "obs_date",
-                "obs_time",
-                "create_date",
-                "create_time",
-                "parameter_code",
-                "value",
-                "data_qualifier",
-                "revised_code",
-                "time_series_code",
-                "comment",
-            ],
-        )
-
-
+.. [1] A single SHEF message may contain multiple values, each of which is parsed into a single line in the output
+.. [2] The :py:`set_shef_value(value_str: str)` is not normally overridden in a loader, instead using the version in :py:`shef.loaders.abstract_loader.AbstractLoader`
+.. [3] :py:`shef.loaders.abstract_loader.AbstractLoader.load_time_series()` is abstract, so it must be implemented by the loader, and it must leave its :py:`_time_series` value empty
+.. [4] :py:`shef.loaders.abstract_loader.AbstractLoader.done()` call's the loader's :py:`load_time_series()` method. If additional code is necessary to clean up resources, the loader
+       should override the :py:`done()` method and implement its additional code after calling :py:`super().done()`
