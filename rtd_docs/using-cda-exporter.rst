@@ -1,2 +1,2 @@
-Using the CdaExporter
-=====================
+Using the CdaExporter Class
+===========================
