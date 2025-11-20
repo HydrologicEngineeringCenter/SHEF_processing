@@ -1,4 +1,5 @@
 import re
+import sys
 from abc import ABC, abstractmethod
 from datetime import timedelta
 from io import BufferedRandom
@@ -49,6 +50,18 @@ class AbstractLoader(ABC):
         if self._logger:
             self._logger.info(f"{self.loader_name} v{self.loader_version} instatiated")
 
+    def get_options(self, options_str: Optional[str]) -> tuple[str,...]:
+        """
+        Parses options string into individual options
+
+        Args:
+            options_str (Optional[str]): 
+
+        Returns:
+            tuple[str,...]: The options in the optiions string
+        """
+        return tuple(re.findall(r"\[(.*?)\]", options_str if options_str else ""))
+
     def set_options(self, options_str: Optional[str]) -> None:
         """
         Set the loader-specific options. This loader takes none, but other loaders should take option strings
@@ -57,7 +70,7 @@ class AbstractLoader(ABC):
         positional options (e.g., [key1=val2][key2=val2]) and the process into a dictionary
         """
         if options_str:
-            options = tuple(re.findall(r"\[(.*?)\]", options_str))
+            options = self.get_options(options_str)
             if self._logger:
                 self._logger.info(f"{self.loader_name} initialized with {str(options)}")
 
@@ -213,10 +226,9 @@ class AbstractLoader(ABC):
     @property
     def loader_version(self) -> str:
         """
-        The class name of the current loader
+        The version of the current loader
         """
-        global loader_version
-        return loader_version
+        return getattr(sys.modules[self.__class__.__module__], "loader_version")
 
     @property
     def output_name(self) -> Optional[str]:

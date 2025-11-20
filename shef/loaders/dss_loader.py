@@ -130,7 +130,7 @@ class DssLoader(abstract_loader.AbstractLoader):
                 "transform": transform.strip(),
             }
 
-        options = tuple(re.findall(r"\[(.*?)\]", options_str))
+        options = self.get_options(options_str)
         if len(options) == 3:
             self._dss_file_name, sensorfile_name, parameterfile_name = options
         else:
@@ -762,14 +762,6 @@ class DssLoader(abstract_loader.AbstractLoader):
             )
 
     @property
-    def loader_version(self) -> str:
-        """
-        The class name of the current loader
-        """
-        global loader_version
-        return loader_version
-
-    @property
     def sensor(self) -> str:
         """
         The the senor name for the current SHEF value
@@ -792,15 +784,6 @@ class DssLoader(abstract_loader.AbstractLoader):
                 f"No C Pathname part specified for PE code [{pe_code}]"
             )
         return param
-
-    @property
-    def time_series_name(self) -> str:
-        """
-        Get the loader-specific time series name for the current SHEF value
-        """
-        self.assert_value_is_set()
-        sv = cast(shared.ShefValue, self._shef_value)
-        return self.get_time_series_name(sv)
 
     def get_time_series_name(self, shef_value: Optional[shared.ShefValue]) -> str:
         """

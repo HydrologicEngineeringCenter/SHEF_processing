@@ -124,7 +124,7 @@ class DSSVueLoader(abstract_loader.AbstractLoader):
                 "transform": transform.strip(),
             }
 
-        options = tuple(re.findall(r"\[(.*?)\]", options_str))
+        options = self.get_options(options_str)
         if len(options) == 2:
             sensorfile_name, parameterfile_name = options
         else:
@@ -703,14 +703,6 @@ class DSSVueLoader(abstract_loader.AbstractLoader):
             self._logger.info(
                 f"{self._value_count} values output in {self._time_series_count} time series"
             )
-
-    @property
-    def loader_version(self) -> str:
-        """
-        The class name of the current loader
-        """
-        global loader_version
-        return loader_version
 
     @property
     def sensor(self) -> str:

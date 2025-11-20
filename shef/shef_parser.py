@@ -1854,9 +1854,9 @@ class ShefParser:
         """
         Add to the set of recognized PE codes
         """
-        recognozed_pe_codes = self.get_recognized_pe_codes()
+        recognized_pe_codes = self.get_recognized_pe_codes()
         for additional_pe_code in [
-            x for x in sorted(additional_pe_codes) if x not in recognozed_pe_codes
+            x for x in sorted(additional_pe_codes) if x not in recognized_pe_codes
         ]:
             self.info(
                 f"PE code [{additional_pe_code}] is now recognized and will not generate any warning messages"
@@ -5260,4 +5260,10 @@ Loading SHEF data to data stores:"""
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    with open("testing/cda_test.shef") as f:
+        print(f.read())
+    parse(
+        input_name="testing/cda_test.shef",
+        loader_spec="cda[https://wm.swt.ds.usace.army.mil:8243/swt-data/][TNKOaGFYhFMkOiPleSLYiZ06nD41Dr5ZbfqIhMSFkZhoxpLl3oKvddLKvfKNrqws9rK3DQ925o64wh49ZqVERrpZ7ly39ZmNmGToVAO5uuyDe13HuvIStVpvNTFn9jDqlBx6WTnQo9FEl0mERH3AQsu12dbgCUJ2nf7NkkDl5FMYXPxl3ygH0ZS4NnJmuAbRPGK1REdnY3eHUTT3ACTZm97aNEh5bGl4sMIvgNkZYlrtRUhNtsXTmsMEKqhOt3cp]"
+    )

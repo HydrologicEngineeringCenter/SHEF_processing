@@ -158,7 +158,7 @@ class CdaLoader(abstract_loader.AbstractLoader):
                 f"Empty options on {self.loader_name}.set_options()"
             )
 
-        options = tuple(re.findall(r"\[(.*?)\]", options_str))
+        options = self.get_options(options_str)
         if len(options) > 2:
             self._office_id = options[2]
         if len(options) > 1:
@@ -191,6 +191,27 @@ class CdaLoader(abstract_loader.AbstractLoader):
         The ShefTransform object for the current SHEF value
         """
         return self._transforms[self.transform_key]
+    
+    def make_transforms(self) -> None:
+        """
+        Makes the loading transforms
+        """
+        shef_group = cwms.get_timeseries_group(
+            group_office_id="CWMS",
+            category_office_id="CWMS",
+            group_id="SHEF Data Acquisition",
+            category_id="Data Acquisition",
+        ).json
+        try:
+            for assigned_ts in shef_group["assigned-time-series"]:
+                transform = self.make_shef_transform(assigned_ts)
+                transform_key = f"{transform.location}.{transform.parameter_code}"
+                self._transforms[transform_key] = transform
+        except Exception as e:
+            if self._logger:
+                self._logger.warning(
+                    f"{str(e)} occurred while processing SHEF criteria for {assigned_ts['timeseries-id']}"
+                )
 
     def get_time_series_name(self, shef_value: Optional[shared.ShefValue]) -> str:
         """
@@ -198,6 +219,8 @@ class CdaLoader(abstract_loader.AbstractLoader):
         """
         if shef_value is None:
             raise shared.LoaderException("Empty SHEF value in get_time_series_name()")
+        if not self._transforms:
+            self.make_transforms()
         transform_key = f"{shef_value.location}.{shef_value.parameter_code[:-1]}"
         return self._transforms[transform_key].timeseries_id
 
@@ -219,23 +242,6 @@ class CdaLoader(abstract_loader.AbstractLoader):
         """
         Store SHEF values as CDA POST payloads grouped by time series ID
         """
-        if not self._transforms:
-            shef_group = cwms.get_timeseries_group(
-                group_office_id="CWMS",
-                category_office_id="CWMS",
-                group_id="SHEF Data Acquisition",
-                category_id="Data Acquisition",
-            ).json
-            try:
-                for assigned_ts in shef_group["assigned-time-series"]:
-                    transform = self.make_shef_transform(assigned_ts)
-                    transform_key = f"{transform.location}.{transform.parameter_code}"
-                    self._transforms[transform_key] = transform
-            except Exception as e:
-                if self._logger:
-                    self._logger.warning(
-                        f"{str(e)} occurred while processing SHEF criteria for {assigned_ts['timeseries-id']}"
-                    )
 
         if self._shef_value and self._time_series:
             sv = self._shef_value
@@ -660,14 +666,6 @@ class CdaLoader(abstract_loader.AbstractLoader):
         for i in range(1, len(values)):
             diff.append(values[i][0] - values[i - 1][0])
         return set(diff)
-
-    @property
-    def loader_version(self) -> str:
-        """
-        The version string for the current loader
-        """
-        global loader_version
-        return loader_version
 
     @property
     def use_value(self) -> bool:
