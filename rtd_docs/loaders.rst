@@ -22,7 +22,7 @@ where:
 * ``<loader_name>`` is the name of the loader module without the ``_loader`` portion (e.g., ``abc`` for the module ``abc_loader``)
 * ``<loader_options>`` is zero or more loader options, each in square brackets (e.g., ``[opt1][opt2]``)
 
-An example would be ``python shef/shef_parser --loader abc[opt1][opt2]``
+An example would be ``run_shef_parser --loader abc[opt1][opt2]``
 
 Workflow Using a Loader
 -----------------------
@@ -47,6 +47,7 @@ When using a loader, the following happens instead:
      with that of the previous SHEF value (if any).
    * If there was a previous SHEF value and the time series identifier is different, calls the loader's :py:`load_time_series()` method. [3]_
    * Appends the SHEF value into the loader's :py:`_time_series` variable
+
    c. Calls the loader's :py:`done()` method and exits. [4]_
 
 .. [1] A single SHEF message may contain multiple values, each of which is parsed into a single line in the output

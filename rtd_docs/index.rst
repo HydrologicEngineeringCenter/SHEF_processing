@@ -10,6 +10,7 @@ User Guide for Package shef-parser |release|
    :maxdepth: 1
    :caption: Contents:
 
+   helper-script
    command-line
    description
    loaders
@@ -64,7 +65,7 @@ text must adhere to a standard, in order to meet the goal of human readability t
 Having a dedicated parser to convert SHEF text into a not-so-human-readable format that is much simpler to parse by
 machine allows downstream programs to employ much simpler parsing code.
 
-In this package SHEF parser is the :py:`shef.shef_parser` module.
+In this package SHEF parser is the :py:`shef.shef_parser` module; it is assumed you will execute it using ``run_shef_parser``.
 
 .. dropdown:: Format Examples
 
@@ -155,7 +156,7 @@ In this package, loaders are not stand-alone programs but are sub-modules of the
 :py:`shef.shef_parser` to pass its output directly to them to be loaded to the desired data store. To tell
 :py:`shef.shef_parser` to use a specific loader you use the ``--loader`` command line switch follwed by loader-specific
 arguments. The arguments required by each loader are specified on the command line in one or more bracketed
-text strings (e.g., ``[arg1][arg2]...``) and can be displayed by running ``python shef/shef_parser.py --description``.
+text strings (e.g., ``[arg1][arg2]...``) and can be displayed by running ``run_shef_parser --description``.
 
 In the event that one has on hand not the SHEF text but parsed text, :py:`shef.shef_parser` can pass the processed text
 through to an attached loader by using the ``--processed`` command line argument.

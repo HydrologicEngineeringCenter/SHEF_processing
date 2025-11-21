@@ -16,7 +16,7 @@ To use the CdaLoader class, specify ``--loader cda[<cda_url_root>][<cda_api_key>
 * ``<cda_api_key>`` is your personal authentication key for the database referenced by the URL
 
 It is recommended to use environment variables to hold the URL root and API key so that your command line would look 
-something like ``python shef/shef_parser --loader cda[%CDA_URL_ROOT%][%CDA_API_KEY%]`` on Windows or ``python shef/shef_parser --loader cda[$CDA_URL_ROOT][$CDA_API_KEY]``
+something like ``run_shef_parser  --loader cda[%CDA_URL_ROOT%][%CDA_API_KEY%]`` on Windows or ``run_shef_parser --loader cda[$CDA_URL_ROOT][$CDA_API_KEY]``
 on Linux
 
 Loading Configuration
@@ -39,17 +39,35 @@ where:
 
 For information on SHEF codes, see the `SHEF Code Manual <https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&ved=2ahUKEwiqkISqkvqQAxXyQjABHdeoE9QQFnoECBkQAQ&url=https%3A%2F%2Fwww.weather.gov%2Fmedia%2Fmdl%2FSHEF_CodeManual_5July2012.pdf&usg=AOvVaw0k3t5QKxjiMX1oPJXSOR3K&opi=89978449>`_
 
-Examples:
-
-+-------------------------------------------------+--------------------------------+
-| CWMS Time Series Identifier                     | Alias Field Value              |
-+=================================================+================================+
-| ``Keystone Lake.Elev.Inst.1Hour.0.Decodes-Raw`` | ``KEYO2.HP.RGZ.1001.Units=ft`` |
-+-------------------------------------------------+--------------------------------+
-| ``Keystone Lake.Stor.Inst.1Hour.0.Decodes-Raw`` | ``KEYO2.LS.RGZ.1001.Units=ft`` |
-+-------------------------------------------------+--------------------------------+
+Examples
+--------
 
 It is important to note that the alias field value must *match the actual SHEF text*, so if non-standard SHEF text is being received, the
 alias field may have to have values that disagree with the SHEF standard for the time series.
+
+An exmple (non-standard) configuration and an command line session using it to load data is shown below.
+
+.. figure:: images/cda_loader_config.png
+   :alt: Application screenshot
+   :width: 100%
+   :align: left
+
+   CWMS-Vue with SHEF loading configuration info (double-click to see larger image).
+
+::
+
+    U:\Devl\git\SHEF_processing>run_shef_parser -i testing/cda_test.shef --loader cda[%cda_url_root%][%cda_api_key%]
+    INFO: ----------------------------------------------------------------------
+    INFO: Program shef_parser version 1.6.0 (19Nov2025) starting up
+    INFO: ----------------------------------------------------------------------
+    INFO: CdaLoader v0.5 instatiated
+    INFO: Beginning CWMS-Data-API POST tasks...
+    INFO: Stored 168 values in TestLoc.Elev.Inst.1Hour.0.Test
+    INFO: Stored 168 values in TestLoc.Stor.Inst.1Hour.0.Test
+    INFO: CWMS-Data-API POST tasks complete (0.62 seconds)
+    INFO: --[Summary]-----------------------------------------------------------
+    INFO: 336 values posted in 2 time series
+
+    U:\Devl\git\SHEF_processing>
 
 .. [1] The extremum code is almost never in the SHEF text (although it *is* in the processed text). If absent, it defaults to ``Z`` (not an extremum).

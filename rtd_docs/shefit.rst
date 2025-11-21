@@ -57,7 +57,7 @@ allows files to proliferate without knowing which, if any, contain the canonical
 
 The ``shef.shef_parser`` module contains all canonical parsing configuration in code and thus does not
 need a ``SHEFPARM`` file unless specific customization is required. In this case a ``SHEFPARM`` file
-containing canonical information can be created by running ``python shef/shef_parser.py --make_shefparm``.
+containing canonical information can be created by running ``run_shef_parser --make_shefparm``.
 The file can then be edited as necessary and used with ``shef.shef_parser`` by
 by:
 

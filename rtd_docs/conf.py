@@ -24,12 +24,14 @@ release = pyproject["tool"]["poetry"]["version"]
 project = f'shef-parser {release}'
 copyright = 'No copyright. Developed by U.S. Government'
 author = 'U.S. Army Corps of Engineers'
+highlight_language = 'none' # prevents :: blocks from being highlighted
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    "sphinx_design"
+    "sphinx_design",
+    "sphinx_copybutton",
 ]
 
 templates_path = ['_templates']

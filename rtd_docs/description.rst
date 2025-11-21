@@ -7,6 +7,8 @@ Option Descriptions
 
 ::
 
+    run_shef_parser --description
+    
     shef_parser is a pure Python replacement for the shefit program from
     NOAA/NWS.
 
