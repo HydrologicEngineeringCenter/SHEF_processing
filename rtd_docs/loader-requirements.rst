@@ -50,26 +50,17 @@ As stated above, the loader class must be a subclass of :py:`shef.loaders.Abstra
 * call the :py:`AbstractLoader.__init__(...)` method from its own :py:`__init__(...)` method.
     .. code-block:: python
 
-        #AbstractLoader.py
+        #abc_loader.py
 
         from io import BufferedRandom
         from logging import Logger
         from typing import Optional, TextIO, Union
 
-        def __init__(
-            self,
-            logger: Optional[Logger],
-            output_object: Optional[Union[BufferedRandom, TextIO, str]] = None,
-            append: bool = False,
-        ) -> None
 
-    .. code-block:: python
-
-        #AbcLoader.py
-
-        from io import BufferedRandom
-        from logging import Logger
-        from typing import Optional, TextIO, Union
+      class AbcLoader(abstract_loader.AbstractLoader):
+          """
+          Loads/unloads to/from ABC data stores.
+          """
 
         def __init__(
             self,
