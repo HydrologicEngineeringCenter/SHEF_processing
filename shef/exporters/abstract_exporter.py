@@ -9,10 +9,6 @@ import cwms  # type: ignore
 
 from shef.loaders import abstract_loader, shared
 
-version = "1.0.0"
-version_date = "31Oct2025"
-
-
 class AbstractExporter(ABC):
     """
     Base class for SHEF exporters
@@ -89,6 +85,16 @@ class AbstractExporter(ABC):
             self.set_output(prev_output)
             return s
 
+    @property
+    def logger(self) -> logging.Logger:
+        """
+        The exporter's logger, initially configured to logging.WARNING
+
+        Operations:
+            Read-Only
+        """
+        return self._logger
+    
     def set_output(
         self,
         output_object: Optional[Union[BufferedRandom, TextIO, StringIO]],
@@ -132,6 +138,6 @@ class AbstractExporter(ABC):
 
 exporter_description = "Base exporter for all other exporters to inherit from"
 exporter_parameters = ""
-exporter_version = "1.0.0"
+exporter_version = "1.1.0"
 exporter_class = AbstractExporter
 loader_class = abstract_loader.AbstractLoader

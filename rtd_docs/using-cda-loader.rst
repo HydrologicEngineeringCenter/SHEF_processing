@@ -45,7 +45,7 @@ Examples
 It is important to note that the alias field value must *match the actual SHEF text*, so if non-standard SHEF text is being received, the
 alias field may have to have values that disagree with the SHEF standard for the time series.
 
-An exmple (non-standard) configuration and an command line session using it to load data is shown below.
+An exmple (non-standard) configuration and a command line session using it to load data is shown below.
 
 .. figure:: images/cda_loader_config.png
    :alt: Application screenshot

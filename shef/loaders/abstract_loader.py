@@ -15,7 +15,6 @@ pe_units = {k: v[1] for k, v in PE_CONVERSIONS.items()}  # English units for PE 
 class AbstractLoader(ABC):
     """
     Base class for all SHEF data loaders.
-    This class simply writes the SHEF information to the output for "loading"
     """
 
     def __init__(

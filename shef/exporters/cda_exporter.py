@@ -33,7 +33,7 @@ class CdaExporter(AbstractExporter):
             raise shared.LoaderException("Must specifiy api_root, api_key and office")
         self._api_root = cda_url
         self._office = office
-        self._cda_loader = loaders.cda_loader.CdaLoader(self._logger, sys.stdout)
+        self._cda_loader = loaders.cda_loader.CdaLoader(self.logger, sys.stdout)
         self._cda_loader.set_options(f"[{cda_url}][][{office}]")
         self._cda_loader.make_export_transforms()
 
@@ -50,10 +50,12 @@ class CdaExporter(AbstractExporter):
             timeseries_ids = self._cda_loader._export_groups[timeseries_or_group][
                 "timeseries"
             ]
+        total_value_count: int = 0
+        value_count: int = 0
         data = StringIO()
         data.write("[")
-        for i, tsid in enumerate(timeseries_ids):
-            if i > 0:
+        for tsid in timeseries_ids:
+            if value_count > 0:
                 data.write(",")
             unit = self._cda_loader._transforms[tsid].units
             ts = cwms.get_timeseries(
@@ -63,17 +65,22 @@ class CdaExporter(AbstractExporter):
                 begin=self._start_time,
                 end=self._end_time,
             )
-            data.write(json.dumps(ts.json))
+            value_count = len(ts.json["values"])
+            if value_count > 0:
+                data.write(json.dumps(ts.json))
+                total_value_count += value_count
         data.write("]")
-        self._cda_loader.set_input(AbstractExporter.NamedStringIO(data.getvalue()))
+        to_unload = data.getvalue()
         data.close()
-        try:
-            old_output = self._cda_loader._output
-            self._cda_loader._output = self._output
-            self._cda_loader.unload()
-        finally:
-            self._cda_loader._output = old_output
-            self._cda_loader._input = None
+        if (total_value_count) > 0:
+            try:
+                old_output = self._cda_loader._output
+                self._cda_loader._output = self._output
+                self._cda_loader.set_input(AbstractExporter.NamedStringIO(to_unload))
+                self._cda_loader.unload()
+            finally:
+                self._cda_loader._output = old_output
+                self._cda_loader._input = None
 
     def get_groups(self) -> dict[str, str]:
         """

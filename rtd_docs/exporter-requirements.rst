@@ -68,3 +68,24 @@ As stated above, the loader class must be a subclass of :py:`shef.loaders.Abstra
 
   Note that :py:`AbstractExporter` has a :py:`get_export(self., identifier: str) -> str` method that will call
   this exporter's :py:`export(self, identifier: str)` method and return the resulting SHEF text in a string
+
+AbstractExporter Class
+-----------------------
+
+The :py:`AbstractExporter` class provides the following properties and methods that can/should be used directly by exporter subclasses:
+
+* properties
+
+  * :py:`start_time: datetime.datetime` (get/set): The start of the export time window. Initially set to :py:`None`, which may have 
+    different meanings for different exporters
+  * :py:`end_time: datetime.datetime` (get/set): The end of the export time window. Initially set to :py:`None`, which may have 
+    different meanings for different exporters
+  * :py:`logger: logging.Logger` (get only): A logger for use by exporters. Initially configured to level :py:`logging.WARNING`
+
+* methods
+
+  * :py:`set_output(output: Optional[Union[io.BufferedRandom, typing.TextIO, io.StringIO]]) -> None`: Used to set the exporter's output
+    to a file-like object or None (which may have different meanings for different exporters)
+  * :py:`get_export(identifier: str) -> str`: calls the current exporter's :py:`export(identifier)` method and returns the results in a string.
+    While :py:`AbstractExporter` has no concept of groups, it can be used from exporters that do to collect the output of exporting the
+    group in a string.

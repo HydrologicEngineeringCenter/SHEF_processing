@@ -5260,10 +5260,4 @@ Loading SHEF data to data stores:"""
 
 
 if __name__ == "__main__":
-    # main()
-    with open("testing/cda_test.shef") as f:
-        print(f.read())
-    parse(
-        input_name="testing/cda_test.shef",
-        loader_spec="cda[https://wm.swt.ds.usace.army.mil:8243/swt-data/][TNKOaGFYhFMkOiPleSLYiZ06nD41Dr5ZbfqIhMSFkZhoxpLl3oKvddLKvfKNrqws9rK3DQ925o64wh49ZqVERrpZ7ly39ZmNmGToVAO5uuyDe13HuvIStVpvNTFn9jDqlBx6WTnQo9FEl0mERH3AQsu12dbgCUJ2nf7NkkDl5FMYXPxl3ygH0ZS4NnJmuAbRPGK1REdnY3eHUTT3ACTZm97aNEh5bGl4sMIvgNkZYlrtRUhNtsXTmsMEKqhOt3cp]"
-    )
+    main()

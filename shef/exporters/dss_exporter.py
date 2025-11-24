@@ -110,7 +110,7 @@ class DssExporter(AbstractExporter):
         self._dss_file: HecDss = HecDss(dss_filename)
         self._catalog: Catalog = self._dss_file.get_catalog()
         self._dss_loader: loaders.dss_loader.DssLoader = loaders.dss_loader.DssLoader(
-            self._logger, sys.stdout
+            self.logger, sys.stdout
         )
         self._dss_loader.set_options(
             f"[{dss_filename}][{sensor_filename}][{parameter_filename}]"
@@ -145,7 +145,7 @@ class DssExporter(AbstractExporter):
                 RecordType.RegularTimeSeries,
                 RecordType.IrregularTimeSeries,
             ):
-                self._logger.warning(
+                self.logger.warning(
                     f"Cannot export {identifier}: No such record or record is not time series"
                 )
                 return
@@ -176,7 +176,7 @@ class DssExporter(AbstractExporter):
             try:
                 group = groups[identifier]
             except KeyError:
-                self._logger.warning(
+                self.logger.warning(
                     f"Cannot export {identifier}: No such group defined in {self._groups_filename}"
                 )
                 return
@@ -193,14 +193,14 @@ class DssExporter(AbstractExporter):
                     from hec import hectime  # type: ignore
                     from hec.hectime import HecTime  # type: ignore
                 except ImportError:
-                    self._logger.warning(
+                    self.logger.warning(
                         f"Cannot export {identifier}: package hec is not installed. (pip install hec-python-library)"
                     )
                     return
                 start_time = HecTime()
                 end_time = HecTime()
                 if hectime.get_time_window(group["timewindow"], start_time, end_time):
-                    self._logger.warning(
+                    self.logger.warning(
                         f"Cannot export {identifier}: invalid time window: {group['timewindow']}"
                     )
                     return
@@ -267,7 +267,7 @@ class DssExporter(AbstractExporter):
                     if e_part not in valid_e_parts:
                         del groups[group]["datasets"][i]
         else:
-            self._logger.warning(f"Groups file does not exist: {self._groups_filename}")
+            self.logger.warning(f"Groups file does not exist: {self._groups_filename}")
         return groups
 
     def get_time_window_str(self, group: str) -> Optional[str]:
@@ -283,8 +283,7 @@ class DssExporter(AbstractExporter):
         try:
             twstr: Optional[str] = self.get_groups()[group]["timewindow"]
         except KeyError:
-            if self._logger:
-                self._logger.error(f"No such group: {group}")
+            self.logger.error(f"No such group: {group}")
         return twstr
 
     def get_time_window(self, group: str) -> Optional[list[datetime]]:
@@ -300,23 +299,22 @@ class DssExporter(AbstractExporter):
         try:
             twstr: Optional[str] = self.get_groups()[group]["timewindow"]
         except KeyError:
-            if self._logger:
-                self._logger.error(f"No such group: {group}")
-                return None
+            self.logger.error(f"No such group: {group}")
+            return None
         if not twstr:
             return None
         try:
             from hec import hectime
             from hec.hectime import HecTime
         except ImportError:
-            self._logger.warning(
+            self.logger.warning(
                 f"Cannot parse time window: package hec is not installed. (pip install hec-python-library)"
             )
             return None
         start_time = HecTime()
         end_time = HecTime()
         if hectime.get_time_window(twstr, start_time, end_time):
-            self._logger.warning(f"Invalid time window: {twstr}")
+            self.logger.warning(f"Invalid time window: {twstr}")
             return None
         return [start_time.datetime(), end_time.datetime()]
 
@@ -333,8 +331,7 @@ class DssExporter(AbstractExporter):
         try:
             datasets: list[str] = self.get_groups()[group]["datasets"]
         except KeyError:
-            if self._logger:
-                self._logger.error(f"No such group: {group}")
+            self.logger.error(f"No such group: {group}")
         return datasets
 
 
