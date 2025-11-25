@@ -107,6 +107,7 @@ class DssExporter(AbstractExporter):
                 f"Specified HEC-DSS file does not exist: {dss_filename}"
             )
         self._dss_filename = dss_filename
+        HecDss.set_global_debug_level(int(os.getenv("DSS_MESSAGE_LEVEL", "4")))
         self._dss_file: HecDss = HecDss(dss_filename)
         self._catalog: Catalog = self._dss_file.get_catalog()
         self._dss_loader: loaders.dss_loader.DssLoader = loaders.dss_loader.DssLoader(
@@ -308,7 +309,7 @@ class DssExporter(AbstractExporter):
             from hec.hectime import HecTime
         except ImportError:
             self.logger.warning(
-                f"Cannot parse time window: package hec is not installed. (pip install hec-python-library)"
+                f"Cannot parse time window: module hec is does not exist. (Run 'pip install hec-python-library' to fix)"
             )
             return None
         start_time = HecTime()
@@ -318,7 +319,7 @@ class DssExporter(AbstractExporter):
             return None
         return [start_time.datetime(), end_time.datetime()]
 
-    def get_time_series(self, group: str) -> list[str]:
+    def get_time_series(self, group: str) -> list[list[str]]:
         """
         Retrieves the time in the specifed time series group
 

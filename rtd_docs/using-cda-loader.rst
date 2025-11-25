@@ -2,15 +2,18 @@ Using The CdaLoader Class
 =========================
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Contents:
+
+.. role:: py(code)
+    :language: python
 
 This page does not cover unloading with the ``--unload`` command line option, which is covered in the :doc:`using-cda-exporter` page.
 
 Command Line
 ------------
 
-To use the CdaLoader class, specify ``--loader cda[<cda_url_root>][<cda_api_key>]`` on the command line, where
+To use the :py:`CdaLoader` class, specify ``--loader cda[<cda_url_root>][<cda_api_key>]`` on the command line, where
 
 * ``<cda_url_root>`` is the URL to the Cwms Data API (e.g., ``https://cwms-data-test.cwbi.us/cwms-data/`` for the CWBI test database)
 * ``<cda_api_key>`` is your personal authentication key for the database referenced by the URL
@@ -47,7 +50,7 @@ alias field may have to have values that disagree with the SHEF standard for the
 
 An exmple (non-standard) configuration and a command line session using it to load data is shown below.
 
-.. figure:: images/cda_loader_config.png
+.. figure:: images/cda-loader-config.png
    :alt: Application screenshot
    :width: 100%
    :align: left

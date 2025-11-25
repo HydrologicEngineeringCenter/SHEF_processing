@@ -2,7 +2,7 @@ HEC-DSS Sensor and Parameter Files
 ==================================
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Contents
 
    shefdss_util
@@ -11,20 +11,21 @@ HEC-DSS Sensor and Parameter Files
     :language: python
 
 Using sensor and parameter files to store the configuration for translating SHEF text to/from HEC-DSS files was introduced
-in the early to mid 1980's in HEC's original program for loading SHEF data into HEC-DSS files, named ``SHFDSS``. [1]_ As the program was
-modified, updated, and renamed (to ``SHEFDSS``) over the years, the sensor and parameter files - with their names and formats -
-continued unchanged, save for the deprecation of the sensor file's password field [2]_.
+in HEC's earliest programs for ingesting SHEF text into HEC-DSS. [1]_ As the program was modified and updated over the years,
+the sensor and parameter files - with their names and formats - continued unchanged, save for the deprecation of a password field
+in the sensor file. [2]_
 
-The :py:`DssLoader` class can still use the traditional columnar format of the sensor and parameter files, but can also use
-comma separated values (.csv) formats for them, which removes the constraints on the lengths of DSS pathname parts they can specify.
-Columnar files can be translated into .csv format using :doc:`shefdss_util`
+The :py:`DssLoader` class can still use the traditional columnar format of the sensor and parameter files, but the preferred
+format is comma separated values (.csv), which removes the constraints on the lengths of DSS pathname parts they can specify.
+Columnar files can be translated into .csv format as described in the :doc:`shefdss_util` page
 
 In the descriptions below, *Fields* refers to the .csv field number, and *cols* refers to the columnar format.
 
 Sensor File
 -----------
 
-The sensor file controls which SHEF messages get loaded [3]_ and contains the following information:
+The sensor file maps SHEF locations and PE codes to DSS time series locations, intervals and descriptions. It controls which
+SHEF messages get loaded [3]_ and contains the following information:
 
     * **Field 1 or cols 1-8 (required)**: The SHEF location identifier
     * **Field 2 or cols 9-10 (required)**: The SHEF PE code
@@ -49,8 +50,8 @@ Any sensor file line that begins with ``*`` or at least 10 consecutive spaces is
 Parameter File
 --------------
 
-The parameter file controls value conversions and determines the DSS C pathname part, the data type and unit for SHEF
-messages for specific PE codes:
+The parameter file maps SHEF PE codes to DSS time series parameters, data types, and units for all locations. It controls value
+conversions and contains the following information:
 
     * **Field 1 or cols 1-2 (required)**: The SHEF PE code
     * **Field 2 or cols 4-28 (optional)**: The DSS C pathname part. If empty, the C part will be the PE code
@@ -413,8 +414,9 @@ Example Files
         YY,Code-Gage Status Lvl 3,n/a,*,
 
 
-.. [1] The documentation for the 10 April 1988 version of ``SHFDSS`` provides instructions for updating from versions prior
-   to February, 1986.
+.. [1] The program was a Fortran program named ``SHFDSS`` written in the early to mid 1980s (the documentation for the 10 April 1988
+   version provides instructions for updating from versions prior to February, 1986) for the Harris minicomputers that comprised
+   USACE's Water Control Data System (WCDS).
 
 .. [2] The default file names (``SHFDSSS`` and ``SHFDSSP`` for the sensor and parameter files, respectively) remained unchanged,
    except for changing to lower-case in the original HEC-DSSVue SHEF import/export code. The columnar formats remain

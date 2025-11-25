@@ -2,7 +2,7 @@ Using the CdaExporter Class
 ===========================
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Contents:
 
 .. role:: py(code)
@@ -20,7 +20,7 @@ series to be a member of more than one export group.
 
     1. It allows for SHEF text for a specific location and parameter to be loaded into one time series and unloaded from another one.
        This allows loading into a "raw" (not screened or validated) time series and unloading from a "revised" (screeened and validiated)
-       time series.
+       time series - although, in this scenario, the SHEF text *should* have different type and source (TS) codes.
 
     2. Using multiple groups for export allows the :py:`CdaExporter` to export by group name instead of having to export multiple time series
        identifiers to unload SHEF text for specific purposes
@@ -37,13 +37,29 @@ where:
 
 For information on SHEF codes, see the `SHEF Code Manual <https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&ved=2ahUKEwiqkISqkvqQAxXyQjABHdeoE9QQFnoECBkQAQ&url=https%3A%2F%2Fwww.weather.gov%2Fmedia%2Fmdl%2FSHEF_CodeManual_5July2012.pdf&usg=AOvVaw0k3t5QKxjiMX1oPJXSOR3K&opi=89978449>`_
 
+Groups
+------
+
+As stated above, the :py:`CdaExporter` can export by group where the group name is the name of a time series group under the
+``SHEF Export`` time series category. The group operations available are:
+
+* :py:`get_groups() -> dict[str, str]` returns a dictionary whose keys are the defined group names and whose values are
+  the description in the CWMS database for each group
+* :py:`get_time_series(group: str) -> list[str]` returns a list of time series identifiers assigned to the specified group
+
+Other
+-----
+
+* :py:`get_unit(tsid: str) -> Optional[str]` returns the SHEF unit for the time series as specified in alias field of the 
+  time series group assignment.
+
 Examples
 --------
 
 An exmple configuration and a Python script using it to unload data is shown below. Note that some non-standard SHEF PE
 codes are used, so an annotated SHEF file is created that has extra information.
 
-.. figure:: images/cda_exporter_config.png
+.. figure:: images/cda-exporter-config.png
    :alt: Application screenshot
    :width: 100%
    :align: left
@@ -61,6 +77,9 @@ codes are used, so an annotated SHEF file is created that has extra information.
     exporter = CdaExporter(os.getenv("cda_url_root"), "SWT")
     exporter.start_time = datetime.now() - timedelta(hours=6)
     exporter.end_time = datetime.now()
+    group_name = "ARBU"
+
+    assert group_name in exporter.get_groups()
 
     # ------------------------------------------------------------------ #
     # Generate SHEF data for time series in group "ARBU" (Arbuckle Lake) #
@@ -69,7 +88,7 @@ codes are used, so an annotated SHEF file is created that has extra information.
     # ------------------------------------------------------------------ #
     with open("Arbuckle.shef", "w") as f:
         exporter.set_output(f)
-        exporter.export("ARBU")
+        exporter.export(group_name)
     # -------------------------------------------- #
     # Create an annotated SHEF file that includes: #
     # 1. Source time series IDs                    #
@@ -78,11 +97,10 @@ codes are used, so an annotated SHEF file is created that has extra information.
     # -------------------------------------------- #
     with open("Arbuckle-annotated.shef", "w") as f:
         exporter.set_output(f)
-        for tsid in exporter.get_time_series("ARBU"):
+        for tsid in exporter.get_time_series(group_name):
             f.write(f":\n: {tsid}, unit={exporter.get_unit(tsid)}\n:\n")
             shef = exporter.get_export(tsid)
             f.write(shef if shef else "<No data in time window>\n\n")
-
 
 .. dropdown:: Arbuckle.shef
 

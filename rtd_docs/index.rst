@@ -7,7 +7,7 @@ User Guide for Package shef-parser |release|
 =============================================
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Contents:
 
    helper-script

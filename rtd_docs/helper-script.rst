@@ -2,7 +2,7 @@ run_shef_parser Script
 ======================
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Contents:
 
 .. role:: py(code)
