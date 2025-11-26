@@ -22,7 +22,7 @@ from typing import (
 
 import cwms  # type: ignore
 
-from shef.loaders import base_loader, shared
+from shef.loaders import abstract_loader, shared
 
 MS_DAY = 86400 * 1000
 MS_HOUR = 3600 * 1000
@@ -79,7 +79,7 @@ SHEF_INTERVAL_MS: dict[str, int] = {
 MAX_CONNECTIONS = 10
 
 
-class CdaLoader(base_loader.BaseLoader):
+class CdaLoader(abstract_loader.AbstractLoader):
     """
     Loader used by cwms-data-api (CDA)
     """
@@ -104,9 +104,9 @@ class CdaLoader(base_loader.BaseLoader):
         self._time_series_error_count: int = 0
         self._transforms: dict[str, ShefTransform] = {}
         self._value_error_count: int = 0
-        self._write_tasks: list[Coroutine] = []
+        self._write_tasks: list[Coroutine[Any, Any, Any]] = []
 
-    def make_shef_transform(self, crit: dict) -> ShefTransform:
+    def make_shef_transform(self, crit: dict[str, Any]) -> ShefTransform:
         """
         Create a ShefTransform object based on the provided SHEF time series group item
         """
@@ -158,7 +158,7 @@ class CdaLoader(base_loader.BaseLoader):
                 f"Empty options on {self.loader_name}.set_options()"
             )
 
-        options = tuple(re.findall(r"\[(.*?)\]", options_str))
+        options = self.get_options(options_str)
         if len(options) > 2:
             self._office_id = options[2]
         if len(options) > 1:
@@ -172,7 +172,9 @@ class CdaLoader(base_loader.BaseLoader):
         if cda_api_key:
             cwms.init_session(api_root=self._cda_url, api_key=f"apikey {cda_api_key}")
         else:
-            cwms.init_session(api_root=self._cda_url, api_key=None) # don't need api key if unloading
+            cwms.init_session(
+                api_root=self._cda_url, api_key=None
+            )  # don't need api key if unloading
 
     @property
     def transform_key(self) -> str:
@@ -240,26 +242,9 @@ class CdaLoader(base_loader.BaseLoader):
         """
         Store SHEF values as CDA POST payloads grouped by time series ID
         """
-        if not self._transforms:
-            shef_group = cwms.get_timeseries_group(
-                group_office_id="CWMS",
-                category_office_id="CWMS",
-                group_id="SHEF Data Acquisition",
-                category_id="Data Acquisition",
-            ).json
-            try:
-                for assigned_ts in shef_group["assigned-time-series"]:
-                    transform = self.make_shef_transform(assigned_ts)
-                    transform_key = f"{transform.location}.{transform.parameter_code}"
-                    self._transforms[transform_key] = transform
-            except Exception as e:
-                if self._logger:
-                    self._logger.warning(
-                        f"{str(e)} occurred while processing SHEF criteria for {assigned_ts['timeseries-id']}"
-                    )
 
         if self._shef_value and self._time_series:
-            sv = cast(shared.ShefValue, self._shef_value)
+            sv = self._shef_value
             if self._logger:
                 self._logger.debug(f"ts_name: {self.get_time_series_name(sv)}")
                 self._logger.debug(f"shef_value: {sv}")
@@ -268,7 +253,7 @@ class CdaLoader(base_loader.BaseLoader):
                 time_series: list[CdaValue] = []
                 for ts in self._time_series:
                     time = self.get_unix_timestamp(ts[0])
-                    time_series.append(CdaValue(time, ts[1], 0))
+                    time_series.append(CdaValue(time, float(ts[1]), 0))
                 post_data: TimeseriesPayload = {
                     "name": self.get_time_series_name(sv),
                     "office-id": self.transform.office,
@@ -283,13 +268,15 @@ class CdaLoader(base_loader.BaseLoader):
                     match_payload["values"].extend(time_series)
             self._time_series = []
 
-    def create_write_task(self, post_data: TimeseriesPayload) -> Coroutine:
+    def create_write_task(
+        self, post_data: TimeseriesPayload
+    ) -> Coroutine[Any, Any, Any]:
         """
         Create an async CDA POST request coroutine for provided post_data
         """
         post_data_dict = cast(dict[str, Any], post_data)
 
-        async def limited_task():
+        async def limited_task() -> Coroutine[Any, Any, Any]:
             async with self._semaphore:
                 return await asyncio.to_thread(
                     cwms.store_timeseries,
@@ -426,7 +413,7 @@ class CdaLoader(base_loader.BaseLoader):
                 task = self.create_write_task(this_payload)
                 self._write_tasks.append(task)
 
-    async def store_cda_data(self):
+    async def store_cda_data(self) -> None:
         self._semaphore = asyncio.Semaphore(MAX_CONNECTIONS)
         self.parse_payload_tasks()
         await self.process_write_tasks()
@@ -456,7 +443,7 @@ class CdaLoader(base_loader.BaseLoader):
         if self._input:
             raise shared.LoaderException("Input has already been set")
         if isinstance(input_object, (StringIO, TextIOWrapper)):
-            self._input = input_object # type: ignore
+            self._input = input_object  # type: ignore
         elif isinstance(input_object, str):
             self._input = open(input_object)
         else:
@@ -470,7 +457,7 @@ class CdaLoader(base_loader.BaseLoader):
                 f"Cannot unload without office specified, use options [api_root][api_key][office]"
             )
         if not self._transforms:
-            tsids_used = {}
+            tsids_used: dict[str, list[str]] = {}
             group_list = cwms.get_timeseries_groups(
                 office_id=self._office_id,
                 include_assigned=True,
@@ -492,10 +479,11 @@ class CdaLoader(base_loader.BaseLoader):
                         )
                         self._transforms[transform_key] = transform
                         if transform.timeseries_id in tsids_used:
-                            self._logger.warning(
-                                f"Tranform for time seires {transform.timeseries_id} specified in group(s) "
-                                f"{','.join(tsids_used[transform.timeseries_id])} is/are overriden by transform specified in group {group_id}"
-                            )
+                            if self._logger:
+                                self._logger.warning(
+                                    f"Tranform for time seires {transform.timeseries_id} specified in group(s) "
+                                    f"{','.join(tsids_used[transform.timeseries_id])} is/are overriden by transform specified in group {group_id}"
+                                )
                         self._export_groups[group_id]["timeseries"].append(
                             transform.timeseries_id
                         )
@@ -553,7 +541,7 @@ class CdaLoader(base_loader.BaseLoader):
                 f"{self._value_count} values output in {self._message_count} messages from {self._time_series_count} time series"
             )
 
-    def output_time_series_as_shef(self, time_series: TimeSeriesResponse):
+    def output_time_series_as_shef(self, time_series: TimeSeriesResponse) -> None:
         """
         Output all time series values in SHEF format
 
@@ -585,7 +573,7 @@ class CdaLoader(base_loader.BaseLoader):
 
     def build_shef_a_from_time_series(
         self, time_series: TimeSeriesResponse, transform: ShefTransform
-    ):
+    ) -> str:
         """
         Return a SHEF .A string for a time series
         """
@@ -607,7 +595,7 @@ class CdaLoader(base_loader.BaseLoader):
 
     def build_shef_e_from_time_series(
         self, time_series: TimeSeriesResponse, transform: ShefTransform
-    ):
+    ) -> str:
         """
         Return a SHEF .E string for a time series
         """
@@ -628,7 +616,9 @@ class CdaLoader(base_loader.BaseLoader):
         line_num = 1
         line = self.start_continuation_line("E", line_num)
         for value in time_series["values"]:
-            value_str = "-/" if value[1] is None or math.isnan(value[1]) else f"{value[1]:.6g}/"
+            value_str = (
+                "-/" if value[1] is None or math.isnan(value[1]) else f"{value[1]:.6g}/"
+            )
             if len(line + value_str) > max_message_len:
                 shef_lines.append(line)
                 line_num += 1
@@ -641,14 +631,14 @@ class CdaLoader(base_loader.BaseLoader):
         return "\n".join(shef_lines) + "\n"
 
     @staticmethod
-    def start_continuation_line(format: str, number: int):
+    def start_continuation_line(format: str, number: int) -> str:
         """
         Return the beginning of a SHEF continuation line, e.g. ".E1 "
         """
         return f".{format}{number:.3g} "
 
     @staticmethod
-    def get_shef_interval_from_ms(time_series_ms: int):
+    def get_shef_interval_from_ms(time_series_ms: int) -> Optional[str]:
         """
         Return SHEF interval code (e.g. DIH01) for an interval in ms
         """
@@ -656,8 +646,9 @@ class CdaLoader(base_loader.BaseLoader):
             if time_series_ms % interval_ms == 0:
                 num_units = time_series_ms / interval_ms
                 return f"{interval_code}{int(num_units):02}"
+        return None
 
-    def get_transform_for_tsid(self, tsid: str):
+    def get_transform_for_tsid(self, tsid: str) -> Optional[ShefTransform]:
         """
         Return the ShefTransform for a given time series id (or None)
         """
@@ -677,14 +668,6 @@ class CdaLoader(base_loader.BaseLoader):
         return set(diff)
 
     @property
-    def loader_version(self) -> str:
-        """
-        The version string for the current loader
-        """
-        global loader_version
-        return loader_version
-
-    @property
     def use_value(self) -> bool:
         """
         Returns true if criteria exist for the current ShefValue
@@ -695,8 +678,8 @@ class CdaLoader(base_loader.BaseLoader):
 
 loader_options = (
     "--loader cda[cda_url][cda_api_key]\n"
-    "cda_url     = the url of the CDA instance to be used, e.g. https://cwms-data.usace.army.mil/cwms-data/\n"
-    "cda_api_key = the api_key to use for CDA POST requests\n"
+    "* cda_url = the url of the CDA instance to be used, e.g. https://cwms-data.usace.army.mil/cwms-data/\n"
+    "* cda_api_key = the api_key to use for CDA POST requests\n"
 )
 loader_description = (
     "Used to import and export SHEF data through cwms-data-api.\n"

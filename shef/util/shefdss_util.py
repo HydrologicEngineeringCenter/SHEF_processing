@@ -74,7 +74,7 @@ def _open_files_(
     return col_file, csv_file
 
 
-def _make_csv_record_(items: tuple) -> str:
+def _make_csv_record_(items: tuple[str, ...]) -> str:
     """
     returns a string of comma-separated items, quoting any items that contain a comma
     """
