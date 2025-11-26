@@ -1,0 +1,27 @@
+﻿* PE code,,,,
+* C Part, (optional),,,
+*     blank = SHEF PE code,,,,
+* Data Unit (required),,,,
+* Data Type (required),,,,
+*     * = infer data type from SHEF parameter,,,,
+* Conversion (optional),,,,
+*     number = numerical factor,,,,
+*     hm2h = hhmm->decimal h,,,,
+*     dur2h = MW<duration> -> MWh for (VK VL VM VR),,,,
+*********************************************************,,,,
+*PE Code,C Part,Data Unit,Data Type,Conversion
+HP,Elev-Pool,ft,*,
+HT,Elev-Tailwater,ft,*,
+LS,Stor-Lake,ac-ft,*,1000
+PC,Precip,in,*,
+RI,Rad-Solar Accumulated,langley,*,
+TA,Temp-Air,F,*,
+UD,Dir-Wind,deg,*,
+US,Speed-Wind,mph,*,
+VB,Volt-Battery,volt,*,
+XR,%-Relative Humidity,%,*,
+YD,Stor-Conservation Pool,ac-ft,*,1000
+YE,Stor-Flood Pool,ac-ft,*,1000
+YH,Volt-Battery Load,volt,*,
+YL,% Conservation Pool Full,%,*,
+YM,% Flood Pool Full,%,*,
