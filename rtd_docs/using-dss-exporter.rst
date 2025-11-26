@@ -75,17 +75,19 @@ to remove the annotations before writing the ``Keystone.shef``
    from shef.exporters import DssExporter
 
    exporter = DssExporter("cwms.dss", "cwms_sensors.csv", "cwms_parameters.csv")
-   for group in exporter.get_groups():
+   groups = exporter.get_groups()
+   for group in groups:
       print(group)
       print(f"\t{exporter.get_time_window_str(group)}")
       print(f"\t{exporter.get_time_window(group)}")
       print(f"\t{len(exporter.get_time_series(group))} datasets")
 
+   group = "KEYS>Weather"
+   assert group in groups
 
    # ------------------------------------------------------------- #
    # Create an annotated SHEF file Source pathnames and SHEF units #
    # ------------------------------------------------------------- #
-   group = "KEYS>Weather"
    with open("Keystone-annotated.shef", "w") as f:
       exporter.set_output(f)
       exporter.export(group)

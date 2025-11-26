@@ -7,8 +7,8 @@ Option Descriptions
 
 ::
 
-    run_shef_parser --description
-    
+    U:\Devl\git\SHEF_processing>run_shef_parser --description
+
     shef_parser is a pure Python replacement for the shefit program from
     NOAA/NWS.
 
@@ -86,6 +86,10 @@ Option Descriptions
         which discards all data from messages with errors.
 
     Loading SHEF data to data stores:
+
+        Errors importing the following modules:
+            dssvue_loader
+
         ======================================================================
         Loader        : cda_loader.CdaLoader v0.5
         Description   : Used to import and export SHEF data through cwms-
@@ -124,17 +128,3 @@ Option Descriptions
                         Files
                         DssExporter(dss_filename: str, sensor_filename:
                         str, parameter_filename: str)
-        ======================================================================
-        Loader        : dssvue_loader.DSSVueLoader v1.4.1
-        Description   : Used by HEC-DSSVue to import/export SHEF data.
-                        Uses ShefDss-style configuration.
-                        As of v1.2 .csv sensor and parameter files can be
-                        used to handle long pathname parts.
-        Option Format : --loader
-                        dssvue[sensor_file_path][parameter_file_path]
-                        * sensor_file_path = the name of the ShefDss-style
-                        sensor file to use
-                        * parameter_file_path = the name of the ShefDss-
-                        style parameter file to use
-        Can unload    : True
-        Exporter      : <None>

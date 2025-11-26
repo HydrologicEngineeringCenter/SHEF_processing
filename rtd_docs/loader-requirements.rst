@@ -10,10 +10,10 @@ Loader Requirements
 
 As stated in the main page, loaders are modules within the :py:`shef.loaders` module.
 
+Any loader that fails to meet all of these requirements will raise and :py:`ImportError` on import.
+
 Loader Module Requirements
 --------------------------
-
-Any loader that fails to meet all of these requirements will raise and :py:`ImportError` on import.
 
 * A loader module must be named ``<loader-name>_loader.py`` where <loader-name> will be used in the ``--loader`` command line option
 
@@ -36,7 +36,7 @@ Any loader that fails to meet all of these requirements will raise and :py:`Impo
       loader_options = "--loader abc[ds_name][usr_cred]\n"
                        "* ds_name is the name of the ABC data store\n"
                        "* usr_cred is the ABC user credential string"
-      loader_description = "Loads SHEF data to the specifed ABC data store\n"
+      loader_description = "Loads SHEF data to the specified ABC data store\n"
                            "Allows only encoded user credential string"
       loader_version = "1.0.3"                         
       loader_class = AbcLoader
@@ -118,7 +118,7 @@ following methods of :py:`shef.loaders.AbstractLoader`:
                     f"{self._value_count} values output in {self._time_series_count} time series"
                 )
 
-* :py:`get_additional_pe_codes(self, parser_recognized_pe_code: set[str]) -> set[str]`: This is used by :py:`shef.shef_parser` when loading
+* :py:`get_additional_pe_codes(self, parser_recognized_pe_codes: set[str]) -> set[str]`: This is used by :py:`shef.shef_parser` when loading
   to prevent warning messages on PE codes recognized by the loader that aren't recognized by the parser
 
   The default behavior returns an empyt set
@@ -131,14 +131,16 @@ following methods of :py:`shef.loaders.AbstractLoader`:
   The default behavoir returns an empty dictionary
 * :py:`location(self) -> str`: Returns a loader-specific location identifier.
 
-  The default behavior returns the SHEF location and full parameter
+  The default behavior returns the SHEF location
 * :py:`parameter(self) -> str`: Returns a location specific parameter identifier.
 
   The default behavior returns the SHEF parameter code
 * :py:`set_options(self, options_str: Optional[str]) -> None`: Sets the loader options from the options string.
+  You can use :py:`options = self.get_options(options_str)` to retrieve a tuple of options passed in :py:`options_str`.
+  :py:`get_options(options_str: str) -> tuple[str,...]` is defined in :py:`AbstractLoader`
 
   The default behavior simply logs the options at INFO level
-* :py:`use_value(self) -> bool`: Returns whether the current :py:`ShefValue` should be loader_description
+* :py:`use_value(self) -> bool`: Returns whether the current :py:`ShefValue` should be loaded
 
   The default behavior always returns :py:`True`
 * :py:`value(self) -> Any`: Returns a loader-specific data value of the current :py:`ShefValue`

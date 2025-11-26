@@ -150,7 +150,7 @@ Authors:
 
 progname = Path(sys.argv[0]).stem
 version = "1.6.0"
-version_date = "19Nov2025"
+version_date = "26Nov2025"
 logger = logging.getLogger()
 
 
@@ -5181,12 +5181,19 @@ Loading SHEF data to data stores:"""
                 "    The 'loaders' package was not found or it contained no valid loaders."
             )
         else:
-            def output_lines(header, text) :
+
+            def output_lines(header: str, text: str) -> None:
                 input_lines = text.split("\n")
                 output_lines = []
                 for input_line in input_lines:
-                    output_lines.extend(textwrap.fill(input_line.strip(), width=50, break_long_words=False).split("\n"))
-                print(f"    {header.ljust(14)}{': ' if header else '  '}{output_lines[0]}")
+                    output_lines.extend(
+                        textwrap.fill(
+                            input_line.strip(), width=50, break_long_words=False
+                        ).split("\n")
+                    )
+                print(
+                    f"    {header.ljust(14)}{': ' if header else '  '}{output_lines[0]}"
+                )
                 for line in output_lines[1:]:
                     print(f"{20 * ' '}{line}")
 
@@ -5215,10 +5222,15 @@ Loading SHEF data to data stores:"""
                 )
                 loader_class_name = available_loaders[loader_name]["class"].__name__
                 print(f"    {70 * '='}")
-                output_lines("Loader", f"{loader_name}.{loader_class_name} v{available_loaders[loader_name]['version']}")
+                output_lines(
+                    "Loader",
+                    f"{loader_name}.{loader_class_name} v{available_loaders[loader_name]['version']}",
+                )
                 output_lines("Description", description)
                 output_lines("Option Format", options)
-                output_lines("Can unload", f"{available_loaders[loader_name]['can_unload']}")
+                output_lines(
+                    "Can unload", f"{available_loaders[loader_name]['can_unload']}"
+                )
                 if available_loaders[loader_name]["can_unload"]:
                     has_exporter = False
                     for exporter_name in [
@@ -5231,9 +5243,17 @@ Loading SHEF data to data stores:"""
                         exporter_class_name = available_exporters[exporter_name][
                             "exporter_class"
                         ].__name__
-                        output_lines("Exporter", f"{exporter_name}.{exporter_class_name} v{available_exporters[exporter_name]['version']}")
-                        output_lines("", f"{available_exporters[exporter_name]['description']}")
-                        output_lines("", f"{exporter_class_name}({available_exporters[exporter_name]['parameters']})")
+                        output_lines(
+                            "Exporter",
+                            f"{exporter_name}.{exporter_class_name} v{available_exporters[exporter_name]['version']}",
+                        )
+                        output_lines(
+                            "", f"{available_exporters[exporter_name]['description']}"
+                        )
+                        output_lines(
+                            "",
+                            f"{exporter_class_name}({available_exporters[exporter_name]['parameters']})",
+                        )
                     if not has_exporter:
                         output_lines("Exporter", "<None>")
 

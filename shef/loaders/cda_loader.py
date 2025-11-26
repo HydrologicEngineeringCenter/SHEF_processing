@@ -191,7 +191,7 @@ class CdaLoader(abstract_loader.AbstractLoader):
         The ShefTransform object for the current SHEF value
         """
         return self._transforms[self.transform_key]
-    
+
     def make_transforms(self) -> None:
         """
         Makes the loading transforms

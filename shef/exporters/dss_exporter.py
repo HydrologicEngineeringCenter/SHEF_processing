@@ -9,7 +9,7 @@ from hecdss import Catalog, HecDss  # type: ignore
 from hecdss.record_type import RecordType  # type: ignore
 
 from shef import loaders
-from shef.exporters import AbstractExporter
+from shef.exporters.abstract_exporter import AbstractExporter
 from shef.loaders import shared
 
 valid_e_parts = [
@@ -330,7 +330,7 @@ class DssExporter(AbstractExporter):
             list[list[str]]: The time series in the group. Each time series is a list of two items: the HEC-DSS file name, and the pathname
         """
         try:
-            datasets: list[str] = self.get_groups()[group]["datasets"]
+            datasets: list[list[str]] = self.get_groups()[group]["datasets"]
         except KeyError:
             self.logger.error(f"No such group: {group}")
         return datasets

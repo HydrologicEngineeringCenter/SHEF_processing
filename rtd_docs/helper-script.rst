@@ -1,5 +1,5 @@
-run_shef_parser Script
-======================
+Using a Helper Script
+=====================
 
 .. toctree::
    :maxdepth: 2

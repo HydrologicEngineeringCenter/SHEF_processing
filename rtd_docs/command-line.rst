@@ -7,7 +7,7 @@ Command Line Options
 
 ::
 
-   run_shef_parser --help
+   U:\Devl\git\SHEF_processing>run_shef_parser --help
 
    usage: shef_parser.py [-h]
                          [-s SHEFPARM]

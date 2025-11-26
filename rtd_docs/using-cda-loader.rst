@@ -28,7 +28,7 @@ Loading Configuration
 The configuration information for loading SHEF data into a CWMS database is specified by assigning time series to be loaded
 to the ``SHEF Data Acquisition`` time series group under the ``Data Acquisition`` time series category. If no ``SHEF Data Acquisition``
 time series group exists for your office in the CWMS database, you may create it under the ``Data Acquisition`` time series category.
-You can use CWMS-Vue to both create the time series group and assign individual time series to it.
+You can use CWMS-Vue to both create the time series group and assign individual time series to it. [1]_
 
 The assigned time series use the ``Alias`` field to hold the SHEF loading configuration. The information must be of the format
 ``<shef-loc>.<shef-pe-code>.<shef-ts+ext-code>.<shef-dur-value>:Units=<shef-unit>``
@@ -36,7 +36,7 @@ where:
 
 * ``<shef-loc>`` is the location identifer in the SHEF text
 * ``<shef-pe-code>`` is the SHEF phyical element code in the SHEF text
-* ``<shef-ts+ext-code>`` is the SHEF type and source code concatenated with the SHEF extremum code [1]_ in the SHEF text
+* ``<shef-ts+ext-code>`` is the SHEF type and source code concatenated with the SHEF extremum code [2]_ in the SHEF text
 * ``<shef-dur-value>`` is the SHEF duration numeric value corresponding to the duration code in the SHEF text
 * ``<shef-unit>`` is the unit of the values in the SHEF text
 
@@ -73,4 +73,7 @@ An exmple (non-standard) configuration and a command line session using it to lo
 
     U:\Devl\git\SHEF_processing>
 
-.. [1] The extremum code is almost never in the SHEF text (although it *is* in the processed text). If absent, it defaults to ``Z`` (not an extremum).
+.. [1] The ``CWMS Data Acquisition`` time series category is owned by the ``CWMS`` user. The ``SHEF Data Acquisition`` time series group
+   must be owned by your office in order to separate loading configurations by office.
+
+.. [2] The extremum code is almost never in the SHEF text (although it *is* in the processed text). If absent, it defaults to ``Z`` (not an extremum).

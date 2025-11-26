@@ -49,12 +49,12 @@ class AbstractLoader(ABC):
         if self._logger:
             self._logger.info(f"{self.loader_name} v{self.loader_version} instatiated")
 
-    def get_options(self, options_str: Optional[str]) -> tuple[str,...]:
+    def get_options(self, options_str: Optional[str]) -> tuple[str, ...]:
         """
         Parses options string into individual options
 
         Args:
-            options_str (Optional[str]): 
+            options_str (Optional[str]):
 
         Returns:
             tuple[str,...]: The options in the optiions string
@@ -73,7 +73,7 @@ class AbstractLoader(ABC):
             if self._logger:
                 self._logger.info(f"{self.loader_name} initialized with {str(options)}")
 
-    def get_additional_pe_codes(self, parser_recognized_pe_code: set[str]) -> set[str]:
+    def get_additional_pe_codes(self, parser_recognized_pe_codes: set[str]) -> set[str]:
         """
         Return any PE codes recognized by this loader that aren't otherwised recognized by the parser
         """
@@ -227,7 +227,9 @@ class AbstractLoader(ABC):
         """
         The version of the current loader
         """
-        return getattr(sys.modules[self.__class__.__module__], "loader_version")
+        return cast(
+            str, getattr(sys.modules[self.__class__.__module__], "loader_version")
+        )
 
     @property
     def output_name(self) -> Optional[str]:

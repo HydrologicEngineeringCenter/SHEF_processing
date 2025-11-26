@@ -10,10 +10,10 @@ Exporter Requirements
 
 As stated in the main page, exporters are modules within the :py:`shef.exporters` module.
 
+Any exporter that fails to meet all of these requirements will raise and :py:`ImportError` on import.
+
 Exporter Module Requirements
 ----------------------------
-
-Any exporter that fails to meet all of these requirements will raise and :py:`ImportError` on import.
 
 * An exporter module must be named ``<exporter-name>_exporter.py`` where <exporter-name> is the loader name of the loader module it uses.
 
@@ -37,7 +37,7 @@ Any exporter that fails to meet all of these requirements will raise and :py:`Im
         exporter_parameters = "abc_filename: str, user_credentials: str"
         exporter_version = "1.0.0"
         exporter_class = AbcExporter
-        loader_class = loaders.abc_lodader.AbcLoader
+        loader_class = loaders.abc_loader.AbcLoader
 
 Exporter Class Requirements
 ---------------------------
@@ -47,7 +47,7 @@ As stated above, the loader class must be a subclass of :py:`shef.loaders.Abstra
 * call the :py:`AbstractExporter.__init__()` method from its own :py:`__init__(self, ...)` method.
     .. code-block:: python
 
-        #abc_exporter.py
+      #abc_exporter.py
       class AbcLoader(abstract_loader.AbstractLoader):
           """
           Loads/unloads to/from ABC data stores.
@@ -66,8 +66,23 @@ As stated above, the loader class must be a subclass of :py:`shef.loaders.Abstra
   * optionally set the loader's output to the desired location
   * call the loader's :py:`unload()` method
 
-  Note that :py:`AbstractExporter` has a :py:`get_export(self., identifier: str) -> str` method that will call
-  this exporter's :py:`export(self, identifier: str)` method and return the resulting SHEF text in a string
+If the exporter class acquires resources, it should override :py:`object`'s :py:`__del__() -> None` method and release the resources there
+
+.. code-block:: python
+
+  # dss_exporter.py
+
+  class DssLoader(abstract_loader.AbstractLoader):
+      """
+      Loads/unloads to/from HEC-DSS files.
+      This loader uses ShefDss-style sensor and parameter files
+      """
+
+    ...
+
+    def __del__(self) -> None:
+        if self._dss_file:
+            self._dss_file.close()
 
 AbstractExporter Class
 -----------------------

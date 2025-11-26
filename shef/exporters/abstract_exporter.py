@@ -9,6 +9,7 @@ import cwms  # type: ignore
 
 from shef.loaders import abstract_loader, shared
 
+
 class AbstractExporter(ABC):
     """
     Base class for SHEF exporters
@@ -94,7 +95,7 @@ class AbstractExporter(ABC):
             Read-Only
         """
         return self._logger
-    
+
     def set_output(
         self,
         output_object: Optional[Union[BufferedRandom, TextIO, StringIO]],

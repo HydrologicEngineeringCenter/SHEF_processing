@@ -182,7 +182,7 @@ into 6 reports would improve the loading efficiency.
       U:\Devl\git\SHEF_processing>
 
 .. [1] The ``"15:OKMN"`` in this SHEF text is a retained comment. To enhance human readability, SHEF text can have interspersed
-   comments, toggled on and off by the ``:`` character, but hese comments are stripped during SHEF parsing, whild retained comments are
+   comments, toggled on and off by the ``:`` character, but these comments are stripped during SHEF parsing, whild retained comments are
    preserved in the parsed output. The :py:`DssLoader` ignores retained comments, but a legacy database loader for this data used
    these comments to track the data source and interval.
 .. [2] The omission of the ``*`` character in field 3 of the ``TNSO2,PC`` sensor line is inadvertent, but you can see how it

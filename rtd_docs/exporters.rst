@@ -17,9 +17,9 @@ to the loaders' input for unloading (generating SHEF text from the time series).
 
 Loaders can unload time series without exporters, but the time series to unload must be available on the
 SHEF parser's (and thus the loader's) input device in the format used by the loader. If the time series are
-available in this format, the using ``run_shef_parser --loader <loader-spec> --unload()`` will suffice. However,
-many (most?) contexts, some extra functionality is needed to retrieve the desired time series (with the desired) 
-time window from the data store, and format it appropriately for the loader.
+available in this format, the using ``run_shef_parser --loader <loader-spec> --unload`` will suffice. However,
+in most contexts, some extra functionality is needed to retrieve the desired time series (with the desired 
+time window) from the data store, and format it appropriately for the loader.
 
 Workflow Using an Exporter
 --------------------------

@@ -1,4 +1,16 @@
-__all__ = ["AbstractExporter", "CdaExporter", "DssExporter"]
+"""
+# Module shef.exporters
+
+This module includes modules to be used for exporting SHEF data from specific data stores, using the `unload()` methods of loaders from the shef.loaders module
+
+See the [User Guide](https://shef-parser.readthedocs.io/en/latest/)
+"""
+
+__all__: list[str] = [
+    "abstract_exporter",
+    "cda_exporter",
+    "dss_exporter",
+]
 
 from .abstract_exporter import AbstractExporter
 from .cda_exporter import CdaExporter

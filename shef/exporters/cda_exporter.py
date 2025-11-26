@@ -7,7 +7,7 @@ from typing import Any, Optional, TextIO, Union
 import cwms  # type: ignore
 
 from shef import loaders
-from shef.exporters import AbstractExporter
+from shef.exporters.abstract_exporter import AbstractExporter
 from shef.loaders import abstract_loader, shared
 
 
