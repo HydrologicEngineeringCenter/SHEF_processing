@@ -131,7 +131,7 @@ versions = """
 +-------+-----------+-----+-------------------------------------------------------------------------+
 | 1.5.3 | 31Oct2025 | MDP | Added exporters (base_exporter, cda_exporter)                           |
 +-------+-----------+-----+-------------------------------------------------------------------------+
-| 1.6.0 | 19Nov2025 | MDP | 1. Move base_loader to abstract_loader and base_exporter                |
+| 1.6.0 | 26Nov2025 | MDP | 1. Move base_loader to abstract_loader and base_exporter                |
 |       |           |     |    to abstract_exporter and make truly abstract                         |
 |       |           |     | 2. Implement module validation scheme to enforce existence and type of  |
 |       |           |     |    specific variables for modules that define subclasses of             |
