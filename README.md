@@ -6,7 +6,7 @@ text from various data stores.
 Parsing and loading can be performed by using module in python or through command line. Generating SHEF text from a data store is currenly limited
 to using the module in python.
 
-See User Guide at [https://shef-parser.readthedocs.io/en/latest/](https://shef-parser.readthedocs.io/en/latest/)
+See User Guide at [https://shef-processing.readthedocs.io/en/latest/](https://shef-processing.readthedocs.io/en/latest/)
 
 See API Documentation at [https://hydrologicengineeringcenter.github.io/shef-parser/index.html](https://hydrologicengineeringcenter.github.io/SHEF_processing/)
 
