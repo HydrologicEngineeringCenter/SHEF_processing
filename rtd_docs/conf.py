@@ -31,7 +31,6 @@ highlight_language = 'none' # prevents :: blocks from being highlighted
 
 extensions = [
     "sphinx_design",
-    "sphinx_copybutton",
 ]
 
 templates_path = ['_templates']
@@ -45,6 +44,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 on_rtd = os.environ.get("READTHEDOCS") == "True"
 if not on_rtd:
     html_theme = "alabaster"  # fallback theme for local preview
+    extensions.append("sphinx_copybutton") # not available on RTD
 else:
     html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
