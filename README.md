@@ -61,7 +61,7 @@ shef_parser.parse(
 #CWMS CDA loader
 import os
 from datetime import datetime, timedelta
-from shef.exporters import cda_exporter
+from shef.exporters import CdaExporter
 
 cda_url: str = os.getenv("CDA_API_ROOT")
 office_id: str = os.getenv("CDA_OFFICE_ID")
@@ -69,7 +69,7 @@ tsids: list[str] = [
     ...
 ]
 
-exporter = cda_exporter.CdaExporter(cda_url, office_id)
+exporter = CdaExporter(cda_url, office_id)
 exporter.start_time = datetime.now() - timedelta(days=1)
 exporter.end_time = datetime.now()
 with open("/path/to/output_file", "w") as f:
@@ -81,7 +81,7 @@ with open("/path/to/output_file", "w") as f:
 ```python
 #HEC-DSS loader
 from datetime import datetime, timedelta
-from shef.exporters import dss_exporter
+from shef.exporters import DssExporter
 
 dss_filename: str = "/path_to_dss_file"
 sensors_filename: str = "/path/to/sensors_file"
@@ -90,7 +90,7 @@ pathnames: list[str] = [
     ...
 ]
 
-exporter = dss_exporter.DssExporter(
+exporter = DssExporter(
     dss_filename,
     sensors_filename,
     parameters_filename

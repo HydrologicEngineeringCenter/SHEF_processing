@@ -107,6 +107,7 @@ class DssExporter(AbstractExporter):
                 f"Specified HEC-DSS file does not exist: {dss_filename}"
             )
         self._dss_filename = dss_filename
+        self._orig_dss_filename = dss_filename
         HecDss.set_global_debug_level(int(os.getenv("DSS_MESSAGE_LEVEL", "4")))
         self._dss_file: HecDss = HecDss(dss_filename)
         self._catalog: Catalog = self._dss_file.get_catalog()
@@ -124,10 +125,15 @@ class DssExporter(AbstractExporter):
         self._groups_filename: str = os.path.join(
             basedir, "HEC", "HEC-DSSVue", "groups.txt"
         )
+        self._override_group_time_window = False
+        self._override_group_file_name = False
 
     def __del__(self) -> None:
-        if self._dss_file:
-            self._dss_file.close()
+        try:
+            if self._dss_file:
+                self._dss_file.close()
+        except:
+            pass
 
     def export(self, identifier: str) -> None:
         """
@@ -150,9 +156,13 @@ class DssExporter(AbstractExporter):
                     f"Cannot export {identifier}: No such record or record is not time series"
                 )
                 return
-            ts = self._dss_file.get(
-                identifier, startdatetime=self._start_time, enddatetime=self._end_time
-            )
+            try:
+                ts = self._dss_file.get(
+                    identifier, startdatetime=self._start_time, enddatetime=self._end_time
+                )
+            except Exception as e:
+                self.logger.error(f"Cannot export {identifier}: Error retrieving from {self._dss_filename}")
+                return
             data = StringIO()
             data.write(f"{identifier}\n")
             data.write(f"\t{{'unit': '{ts.units}', 'type': '{ts.data_type}'}}\n")
@@ -186,7 +196,7 @@ class DssExporter(AbstractExporter):
             # -------------------------------------- #
             orig_time_window = (self._start_time, self._end_time)
             orig_dss_file = self._dss_file
-            if group["timewindow"]:
+            if group["timewindow"] and not self._override_group_time_window:
                 # -------------------------------------------------- #
                 # set the time window to that specified in the group #
                 # -------------------------------------------------- #
@@ -210,21 +220,23 @@ class DssExporter(AbstractExporter):
             last_filename = None
             opened_dss_files: list[list[Any]] = []
             for filename, pathname in group["datasets"]:
-                # ---------------------------------------------------------- #
-                # open the DSS file for the dataset if it's not already open #
-                # ---------------------------------------------------------- #
-                if filename != last_filename and not os.path.samefile(
-                    filename, self._dss_filename
-                ):
-                    for i in range(len(opened_dss_files)):
-                        if os.path.samefile(filename, opened_dss_files[i][0]):
-                            last_filename = opened_dss_files[i][0]
-                            self._dss_file = opened_dss_files[i][1]
-                            break
-                    else:
-                        last_filename = filename
-                        opened_dss_files.append([filename, HecDss(filename)])
-                    self._dss_file = opened_dss_files[-1][1]
+                if not self._override_group_file_name:
+                    # ---------------------------------------------------------- #
+                    # open the DSS file for the dataset if it's not already open #
+                    # ---------------------------------------------------------- #
+                    if filename != last_filename and not os.path.samefile(
+                        filename, self._orig_dss_filename
+                    ):
+                        for i in range(len(opened_dss_files)):
+                            if os.path.samefile(filename, opened_dss_files[i][0]):
+                                last_filename = opened_dss_files[i][0]
+                                self._dss_file = opened_dss_files[i][1]
+                                break
+                        else:
+                            last_filename = filename
+                            opened_dss_files.append([filename, HecDss(filename)])
+                        self._dss_filename = filename
+                        self._dss_file = opened_dss_files[-1][1]
                 # ------------------ #
                 # export the dataset #
                 # ------------------ #
@@ -235,6 +247,7 @@ class DssExporter(AbstractExporter):
             for filename, dssfile in opened_dss_files:
                 dssfile.close()
             self._dss_file = orig_dss_file
+            self._dss_filename = self._orig_dss_filename
             self._start_time, self._end_time = orig_time_window
 
     def get_groups(self) -> dict[str, dict[str, Any]]:
@@ -334,6 +347,34 @@ class DssExporter(AbstractExporter):
         except KeyError:
             self.logger.error(f"No such group: {group}")
         return datasets
+
+    @property
+    def override_group_time_window(self) -> bool:
+        """
+        Whether this exporter overrides the time window specified in the groups file
+
+        Operations:
+            Read/Write
+        """
+        return self._override_group_time_window
+    
+    @override_group_time_window.setter
+    def override_group_time_window(self, value: bool) -> None:
+        self._override_group_time_window = value;
+
+    @property
+    def override_group_file_name(self) -> bool:
+        """
+        Whether this exporter overrides the HEC-DSS file name specified in the groups file
+
+        Operations:
+            Read/Write
+        """
+        return self._override_group_file_name
+    
+    @override_group_file_name.setter
+    def override_group_file_name(self, value: bool) -> None:
+        self._override_group_file_name = value;
 
 
 exporter_description = "Outputs SHEF text from time series in HEC-DSS Files"

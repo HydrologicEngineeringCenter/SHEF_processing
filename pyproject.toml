@@ -2,7 +2,7 @@
 name = "shef-parser"
 repository = "https://github.com/HydrologicEngineeringCenter/SHEF_processing"
 
-version = "1.6"
+version = "1.6.2"
 
 
 packages = [
