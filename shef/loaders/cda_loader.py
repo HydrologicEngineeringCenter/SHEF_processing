@@ -105,6 +105,7 @@ class CdaLoader(abstract_loader.AbstractLoader):
         self._transforms: dict[str, ShefTransform] = {}
         self._value_error_count: int = 0
         self._write_tasks: list[Coroutine[Any, Any, Any]] = []
+        self._configured_pe_codes = set()
 
     def make_shef_transform(self, crit: dict[str, Any]) -> ShefTransform:
         """
@@ -118,6 +119,7 @@ class CdaLoader(abstract_loader.AbstractLoader):
         except:
             shef, options = crit["alias-id"], []
         location, pe_code, type_code, duration_value = shef.split(".")
+        self._configured_pe_codes.add(pe_code)
         duration_code = shared.DURATION_CODES[int(duration_value)]
         parameter_code = pe_code + duration_code + type_code
         timezone = dl_time = units = None
@@ -212,6 +214,14 @@ class CdaLoader(abstract_loader.AbstractLoader):
                 self._logger.warning(
                     f"{str(e)} occurred while processing SHEF criteria for {assigned_ts['timeseries-id']}"
                 )
+
+    def get_additional_pe_codes(self, parser_recognized_pe_codes: set[str]) -> set[str]:
+        """
+        Return any PE codes recognized by this loader that aren't otherwised recognized by the parser
+        """
+        if not self._transforms:
+            self.make_transforms()
+        return self._configured_pe_codes - parser_recognized_pe_codes
 
     def get_time_series_name(self, shef_value: Optional[shared.ShefValue]) -> str:
         """

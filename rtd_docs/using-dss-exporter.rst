@@ -30,6 +30,14 @@ sophisticated than simply being a list of time series identifiers (pathnames).
 * **Each pathname has an associated HEC-DSS file name**: When exporting a group, :py:`DssExporter` retrieves the time series from
   the file indicated in the group
 
+The available properties are:
+
+* :py:`override_group_time_window: bool` (get/set) specifies whether the exporter's time window overrides any time window specified for the
+  group in the groups file. The default value is :py:`False`
+
+* :py:`override_group_file_name: bool` (get/set) specifies whether the exporter's HEC-DSS file overrides any file name specified for the
+   time series in the groups file. The default value is :py:`False`
+
 The available groups operations are:
 
 * :py:`get_groups() -> dict[str, dict[str, Any]]` returns a dictionary that has the available group names as keys. The values of the dictionary are
