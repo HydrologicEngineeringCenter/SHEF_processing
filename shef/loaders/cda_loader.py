@@ -204,16 +204,16 @@ class CdaLoader(abstract_loader.AbstractLoader):
             group_id="SHEF Data Acquisition",
             category_id="Data Acquisition",
         ).json
-        try:
-            for assigned_ts in shef_group["assigned-time-series"]:
+        for assigned_ts in shef_group["assigned-time-series"]:
+            try:
                 transform = self.make_shef_transform(assigned_ts)
                 transform_key = f"{transform.location}.{transform.parameter_code}"
                 self._transforms[transform_key] = transform
-        except Exception as e:
-            if self._logger:
-                self._logger.warning(
-                    f"{str(e)} occurred while processing SHEF criteria for {assigned_ts['timeseries-id']}"
-                )
+            except Exception as e:
+                if self._logger:
+                    self._logger.warning(
+                        f"{str(e)} occurred while processing SHEF criteria for {assigned_ts['timeseries-id']}"
+                    )
 
     def get_additional_pe_codes(self, parser_recognized_pe_codes: set[str]) -> set[str]:
         """
