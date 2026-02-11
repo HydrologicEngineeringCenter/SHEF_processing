@@ -9,7 +9,7 @@ import types
 from collections import deque
 from datetime import datetime, timedelta, timezone
 from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as package_version
+from importlib.metadata import version
 from io import BufferedRandom, StringIO, TextIOWrapper
 from pathlib import Path
 from typing import Any, Optional, TextIO, Union, cast
@@ -72,85 +72,8 @@ $              Added PE code YI for SERFC
 $              Added PE codes GC, GL, HV, TR, and TZ for Utah DOT
 $
 """
-versions = """
-+-------+-----------+-----+-------------------------------------------------------------------------+
-| 1.0.0 | 28May2024 | MDP | Initial version                                                         |
-+-------+-----------+-----+-------------------------------------------------------------------------+
-| 1.0.1 | 28May2024 | MDP | Mods to pass mypy type checks                                           |
-+-------+-----------+-----+-------------------------------------------------------------------------+
-| 1.0.2 | 29May2024 | MDP | Reorg, clean up, improve comments, add --make_shefparm                  |
-+-------+-----------+-----+-------------------------------------------------------------------------+
-| 1.0.3 | 30May2024 | MDP | Bugfixs in info(), warning(), error(), and critcal() methods            |
-+-------+-----------+-----+-------------------------------------------------------------------------+
-| 1.0.4 | 30May2024 | MDP | More bugfixes after reorg and cleanup                                   |
-+-------+-----------+-----+-------------------------------------------------------------------------+
-| 1.0.5 | 05Jun2024 | MDP | Add --append_out and --append_log options                               |
-+-------+-----------+-----+-------------------------------------------------------------------------+
-| 1.1.0 | 06Jun2024 | MDP | Add --loader option to store time series                                |
-+-------+-----------+-----+-------------------------------------------------------------------------+
-| 1.1.1 | 11Jun2024 | MDP | Add --unload option to have loader write SHEF text                      |
-+-------+-----------+-----+-------------------------------------------------------------------------+
-| 1.2.0 | 02Jul2024 | MDP | Fix several issues with parsing and interaction with loaders            |
-|       |           |     | Loading/unloading/reloading mesonet.shef now yields identical DSS files |
-+-------+-----------+-----+-------------------------------------------------------------------------+
-| 1.2.1 | 23Jul2024 | MDP | Correct not calling set_ouput() unless using loader                     |
-+-------+-----------+-----+-------------------------------------------------------------------------+
-| 1.2.2 | 24Jul2024 | MDP | Prevent an error in importing a loader from importing other loaders.    |
-+-------+-----------+-----+-------------------------------------------------------------------------+
-| 1.3.0 | 26Jul2024 | MDP | Restrucured code                                                        |
-|       |           |     | * Moved main script to shef package (shefParser -> shef.shef_parser.py) |
-|       |           |     | * Moved shef_loader package to shef.loaders subpackage                  |
-|       |           |     | * Added parse() function                                                |
-|       |           |     |   * Handles everything but parsing command line and generating SHEFPARM |
-|       |           |     |   * main() now calls parse() for parsing, loading, and unloading        |
-|       |           |     |   * Can be called directly from other scripts                           |
-|       |           |     | Improved exception handling and logging                                 |
-+-------+-----------+-----+-------------------------------------------------------------------------+
-| 1.3.1 | 08Aug2024 | JBK | Two bug fixes:                                                          |
-|       |           |     | * Instantaneous SHEF values no longer parsed as averaged in .E files    |
-|       |           |     | * Error in first SHEF value time_series_name no longer causes errors    |
-|       |           |     |   for all following values.                                             |
-+-------+-----------+-----+-------------------------------------------------------------------------+
-| 1.4.0 | 12Aug2024 | JBK | Add input_stream argument to parse() function                           |
-+-------+-----------+-----+-------------------------------------------------------------------------+
-| 1.4.1 | 14Aug2024 | JBK | Support custom output objects that implement TextIO                     |
-+-------+-----------+-----+-------------------------------------------------------------------------+
-| 1.4.2 | 18Sep2025 | MDP | Allow out-of-order .E header tokens à la shefit                         |
-+-------+-----------+-----+-------------------------------------------------------------------------+
-| 1.4.3 | 18Sep2025 | MDP | Update base loader to skip missing (-9999) values                       |
-+-------+-----------+-----+-------------------------------------------------------------------------+
-| 1.4.4 | 24Sep2025 | MDP | Fix line beginning with : inside a message terminates the message       |
-+-------+-----------+-----+-------------------------------------------------------------------------+
-| 1.5.0 | 25Sep2025 | MDP | Add --processed command line option to read pre-processed input         |
-+-------+-----------+-----+-------------------------------------------------------------------------+
-| 1.5.1 | 30Sep2025 | MDP | Two bug fixes fo Jira issue CWMS-2275:                                  |
-|       |           |     | * .E messages with intervals specified in minutes (e.g., DIN15)         |
-|       |           |     | * .E messages with day intervals specified in hours (e.g., DIH24)       |
-+-------+-----------+-----+-------------------------------------------------------------------------+
-| 1.5.2 | 22Oct2025 | MDP | Fix bugs processing pre-processed format 2 files                        |
-+-------+-----------+-----+-------------------------------------------------------------------------+
-| 1.5.3 | 31Oct2025 | MDP | Added exporters (base_exporter, cda_exporter)                           |
-+-------+-----------+-----+-------------------------------------------------------------------------+
-| 1.6.0 | 26Nov2025 | MDP | 1. Move base_loader to abstract_loader and base_exporter                |
-|       |           |     |    to abstract_exporter and make truly abstract                         |
-|       |           |     | 2. Implement module validation scheme to enforce existence and type of  |
-|       |           |     |    specific variables for modules that define subclasses of             |
-|       |           |     |    AbstractLoader and AbstractExporter classes. Modules that fail the   |
-|       |           |     |    validation can't be imported                                         |
-|       |           |     | 3. Output exporter information on --description output                  |
-|       |           |     | 4. Add --version option to output PyPI package version                  |
-|       |           |     | 5. Improve type hinting to pass mypy --strict mode                      |
-|       |           |     | 6. More documentation                                                   |
-+-------+-----------+-----+-------------------------------------------------------------------------+
-
-Authors:
-    MDP  Mike Perryman, USACE IWR-HEC
-    JBK  Brandon Kolze, USACE LRL-WM
-"""
 
 progname = Path(sys.argv[0]).stem
-version = "1.6.0"
-version_date = "26Nov2025"
 logger = logging.getLogger()
 
 
@@ -5090,9 +5013,19 @@ def main() -> None:
             )
             exit(-1)
         try:
-            print(f"Package shef-parser v{package_version('shef-parser')}")
+            print(f"Package shef-parser v{version('shef-parser')}")
+            assert False
         except:
-            print(f"{progname} {version}")
+            import platform
+            if list(map(int, platform.python_version_tuple()[:2])) < [3, 11]:
+                import tomli as tomllib
+            else:
+                import tomllib
+            pyproject_path = Path(__file__).resolve().parent.parent / "pyproject.toml"
+            with pyproject_path.open("rb") as f:
+                pyproject = tomllib.load(f)
+            date_str = str(datetime.fromtimestamp(pyproject_path.stat().st_mtime)).split()[0]
+            print(f"Package {pyproject['tool']['poetry']['name']} v{pyproject['tool']['poetry']['version']} {date_str}")
         exit(0)
 
     if args.description:
