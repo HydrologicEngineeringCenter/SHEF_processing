@@ -5014,7 +5014,6 @@ def main() -> None:
             exit(-1)
         try:
             print(f"Package shef-parser v{version('shef-parser')}")
-            assert False
         except:
             import platform
             if list(map(int, platform.python_version_tuple()[:2])) < [3, 11]:
