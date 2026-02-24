@@ -8,8 +8,7 @@ import textwrap
 import types
 from collections import deque
 from datetime import datetime, timedelta, timezone
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version
+from importlib.metadata import PackageNotFoundError, version
 from io import BufferedRandom, StringIO, TextIOWrapper
 from pathlib import Path
 from typing import Any, Optional, TextIO, Union, cast
@@ -4964,6 +4963,41 @@ def main() -> None:
         help="write SHEFPARM data to output file and exit",
     )
     argparser.add_argument(
+        "--export-cda",
+        action="store_true",
+        help="export timeseries/group from CWMS via CDA using CdaExporter and exit",
+    )
+    argparser.add_argument(
+        "--cda_url",
+        action="store",
+        help="CDA api root URL (required with --export-cda)",
+    )
+    argparser.add_argument(
+        "--office",
+        action="store",
+        help="office id to use with CDA (required with --export-cda)",
+    )
+    argparser.add_argument(
+        "--timeseries_group",
+        action="store",
+        help="time series group id or timeseries id to export (required with --export-cda)",
+    )
+    argparser.add_argument(
+        "--export-file",
+        action="store",
+        help="output filename for CDA export (defaults to stdout)",
+    )
+    argparser.add_argument(
+        "--start-time",
+        action="store",
+        help="start of export window (ISO format, e.g. 2024-07-01T00:00:00)",
+    )
+    argparser.add_argument(
+        "--end-time",
+        action="store",
+        help="end of export window (ISO format, e.g. 2024-07-03T23:59:59)",
+    )
+    argparser.add_argument(
         "--description",
         action="store_true",
         help="show a more detailed program description and exit",
@@ -4974,6 +5008,53 @@ def main() -> None:
         help="print the version info and exit",
     )
     args = argparser.parse_args()
+
+    # Handle CDA exporter CLI separately and exit
+    if args.export_cda:
+        # validate required args
+        missing = [
+            n for n in ("cda_url", "office", "timeseries_group") if not getattr(args, n)
+        ]
+        if missing:
+            print(
+                f"\nArguments {', '.join('--' + m for m in missing)} are required when --export-cda is used\n"
+            )
+            exit(-1)
+        try:
+            # lazy import to avoid top-level dependency
+            from shef.exporters.cda_exporter import CdaExporter
+
+            def parse_dt(s: Optional[str]):
+                if not s:
+                    return None
+                try:
+                    return datetime.fromisoformat(s)
+                except Exception:
+                    try:
+                        # try date-only
+                        return datetime.fromisoformat(s + "T00:00:00")
+                    except Exception:
+                        raise
+
+            start_time = parse_dt(args.start_time)
+            end_time = parse_dt(args.end_time)
+
+            exporter = CdaExporter(args.cda_url, args.office)
+            exporter.start_time = start_time
+            exporter.end_time = end_time
+            if args.export_file:
+                outpath = args.export_file
+                with open(outpath, "w", encoding="utf-8") as f:
+                    exporter.set_output(f)
+                    exporter.export(args.timeseries_group)
+            else:
+                # default to stdout
+                exporter.set_output(sys.stdout)
+                exporter.export(args.timeseries_group)
+        except Exception as e:
+            logger.critical(exc_info(e))
+            exit(-1)
+        exit(0)
 
     if args.make_shefparm:
         if (
@@ -5016,6 +5097,7 @@ def main() -> None:
             print(f"Package shef-parser v{version('shef-parser')}")
         except:
             import platform
+
             if list(map(int, platform.python_version_tuple()[:2])) < [3, 11]:
                 import tomli as tomllib
             else:
@@ -5023,8 +5105,12 @@ def main() -> None:
             pyproject_path = Path(__file__).resolve().parent.parent / "pyproject.toml"
             with pyproject_path.open("rb") as f:
                 pyproject = tomllib.load(f)
-            date_str = str(datetime.fromtimestamp(pyproject_path.stat().st_mtime)).split()[0]
-            print(f"Package {pyproject['tool']['poetry']['name']} v{pyproject['tool']['poetry']['version']} {date_str}")
+            date_str = str(
+                datetime.fromtimestamp(pyproject_path.stat().st_mtime)
+            ).split()[0]
+            print(
+                f"Package {pyproject['tool']['poetry']['name']} v{pyproject['tool']['poetry']['version']} {date_str}"
+            )
         exit(0)
 
     if args.description:
