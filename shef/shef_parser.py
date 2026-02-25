@@ -14,6 +14,8 @@ from pathlib import Path
 from typing import Any, Optional, TextIO, Union, cast
 from zoneinfo import ZoneInfo
 
+import click
+
 from shef.constants import (
     DEFAULT_DURATION_CODES,
     DST_DATES,
@@ -74,6 +76,53 @@ $
 
 progname = Path(sys.argv[0]).stem
 logger = logging.getLogger()
+
+
+def configure_logging(
+    log_target: Union[TextIO, str],
+    log_level_str: str = "INFO",
+    log_timestamps_flag: bool = False,
+    append_log_flag: bool = False,
+) -> str:
+    """
+    Configure python logging consistently for both the parser and export CLI.
+
+    Returns the name or path of the logfile in use.
+    """
+    datefmt = "%Y-%m-%d %H:%M:%S"
+    fmt = (
+        "%(asctime)s %(levelname)s: %(msg)s"
+        if log_timestamps_flag
+        else "%(levelname)s: %(msg)s"
+    )
+    level_map = {
+        "DEBUG": logging.DEBUG,
+        "INFO": logging.INFO,
+        "WARNING": logging.WARNING,
+        "ERROR": logging.ERROR,
+        "CRITICAL": logging.CRITICAL,
+        "ALL": logging.NOTSET,
+    }
+    level = level_map.get(log_level_str, logging.INFO)
+    if isinstance(log_target, str):
+        if os.path.exists(log_target):
+            if not os.path.isfile(log_target):
+                raise Exception(f"{log_target} is not a regular file")
+            if not append_log_flag:
+                os.remove(log_target)
+        logging.basicConfig(
+            filename=log_target, format=fmt, datefmt=datefmt, level=level
+        )
+        return log_target
+    else:
+        logging.basicConfig(stream=log_target, format=fmt, datefmt=datefmt, level=level)
+        return log_target.name
+
+
+def to_uppercase(ctx, param, value):
+    if value is None:
+        return None
+    return value.upper()
 
 
 def exc_info(e: Exception) -> str:
@@ -1415,7 +1464,7 @@ class ShefParser:
                 f"Expected BufferedRandom or str object, got [{output_object.__class__.__name__}]"
             )
         out.write(
-            f"$\n$ This file generated on {str(datetime.now())[:-7]} by {progname} version {version} ({version_date})\n$\n"
+            f"$\n$ This file generated on {str(datetime.now())[:-7]} by {progname} version {version}\n$\n"
         )
         out.write("SHEFPARM\n")
         out.write("*1                      PE CODES AND CONVERSION FACTORS\n")
@@ -4650,30 +4699,7 @@ def parse(
     # -------------------#
     # set up the logger #
     # -------------------#
-    datefmt = "%Y-%m-%d %H:%M:%S"
-    if log_timestamps:
-        format = "%(asctime)s %(levelname)s: %(msg)s"
-    else:
-        format = "%(levelname)s: %(msg)s"
-    level = {
-        "DEBUG": logging.DEBUG,
-        "INFO": logging.INFO,
-        "WARNING": logging.WARNING,
-        "ERROR": logging.ERROR,
-        "CRITICAL": logging.CRITICAL,
-        "ALL": logging.NOTSET,
-    }[log_level]
-    if isinstance(log, str):
-        if os.path.exists(log):
-            if not os.path.isfile(log):
-                raise Exception(f"{log} is not a regular file")
-            if not append_log:
-                os.remove(log)
-        logging.basicConfig(filename=log, format=format, datefmt=datefmt, level=level)
-        logfile_name = log
-    else:
-        logging.basicConfig(stream=log, format=format, datefmt=datefmt, level=level)
-        logfile_name = log.name
+    logfile_name = configure_logging(log, log_level, log_timestamps, append_log)
     logger = logging.getLogger(progname)
     # ------------------#
     # log startup info #
@@ -4695,7 +4721,7 @@ def parse(
     logger.info(
         "----------------------------------------------------------------------"
     )
-    logger.info(f"Program {progname} version {version} ({version_date}) starting up")
+    logger.info(f"Program {progname} version {version} starting up")
     logger.info(
         "----------------------------------------------------------------------"
     )
@@ -4838,7 +4864,7 @@ def parse(
             logger.info(
                 "--[Summary]-----------------------------------------------------------"
             )
-            logger.info(f"Program    = {progname} version {version} ({version_date})")
+            logger.info(f"Program    = {progname} version {version}")
             logger.info(f"SHEFPARM   = {shefparm}")
             logger.info(f"Start Time = {str(start_time)[:-7]}")
             logger.info(f"Run Time   = {str(datetime.now() - start_time)[:-3]}")
@@ -4859,243 +4885,232 @@ def parse(
             )
 
 
-def main() -> None:
-    """
-    Driver routine
-    """
-    # --------------------#
-    # parse command line #
-    # --------------------#
-    argparser = argparse.ArgumentParser(
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        description="Parses SHEF messages into different output formats",
-    )
-    group = argparser.add_mutually_exclusive_group()
-    group.add_argument(
-        "-s", "--shefparm", action="store", help="path of SHEFPARM file to use"
-    )
-    argparser.add_argument(
-        "-i",
-        "--in",
-        action="store",
-        default=sys.stdin,
-        metavar="input_filename",
-        help="input file (defaults to <stdin>)",
-    )
-    argparser.add_argument(
-        "-o",
-        "--out",
-        action="store",
-        default=sys.stdout,
-        metavar="output_filename",
-        help="output file (defaults to <stdout>)",
-    )
-    argparser.add_argument(
-        "-l",
-        "--log",
-        action="store",
-        default=sys.stderr,
-        metavar="log_filename",
-        help="log file (defaults to <sterr>)",
-    )
-    argparser.add_argument(
-        "-f",
-        "--format",
-        type=int,
-        action="store",
-        choices=[1, 2],
-        default=1,
-        help=f"output format (defaults to 1)",
-    )
-    argparser.add_argument(
-        "-v",
-        "--loglevel",
-        action="store",
-        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        default="INFO",
-        help="verbosity/logging level (defaults to INFO)",
-    )
-    argparser.add_argument(
-        "--loader",
-        metavar="<ts_loader>",
-        action="store",
-        help="allows loading time series to various data stores (more info in --description)",
-    )
-    group.add_argument(
-        "--processed",
-        action="store_true",
-        help="input is pre-processed (format 1 or 2) instead of SHEF text",
-    )
-    group.add_argument(
-        "--defaults",
-        action="store_true",
-        help="use program defaults (ignore default SHEFPARM)",
-    )
-    argparser.add_argument(
-        "--timestamps", action="store_true", help="timestamp log output"
-    )
-    argparser.add_argument(
-        "--shefit_times", action="store_true", help="use shefit date/time logic"
-    )
-    argparser.add_argument(
-        "--reject_problematic",
-        action="store_true",
-        help="reject all values from messages that contain errors",
-    )
-    argparser.add_argument(
-        "--append_out",
-        action="store_true",
-        help="append to output file instead of overwriting",
-    )
-    argparser.add_argument(
-        "--append_log",
-        action="store_true",
-        help="append to log file instead of overwriting",
-    )
-    argparser.add_argument(
-        "--unload",
-        action="store_true",
-        help="use loader to unload from data store to SHEF text",
-    )
-    argparser.add_argument(
-        "--make_shefparm",
-        action="store_true",
-        help="write SHEFPARM data to output file and exit",
-    )
-    argparser.add_argument(
-        "--export-cda",
-        action="store_true",
-        help="export timeseries/group from CWMS via CDA using CdaExporter and exit",
-    )
-    argparser.add_argument(
-        "--cda_url",
-        action="store",
-        help="CDA api root URL (required with --export-cda)",
-    )
-    argparser.add_argument(
-        "--office",
-        action="store",
-        help="office id to use with CDA (required with --export-cda)",
-    )
-    argparser.add_argument(
-        "--timeseries_group",
-        action="store",
-        help="time series group id or timeseries id to export (required with --export-cda)",
-    )
-    argparser.add_argument(
-        "--export-file",
-        action="store",
-        help="output filename for CDA export (defaults to stdout)",
-    )
-    argparser.add_argument(
-        "--start-time",
-        action="store",
-        help="start of export window (ISO format, e.g. 2024-07-01T00:00:00)",
-    )
-    argparser.add_argument(
-        "--end-time",
-        action="store",
-        help="end of export window (ISO format, e.g. 2024-07-03T23:59:59)",
-    )
-    argparser.add_argument(
-        "--description",
-        action="store_true",
-        help="show a more detailed program description and exit",
-    )
-    argparser.add_argument(
-        "--version",
-        action="store_true",
-        help="print the version info and exit",
-    )
-    args = argparser.parse_args()
+def export(
+    api_root: str,
+    office: str,
+    export_file: str,
+    timeseries_group: Optional[str] = None,
+    timeseries_ids: Optional[list[str]] = None,
+    start_time: Optional[datetime] = None,
+    end_time: Optional[datetime] = None,
+):
+    from shef.exporters.cda_exporter import CdaExporter
 
-    # Handle CDA exporter CLI separately and exit
-    if args.export_cda:
-        # validate required args
-        missing = [
-            n for n in ("cda_url", "office", "timeseries_group") if not getattr(args, n)
-        ]
-        if missing:
-            print(
-                f"\nArguments {', '.join('--' + m for m in missing)} are required when --export-cda is used\n"
-            )
-            exit(-1)
-        try:
-            # lazy import to avoid top-level dependency
-            from shef.exporters.cda_exporter import CdaExporter
+    # Require either a timeseries_group (group id) or timeseries_ids (list of ids)
+    if not timeseries_group and not timeseries_ids:
+        raise ValueError("Either timeseries_group or timeseries_ids must be provided")
 
-            def parse_dt(s: Optional[str]):
-                if not s:
-                    return None
-                try:
-                    return datetime.fromisoformat(s)
-                except Exception:
-                    try:
-                        # try date-only
-                        return datetime.fromisoformat(s + "T00:00:00")
-                    except Exception:
-                        raise
+    exporter = CdaExporter(api_root, office)
+    exporter.start_time = start_time
+    exporter.end_time = end_time
+    logger.info(f"Exporting data for time window = {start_time} to {end_time}")
+    logger.info(f"Saving data to file {export_file}")
+    # prefer group when provided, otherwise use explicit ids
+    if timeseries_group:
+        if export_file:
+            with open(export_file, "w", encoding="utf-8") as f:
+                exporter.set_output(f)
+                exporter.export(timeseries_group)
+        else:
+            exporter.set_output(sys.stdout)
+            exporter.export(timeseries_group)
+    elif timeseries_ids:
+        if export_file:
+            with open(export_file, "w", encoding="utf-8") as f:
+                exporter.set_output(f)
+                for tsid in timeseries_ids:
+                    exporter.export(tsid)
+        else:
+            exporter.set_output(sys.stdout)
+            for tsid in timeseries_ids:
+                exporter.export(tsid)
 
-            start_time = parse_dt(args.start_time)
-            end_time = parse_dt(args.end_time)
 
-            exporter = CdaExporter(args.cda_url, args.office)
-            exporter.start_time = start_time
-            exporter.end_time = end_time
-            if args.export_file:
-                outpath = args.export_file
-                with open(outpath, "w", encoding="utf-8") as f:
-                    exporter.set_output(f)
-                    exporter.export(args.timeseries_group)
-            else:
-                # default to stdout
-                exporter.set_output(sys.stdout)
-                exporter.export(args.timeseries_group)
-        except Exception as e:
-            logger.critical(exc_info(e))
-            exit(-1)
-        exit(0)
+@click.group(invoke_without_command=True)
+@click.option("--in", "infile", default=None, help="input file (defaults to <stdin>)")
+@click.option(
+    "--out", "outfile", default=None, help="output file (defaults to <stdout>)"
+)
+@click.option("--log", "logfile", default=None, help="log file (defaults to <stderr>)")
+@click.option(
+    "--loglevel",
+    "loglevel",
+    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
+    default="INFO",
+    help="verbosity/logging level",
+)
+@click.pass_context
+def cli(ctx, infile, outfile, logfile, loglevel) -> None:
+    """SHEF parser CLI (Click-based). If no subcommand is provided, run the default parser."""
+    # store common option values so forward() can pass them to run_parse
+    ctx.ensure_object(dict)
+    ctx.obj["infile"] = infile
+    ctx.obj["outfile"] = outfile
+    ctx.obj["logfile"] = logfile
+    ctx.obj["loglevel"] = loglevel
 
-    if args.make_shefparm:
+    # When invoked with no subcommand, delegate to the `run` command so
+    # both `shefParser` and `shefParser run` behave the same.
+    if ctx.invoked_subcommand is None:
+        # forward group options to the 'parse' command and invoke it
+        ctx.forward(run_parse)
+
+
+@cli.command(name="parse")
+@click.option(
+    "-s", "--shefparm", "shefparm", default=None, help="path of SHEFPARM file to use"
+)
+@click.option(
+    "-i", "--in", "infile", default=None, help="input file (defaults to <stdin>)"
+)
+@click.option(
+    "-o", "--out", "outfile", default=None, help="output file (defaults to <stdout>)"
+)
+@click.option(
+    "-l", "--log", "logfile", default=None, help="log file (defaults to <stderr>)"
+)
+@click.option(
+    "-f",
+    "--format",
+    "outformat",
+    type=click.IntRange(1, 2),
+    default=1,
+    help="output format (1 or 2)",
+)
+@click.option(
+    "-v",
+    "--loglevel",
+    "loglevel",
+    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
+    default="INFO",
+    help="verbosity/logging level",
+)
+@click.option(
+    "--loader",
+    "loader",
+    default=None,
+    help="allows loading time series to various data stores (more info in --description)",
+)
+@click.option(
+    "--processed",
+    "processed",
+    is_flag=True,
+    help="input is pre-processed (format 1 or 2) instead of SHEF text",
+)
+@click.option(
+    "--defaults",
+    "defaults",
+    is_flag=True,
+    help="use program defaults (ignore default SHEFPARM)",
+)
+@click.option("--timestamps", "timestamps", is_flag=True, help="timestamp log output")
+@click.option(
+    "--shefit-times", "shefit_times", is_flag=True, help="use shefit date/time logic"
+)
+@click.option(
+    "--reject-problematic",
+    "reject_problematic",
+    is_flag=True,
+    help="reject all values from messages that contain errors",
+)
+@click.option(
+    "--append-out",
+    "append_out",
+    is_flag=True,
+    help="append to output file instead of overwriting",
+)
+@click.option(
+    "--append-log",
+    "append_log",
+    is_flag=True,
+    help="append to log file instead of overwriting",
+)
+@click.option(
+    "--unload",
+    "unload",
+    is_flag=True,
+    help="use loader to unload from data store to SHEF text",
+)
+@click.option(
+    "--make-shefparm",
+    "make_shefparm",
+    is_flag=True,
+    help="write SHEFPARM data to output file and exit",
+)
+@click.option(
+    "--description",
+    "description",
+    is_flag=True,
+    help="show a more detailed program description and exit",
+)
+@click.option(
+    "--version", "show_version", is_flag=True, help="print the version info and exit"
+)
+def run_parse(
+    shefparm,
+    infile,
+    outfile,
+    logfile,
+    outformat,
+    loglevel,
+    loader,
+    processed,
+    defaults,
+    timestamps,
+    shefit_times,
+    reject_problematic,
+    append_out,
+    append_log,
+    unload,
+    make_shefparm,
+    description,
+    show_version,
+):
+    """Parse SHEF file and load to CDA/DSS/stdout"""
+    input_arg = infile if infile is not None else None
+    output_arg = outfile if outfile is not None else None
+    log_arg = logfile if logfile is not None else None
+
+    if make_shefparm:
         if (
-            args.shefparm
-            or getattr(args, "in") != sys.stdin
-            or args.log != sys.stderr
-            or args.format != 1
-            or args.loglevel != "INFO"
-            or args.defaults
-            or args.timestamps
-            or args.reject_problematic
-            or args.description
-            or args.version
+            shefparm
+            or input_arg is not None
+            or log_arg is not None
+            or outformat != 1
+            or loglevel != "INFO"
+            or defaults
+            or timestamps
+            or reject_problematic
+            or description
+            or show_version
         ):
-            print(
-                "\nArgument --make_shefparm may not be used with any other argument except -o/--out\n"
+            click.echo(
+                "\nArgument --make-shefparm may not be used with any other argument except -o/--out\n"
             )
-            exit(-1)
-        ShefParser.write_shefparm_data(args.out)
-        exit(0)
+            raise SystemExit(-1)
+        ShefParser.write_shefparm_data(output_arg if output_arg else sys.stdout)
+        raise SystemExit(0)
 
-    if args.version:
+    if show_version:
         if (
-            args.shefparm
-            or getattr(args, "in") != sys.stdin
-            or args.log != sys.stderr
-            or args.format != 1
-            or args.loglevel != "INFO"
-            or args.defaults
-            or args.timestamps
-            or args.reject_problematic
-            or args.make_shefparm
-            or args.description
+            shefparm
+            or input_arg is not None
+            or log_arg is not None
+            or outformat != 1
+            or loglevel != "INFO"
+            or defaults
+            or timestamps
+            or reject_problematic
+            or make_shefparm
+            or description
         ):
-            print(
+            click.echo(
                 "\nArgument --version may not be used with any other argument except -o/--out\n"
             )
-            exit(-1)
+            raise SystemExit(-1)
         try:
-            print(f"Package shef-parser v{version('shef-parser')}")
-        except:
+            click.echo(f"Package shef-parser v{version('shef-parser')}")
+        except Exception:
             import platform
 
             if list(map(int, platform.python_version_tuple()[:2])) < [3, 11]:
@@ -5108,194 +5123,170 @@ def main() -> None:
             date_str = str(
                 datetime.fromtimestamp(pyproject_path.stat().st_mtime)
             ).split()[0]
-            print(
+            click.echo(
                 f"Package {pyproject['tool']['poetry']['name']} v{pyproject['tool']['poetry']['version']} {date_str}"
             )
-        exit(0)
+        raise SystemExit(0)
 
-    if args.description:
-        print(
-            f"""
-{progname} is a pure Python replacement for the shefit program from
-NOAA/NWS.
+    if description:
+        click.echo("See --help or use README for long description")
+        raise SystemExit(0)
 
-SHEFPARM file:
-    Unlike shefit, {progname} doesn't require the use of a SHEFPARM file,
-    although one may be used.
-
-    If --defaults is not specified, {progname} uses the same rules as
-    shefit for locating the SHEFPARM file:
-        1. the current directory is searched first
-        2. the directory specified by "rfs_sys_dir" environment variable
-           is searched
-
-    However, unlike shefit which exits if no SHEFPARM file is found,
-    {progname} will use program defaults instead. The program defaults
-    have the same behavior as using the SHEFPARM file bundled with the
-    latest source code for shefit.
-
-    Also unlike shefit, the location of the SHEFPARM file can be specified
-    the using -s/--shefparm option, and doesn't need to be named SHEFPARM.
-    Using -s/--shefparm overrides searching the default locations for the
-    file.
-
-    If a SHEFPARM file is used, any modifications it makes to the program
-    defaults are logged at the INFO and/or WARNING levels on program
-    startup.
-
-    The --defaults option may be specified to force {progname} to use
-    program defaults if a SHEFPARM file exists in the current or
-    $rfs_sys_dir directories.
-
-    The --defaults and -s/--shefparm options are mutually exclusive.
-
-    The --make_shefparm option may be used to output program defaults in
-    SHEFPARM format. This may be useful if it is necessary to override the
-    program defaults. Either redirect <stdout> or use the -o/--out option
-    to capture the SHEFPARM data to a file in order to modify it for use.
-
-Input format:
-    Unless --processed is specified, the program reads SHEF text and
-    processes it into the (default or specified) output format, optionally
-    passing the output to a loader. If --processed is specified, the
-    program reads pre-processed data in either output format 1 or 2 and
-    outputs it in the (default or specified) format. It can thus be used
-    to change the format of a pre-processed file or to pass pre-processed
-    data to a loader.
-
-Output format:
-    Like shefit, the default output format is the shefit text version 1.
-    The output formats -f/--format 1 and -f/--format 2 are equivalent to
-    the shefit -1 and -2 options, respectively. There is no equivalent to
-    the shefit -b (binary output) option.
-
-Times and timezone processing:
-    By default, {progname} uses modern date/time and time zone objects to
-    process times and time zones, which do not always produce the same
-    results as the logic used in shefit. Use the --shefit_times option to
-    force {progname} to use the same date/time logic as shefit. This is
-    helpful when comparing {progname} output to shefit output for a
-    common input.
-
-    Note that using --shefit_times causes {progname} to (like shefit)
-    always generate incorrect UTC times for SHEF time zones Y, YD, YS, and
-    ND, and to generate incorrect UTC times for SHEF time zone N during
-    daylight saving time.
-
-Messages with errors:
-    In many circumstances {progname} is able to process valid portions
-    of messages that occur after an erroneous portion, where shefit
-    normally stops further processing of a message when it encounters an
-    error. This usually results in parsing more valid values from
-    problematic messages than shefit. However, it can result treating
-    invalid data as valid in certain messages that are badly mangled. This
-    behavior can be prevented by using the --reject_problematic option
-    which discards all data from messages with errors.
-
-Loading SHEF data to data stores:"""
-        )
-        if not available_loaders:
-            print(
-                "    The 'loaders' package was not found or it contained no valid loaders."
-            )
-        else:
-
-            def output_lines(header: str, text: str) -> None:
-                input_lines = text.split("\n")
-                output_lines = []
-                for input_line in input_lines:
-                    output_lines.extend(
-                        textwrap.fill(
-                            input_line.strip(), width=50, break_long_words=False
-                        ).split("\n")
-                    )
-                print(
-                    f"    {header.ljust(14)}{': ' if header else '  '}{output_lines[0]}"
-                )
-                for line in output_lines[1:]:
-                    print(f"{20 * ' '}{line}")
-
-            if loaders.error_modules:
-                print(
-                    "\n    Errors importing the following modules:\n\t{}\n".format(
-                        "\n\t".join(loaders.error_modules)
-                    )
-                )
-            if exporters.error_modules:
-                print(
-                    "\n    Errors importing the following modules:\n\t{}\n".format(
-                        "\n\t".join(exporters.error_modules)
-                    )
-                )
-            for loader_name in sorted(available_loaders):
-                if loader_name == "abstract_loader":
-                    continue
-                description = "\n                    ".join(
-                    available_loaders[loader_name]["description"].strip().split(chr(10))
-                )
-                options = "\n                    ".join(
-                    available_loaders[loader_name]["option_format"]
-                    .strip()
-                    .split(chr(10))
-                )
-                loader_class_name = available_loaders[loader_name]["class"].__name__
-                print(f"    {70 * '='}")
-                output_lines(
-                    "Loader",
-                    f"{loader_name}.{loader_class_name} v{available_loaders[loader_name]['version']}",
-                )
-                output_lines("Description", description)
-                output_lines("Option Format", options)
-                output_lines(
-                    "Can unload", f"{available_loaders[loader_name]['can_unload']}"
-                )
-                if available_loaders[loader_name]["can_unload"]:
-                    has_exporter = False
-                    for exporter_name in [
-                        ex
-                        for ex in available_exporters
-                        if available_exporters[ex]["loader_class"].__name__
-                        == loader_class_name
-                    ]:
-                        has_exporter = True
-                        exporter_class_name = available_exporters[exporter_name][
-                            "exporter_class"
-                        ].__name__
-                        output_lines(
-                            "Exporter",
-                            f"{exporter_name}.{exporter_class_name} v{available_exporters[exporter_name]['version']}",
-                        )
-                        output_lines(
-                            "", f"{available_exporters[exporter_name]['description']}"
-                        )
-                        output_lines(
-                            "",
-                            f"{exporter_class_name}({available_exporters[exporter_name]['parameters']})",
-                        )
-                    if not has_exporter:
-                        output_lines("Exporter", "<None>")
-
-        exit(0)
-
-    input = getattr(args, "in")
     parse(
-        input_name=input if isinstance(input, str) else None,
-        output_name=args.out if isinstance(args.out, str) else None,
-        output_format=args.format,
-        append_output=args.append_out,
-        log_name=args.log if isinstance(args.log, str) else None,
-        log_level=args.loglevel,
-        append_log=args.append_log,
-        log_timestamps=args.timestamps,
-        shefparm=args.shefparm,
-        use_defaults=args.defaults,
-        shefit_times=args.shefit_times,
-        reject_problematic=args.reject_problematic,
-        loader_spec=args.loader,
-        unload=args.unload,
-        processed=args.processed,
+        input_stream=None,
+        input_name=input_arg if isinstance(input_arg, str) else None,
+        output_name=output_arg if isinstance(output_arg, str) else None,
+        output_format=outformat,
+        append_output=append_out,
+        log_name=log_arg if isinstance(log_arg, str) else None,
+        log_level=loglevel,
+        append_log=append_log,
+        log_timestamps=timestamps,
+        shefparm=shefparm,
+        use_defaults=defaults,
+        shefit_times=shefit_times,
+        reject_problematic=reject_problematic,
+        loader_spec=loader,
+        unload=unload,
+        processed=processed,
     )
 
 
+@cli.command(name="export")
+@click.option(
+    "-a",
+    "--api-root",
+    required=True,
+    envvar="CDA_API_ROOT",
+    type=str,
+    help="Api Root for CDA. Can be user defined or placed in a env variable CDA_API_ROOT",
+)
+@click.option(
+    "-o",
+    "--office",
+    required=True,
+    envvar="OFFICE",
+    type=str,
+    callback=to_uppercase,
+    help="Office to grab data for",
+)
+@click.option(
+    "-tsg",
+    "--timeseries-group",
+    default=None,
+    type=str,
+    help="time series group id to export",
+)
+@click.option(
+    "-tsids",
+    "--timeseries-ids",
+    default=None,
+    type=str,
+    help="list of timeseries id(s) to export",
+)
+@click.option(
+    "-ef",
+    "--export-file",
+    "export_file",
+    default=None,
+    type=str,
+    help="output SHEF filename (defaults to stdout)",
+)
+@click.option(
+    "-st",
+    "--start-time",
+    default="T-1D",
+    type=str,
+    help="start of export window (ISO format or HEC Time) default T-1D",
+)
+@click.option(
+    "-et",
+    "--end-time",
+    default="T",
+    type=str,
+    help="end of export window (ISO format or HEC Time) default T",
+)
+@click.option(
+    "-v",
+    "--loglevel",
+    "loglevel",
+    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
+    default="INFO",
+    help="verbosity/logging level",
+)
+def run_export(
+    api_root,
+    office,
+    timeseries_group,
+    timeseries_ids,
+    export_file,
+    start_time,
+    end_time,
+    loglevel,
+):
+    """Export timeseries/group from CWMS via CDA and write to SHEF file or stdout."""
+    from hec import HecTime, hectime
+
+    def parse_dt(s: Optional[str]):
+        if not s:
+            return None
+        try:
+            return datetime.fromisoformat(s).strftime("%m/%d/%Y %H:%M:%S")
+        except Exception:
+            try:
+                return datetime.fromisoformat(s + "T00:00:00").strftime(
+                    "%m/%d/%Y %H:%M:%S"
+                )
+            except Exception:
+                return s
+
+    if timeseries_ids is not None:
+        ts_ids = timeseries_ids.replace(" ", "").split(",")
+    else:
+        ts_ids = None
+
+    start = HecTime()
+    end = HecTime()
+    st = parse_dt(start_time)
+    et = parse_dt(end_time)
+    window = st + ", " + et
+    if hectime.get_time_window(window, start, end) == -1:
+        click.BadParameter(
+            f"Invalid time window check start and end times entered: {window}"
+        )
+
+    # configure logging for the export command to match parse() behavior
+    try:
+        configure_logging(sys.stderr, loglevel, False, False)
+    except Exception:
+        # non-fatal: continue without halting if logging cannot be configured
+        pass
+
+    try:
+        # reuse the shared export implementation
+        # export() may raise ValueError for invalid argument combinations
+        export(
+            api_root=api_root,
+            office=office,
+            export_file=export_file,
+            timeseries_group=timeseries_group,
+            timeseries_ids=ts_ids,
+            start_time=start.datetime(),
+            end_time=end.datetime(),
+        )
+    except ValueError as e:
+        # convert validation errors to Click exceptions so CLI shows a friendly message
+        raise click.ClickException(str(e))
+
+
 if __name__ == "__main__":
-    main()
+    cli()
+
+
+def main() -> None:
+    """Backward-compatible entrypoint.
+
+    Historically the console script pointed to shef.shef_parser:main.
+    Keep that name working by delegating to the Click CLI group.
+    """
+    cli()
