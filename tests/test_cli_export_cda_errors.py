@@ -7,7 +7,7 @@ def test_export_cda_missing_required_args():
     runner = CliRunner()
     # omit --office
     result = runner.invoke(
-        cli, ["export", "--cda-url", "http://x", "--timeseries-group", "TG"]
+        cli, ["export", "--api-root", "http://x", "--timeseries-group", "TG"]
     )
     # click should report missing required option
     assert result.exit_code != 0

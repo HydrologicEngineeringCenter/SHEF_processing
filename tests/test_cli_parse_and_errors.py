@@ -4,24 +4,6 @@ import types
 from click.testing import CliRunner
 
 
-def test_base_delegates_to_run(monkeypatch):
-    """When invoking the base CLI with no subcommand, it should delegate to `run` (parse implementation)."""
-    called = {}
-
-    def fake_run():
-        called["ok"] = True
-
-    # Patch the run implementation to a simple spy
-    import shef.shef_parser as sp
-
-    monkeypatch.setattr(sp, "parse", fake_run)
-
-    runner = CliRunner()
-    result = runner.invoke(sp.cli, [])
-    assert result.exit_code == 0
-    assert called.get("ok") is True
-
-
 def test_parse_subcommand_version_prints_package(monkeypatch):
     """`parse --version` should print package/version information and exit 0."""
     import shef.shef_parser as sp

@@ -9,8 +9,8 @@ def test_export_cda_cli_wiring(tmp_path, monkeypatch):
     instances = []
 
     class MockExporter:
-        def __init__(self, cda_url, office):
-            self.cda_url = cda_url
+        def __init__(self, api_root, office):
+            self.api_root = api_root
             self.office = office
             self.start_time = None
             self.end_time = None
@@ -38,7 +38,7 @@ def test_export_cda_cli_wiring(tmp_path, monkeypatch):
         cli,
         [
             "export",
-            "--cda-url",
+            "--api-root",
             "http://example.test/cda",
             "--office",
             "OFF",
@@ -55,7 +55,7 @@ def test_export_cda_cli_wiring(tmp_path, monkeypatch):
     # One exporter instance should have been created and used
     assert len(instances) == 1
     inst = instances[0]
-    assert inst.cda_url == "http://example.test/cda"
+    assert inst.api_root == "http://example.test/cda"
     assert inst.office == "OFF"
     assert inst.exported == "TG123"
     # File output should have been set
