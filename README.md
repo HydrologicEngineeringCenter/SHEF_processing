@@ -62,9 +62,9 @@ shef_parser.parse(
 #CWMS CDA loader
 #et and st can be either ISO date formate 2026-02-01T11:00:00 or use HEC time T, T-1D, T-5Hr, 02Feb2026, ect...)
 #either timeseries group ID can be used or the -tsids parameter with a list of timeseries ids ("tsid1,tsid2,...")
-shefParser export -a api_root -o office -f filename.shef -st start_time -et end_time -tdg <Timesereis Group ID> 
+shefParser export -a api_root -o office -f filename.shef -st start_time -et end_time -tsg <Timesereis Group ID> 
 
-shefParser export -a api_root -o MVP -f filename.shef -st T-2D -et T -tdg KEYS
+shefParser export -a api_root -o MVP -f filename.shef -st T-2D -et T -tsg KEYS
 ```
 
 
