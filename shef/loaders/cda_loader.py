@@ -478,6 +478,8 @@ class CdaLoader(abstract_loader.AbstractLoader):
             ).json
             for shef_group in group_list:
                 group_id = shef_group["id"]
+                if "description" not in shef_group:
+                    shef_group["description"] = ""
                 self._export_groups[group_id] = {
                     "description": shef_group["description"],
                     "timeseries": [],

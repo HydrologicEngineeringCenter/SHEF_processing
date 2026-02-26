@@ -2,7 +2,7 @@
 name = "shef-parser"
 repository = "https://github.com/HydrologicEngineeringCenter/SHEF_processing"
 
-version = "1.8.0"
+version = "1.9.0"
 
 
 packages = [
@@ -16,6 +16,7 @@ authors = ["Hydrologic Engineering Center"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
+click = "^8.1"
 sphinx = { version = "^7.0", optional = true }
 sphinx_rtd_theme = { version = "^2.0", optional = true }
 sphinx-design = { version = "^0.5", optional = true }
@@ -28,8 +29,8 @@ black = "^24.2.0"
 isort = "^5.13.2"
 mypy = "^1.9.0"
 pre-commit = "^3.6.2"
-#pytest = "^8.1.1"
-#pytest-cov = "^4.1.0"
+pytest = "^8.1"
+pytest-cov = "^4.1.0"
 #pandas-stubs = "^2.2.1.240316"
 yamlfix = "^1.16.0"
 
@@ -47,5 +48,5 @@ explicit_start = false
 preserve_quotes = true
 
 [tool.poetry.scripts]
-shefParser = "shef.shef_parser:main"
+shefParser = "shef.shef_parser:cli"
 

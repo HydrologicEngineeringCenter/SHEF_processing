@@ -136,7 +136,7 @@ class AbstractLoader(ABC):
                         )
                 except (KeyError, shared.LoaderException) as e:
                     if self._logger:
-                        self._logger.error(shared.exc_info(e))
+                        self._logger.debug(shared.exc_info(e))
                     self._shef_value = None  # Reset _shef_value until valid value found
             else:
                 # -------------------#
@@ -173,7 +173,7 @@ class AbstractLoader(ABC):
                         )
         except Exception as e:
             if self._logger:
-                self._logger.error(shared.exc_info(e))
+                self._logger.debug(shared.exc_info(e))
 
     @abstractmethod
     def load_time_series(self) -> None:
