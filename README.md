@@ -57,11 +57,23 @@ shef_parser.parse(
 ```
 
 ## Generating SHEF Text
+## Exporting via command line
+```sh
+#CWMS CDA loader
+#et and st can be either ISO date formate 2026-02-01T11:00:00 or use HEC time T, T-1D, T-5Hr, 02Feb2026, ect...)
+#either timeseries group ID can be used or the -tsids parameter with a list of timeseries ids ("tsid1,tsid2,...")
+shefParser export -a api_root -o office -f filename.shef -st start_time -et end_time -tdg <Timesereis Group ID> 
+
+shefParser export -a api_root -o MVP -f filename.shef -st T-2D -et T -tdg KEYS
+```
+
+
+
 ```python
 #CWMS CDA loader
 import os
 from datetime import datetime, timedelta
-from shef.exporters import CdaExporter
+from shef import shef_parser
 
 cda_url: str = os.getenv("CDA_API_ROOT")
 office_id: str = os.getenv("CDA_OFFICE_ID")
@@ -69,13 +81,15 @@ tsids: list[str] = [
     ...
 ]
 
-exporter = CdaExporter(cda_url, office_id)
-exporter.start_time = datetime.now() - timedelta(days=1)
-exporter.end_time = datetime.now()
-with open("/path/to/output_file", "w") as f:
-    exporter.set_output(f)
-    for (tsid in tsids):
-        exporter.export(tsid)
+export_file="/path/to/output_file"
+shef_parser.export(
+            api_root=cda_url,
+            office=office_id,
+            export_file=export_file,
+            timeseries_ids=tsids,
+            start_time=datetime.now(),
+            end_time=datetime.now() - timedelta(days=1),
+        )
 ```
 
 ```python

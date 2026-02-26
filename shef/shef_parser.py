@@ -4899,6 +4899,11 @@ def export(
     # Require either a timeseries_group (group id) or timeseries_ids (list of ids)
     if not timeseries_group and not timeseries_ids:
         raise ValueError("Either timeseries_group or timeseries_ids must be provided")
+    if not office:
+        raise ValueError("Office must be provided")
+
+    if not api_root:
+        raise ValueError("API root must be provided")
 
     exporter = CdaExporter(api_root, office)
     exporter.start_time = start_time
@@ -4926,126 +4931,126 @@ def export(
                 exporter.export(tsid)
 
 
-@click.group(invoke_without_command=True)
-@click.option("--in", "infile", default=None, help="input file (defaults to <stdin>)")
-@click.option(
-    "--out", "outfile", default=None, help="output file (defaults to <stdout>)"
-)
-@click.option("--log", "logfile", default=None, help="log file (defaults to <stderr>)")
-@click.option(
-    "--loglevel",
-    "loglevel",
-    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
-    default="INFO",
-    help="verbosity/logging level",
-)
-@click.pass_context
-def cli(ctx, infile, outfile, logfile, loglevel) -> None:
-    """SHEF parser CLI (Click-based). If no subcommand is provided, run the default parser."""
-    # store common option values so forward() can pass them to run_parse
-    ctx.ensure_object(dict)
-    ctx.obj["infile"] = infile
-    ctx.obj["outfile"] = outfile
-    ctx.obj["logfile"] = logfile
-    ctx.obj["loglevel"] = loglevel
+def parse_options(f):
+    f = click.option(
+        "-s",
+        "--shefparm",
+        "shefparm",
+        default=None,
+        help="path of SHEFPARM file to use",
+    )(f)
+    f = click.option(
+        "-i", "--in", "infile", default=None, help="input file (defaults to <stdin>)"
+    )(f)
+    f = click.option(
+        "-o",
+        "--out",
+        "outfile",
+        default=None,
+        help="output file (defaults to <stdout>)",
+    )(f)
+    f = click.option(
+        "-l", "--log", "logfile", default=None, help="log file (defaults to <stderr>)"
+    )(f)
+    f = click.option(
+        "-f",
+        "--format",
+        "outformat",
+        type=click.IntRange(1, 2),
+        default=1,
+        help="output format (1 or 2)",
+    )(f)
+    f = click.option(
+        "-v",
+        "--loglevel",
+        "loglevel",
+        type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
+        default="INFO",
+        help="verbosity/logging level",
+    )(f)
+    f = click.option(
+        "--loader",
+        "loader",
+        default=None,
+        help="allows loading time series to various data stores (more info in --description)",
+    )(f)
+    f = click.option(
+        "--processed",
+        "processed",
+        is_flag=True,
+        help="input is pre-processed (format 1 or 2) instead of SHEF text",
+    )(f)
+    f = click.option(
+        "--defaults",
+        "defaults",
+        is_flag=True,
+        help="use program defaults (ignore default SHEFPARM)",
+    )(f)
+    f = click.option(
+        "--timestamps", "timestamps", is_flag=True, help="timestamp log output"
+    )(f)
+    f = click.option(
+        "--shefit-times",
+        "shefit_times",
+        is_flag=True,
+        help="use shefit date/time logic",
+    )(f)
+    f = click.option(
+        "--reject-problematic",
+        "reject_problematic",
+        is_flag=True,
+        help="reject all values from messages that contain errors",
+    )(f)
+    f = click.option(
+        "--append-out",
+        "append_out",
+        is_flag=True,
+        help="append to output file instead of overwriting",
+    )(f)
+    f = click.option(
+        "--append-log",
+        "append_log",
+        is_flag=True,
+        help="append to log file instead of overwriting",
+    )(f)
+    f = click.option(
+        "--unload",
+        "unload",
+        is_flag=True,
+        help="use loader to unload from data store to SHEF text",
+    )(f)
+    f = click.option(
+        "--make-shefparm",
+        "make_shefparm",
+        is_flag=True,
+        help="write SHEFPARM data to output file and exit",
+    )(f)
+    f = click.option(
+        "--description",
+        "description",
+        is_flag=True,
+        help="show a more detailed program description and exit",
+    )(f)
+    f = click.option(
+        "--version",
+        "show_version",
+        is_flag=True,
+        help="print the version info and exit",
+    )(f)
+    return f
 
-    # When invoked with no subcommand, delegate to the `run` command so
-    # both `shefParser` and `shefParser run` behave the same.
+
+@click.group(invoke_without_command=True)
+@parse_options
+@click.pass_context
+def cli(ctx, **kwargs):
     if ctx.invoked_subcommand is None:
-        # forward group options to the 'parse' command and invoke it
-        ctx.forward(run_parse)
+        # Pass all group options directly to the default command
+        ctx.invoke(run_parse, **kwargs)
 
 
 @cli.command(name="parse")
-@click.option(
-    "-s", "--shefparm", "shefparm", default=None, help="path of SHEFPARM file to use"
-)
-@click.option(
-    "-i", "--in", "infile", default=None, help="input file (defaults to <stdin>)"
-)
-@click.option(
-    "-o", "--out", "outfile", default=None, help="output file (defaults to <stdout>)"
-)
-@click.option(
-    "-l", "--log", "logfile", default=None, help="log file (defaults to <stderr>)"
-)
-@click.option(
-    "-f",
-    "--format",
-    "outformat",
-    type=click.IntRange(1, 2),
-    default=1,
-    help="output format (1 or 2)",
-)
-@click.option(
-    "-v",
-    "--loglevel",
-    "loglevel",
-    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
-    default="INFO",
-    help="verbosity/logging level",
-)
-@click.option(
-    "--loader",
-    "loader",
-    default=None,
-    help="allows loading time series to various data stores (more info in --description)",
-)
-@click.option(
-    "--processed",
-    "processed",
-    is_flag=True,
-    help="input is pre-processed (format 1 or 2) instead of SHEF text",
-)
-@click.option(
-    "--defaults",
-    "defaults",
-    is_flag=True,
-    help="use program defaults (ignore default SHEFPARM)",
-)
-@click.option("--timestamps", "timestamps", is_flag=True, help="timestamp log output")
-@click.option(
-    "--shefit-times", "shefit_times", is_flag=True, help="use shefit date/time logic"
-)
-@click.option(
-    "--reject-problematic",
-    "reject_problematic",
-    is_flag=True,
-    help="reject all values from messages that contain errors",
-)
-@click.option(
-    "--append-out",
-    "append_out",
-    is_flag=True,
-    help="append to output file instead of overwriting",
-)
-@click.option(
-    "--append-log",
-    "append_log",
-    is_flag=True,
-    help="append to log file instead of overwriting",
-)
-@click.option(
-    "--unload",
-    "unload",
-    is_flag=True,
-    help="use loader to unload from data store to SHEF text",
-)
-@click.option(
-    "--make-shefparm",
-    "make_shefparm",
-    is_flag=True,
-    help="write SHEFPARM data to output file and exit",
-)
-@click.option(
-    "--description",
-    "description",
-    is_flag=True,
-    help="show a more detailed program description and exit",
-)
-@click.option(
-    "--version", "show_version", is_flag=True, help="print the version info and exit"
-)
+@parse_options
 def run_parse(
     shefparm,
     infile,
@@ -5175,17 +5180,17 @@ def run_parse(
     "--timeseries-group",
     default=None,
     type=str,
-    help="time series group id to export",
+    help="time series group id to export (either a timeseries group or timeseries ids are required)",
 )
 @click.option(
     "-tsids",
     "--timeseries-ids",
     default=None,
     type=str,
-    help="list of timeseries id(s) to export",
+    help="list of timeseries id(s) to export (ie tsid1,tsid2....)",
 )
 @click.option(
-    "-ef",
+    "-f",
     "--export-file",
     "export_file",
     default=None,
