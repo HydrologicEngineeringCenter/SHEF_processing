@@ -51,12 +51,10 @@ class CdaExporter(AbstractExporter):
                 "timeseries"
             ]
         total_value_count: int = 0
-        value_count: int = 0
+        first = True
         data = StringIO()
         data.write("[")
         for tsid in timeseries_ids:
-            if value_count > 0:
-                data.write(",")
             unit = self._cda_loader._transforms[tsid].units
             ts = cwms.get_timeseries(
                 ts_id=tsid,
@@ -67,8 +65,11 @@ class CdaExporter(AbstractExporter):
             )
             value_count = len(ts.json["values"])
             if value_count > 0:
+                if not first:
+                    data.write(",")
                 data.write(json.dumps(ts.json))
                 total_value_count += value_count
+                first = False
         data.write("]")
         to_unload = data.getvalue()
         data.close()
