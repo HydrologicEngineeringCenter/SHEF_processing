@@ -106,6 +106,8 @@ class CdaLoader(abstract_loader.AbstractLoader):
         self._value_error_count: int = 0
         self._write_tasks: list[Coroutine[Any, Any, Any]] = []
         self._configured_pe_codes = set()
+        self._loaded_export_group_ids: set[str] = set()
+        self._loaded_all_export_groups: bool = False
 
     def make_shef_transform(self, crit: dict[str, Any]) -> ShefTransform:
         """
@@ -462,55 +464,72 @@ class CdaLoader(abstract_loader.AbstractLoader):
                 f"Expected TextIOWrapper or str object, got [{input_object.__class__.__name__}]"
             )
 
-    def make_export_transforms(self) -> None:
+    def make_export_transforms(self, group_id: Optional[str] = None) -> None:
         if not self._office_id:
             raise shared.LoaderException(
                 f"Cannot unload without office specified, use options [api_root][api_key][office]"
             )
-        if not self._transforms:
-            tsids_used: dict[str, list[str]] = {}
-            group_list = cwms.get_timeseries_groups(
-                office_id=self._office_id,
-                include_assigned=True,
-                timeseries_category_like="SHEF Export",
-                timeseries_group_like="^.+$",
-                category_office_id="CWMS",
-            ).json
-            for shef_group in group_list:
-                group_id = shef_group["id"]
-                if "description" not in shef_group:
-                    shef_group["description"] = ""
-                self._export_groups[group_id] = {
-                    "description": shef_group["description"],
-                    "timeseries": [],
-                }
+        if self._loaded_all_export_groups:
+            return
+        if group_id is None:
+            group_filter = "^.+$"
+        elif group_id in self._loaded_export_group_ids:
+            return
+        else:
+            group_filter = f"^{re.escape(group_id)}$"
+        tsids_used: dict[str, list[str]] = {}
+        group_list = cwms.get_timeseries_groups(
+            office_id=self._office_id,
+            include_assigned=True,
+            timeseries_category_like="SHEF Export",
+            timeseries_group_like=group_filter,
+            category_office_id="CWMS",
+            group_office_id=self._office_id,
+        ).json
+        for shef_group in group_list:
+            shef_group_id = shef_group["id"]
+            if "description" not in shef_group:
+                shef_group["description"] = ""
+            self._export_groups[shef_group_id] = {
+                "description": shef_group["description"],
+                "timeseries": [],
+            }
+            for time_series in shef_group["assigned-time-series"]:
+                if not time_series.get("alias-id"):
+                    if self._logger:
+                        self._logger.warning(
+                            f"Skipping time series {time_series.get('timeseries-id')} in group {shef_group_id}: missing or empty alias-id"
+                        )
+                    continue
                 try:
-                    for time_series in shef_group["assigned-time-series"]:
-                        transform = self.make_shef_transform(time_series)
-                        transform_key = (
-                            f"{transform.location}.{transform.parameter_code}"
-                        )
-                        self._transforms[transform_key] = transform
-                        if transform.timeseries_id in tsids_used:
-                            if self._logger:
-                                self._logger.warning(
-                                    f"Tranform for time seires {transform.timeseries_id} specified in group(s) "
-                                    f"{','.join(tsids_used[transform.timeseries_id])} is/are overriden by transform specified in group {group_id}"
-                                )
-                        self._export_groups[group_id]["timeseries"].append(
-                            transform.timeseries_id
-                        )
-                        tsids_used.setdefault(transform.timeseries_id, []).append(
-                            group_id
-                        )
-                        self._transforms[transform.timeseries_id] = (
-                            transform  # to be able to retrieve by time series ID
-                        )
+                    transform = self.make_shef_transform(time_series)
+                    transform_key = (
+                        f"{transform.location}.{transform.parameter_code}"
+                    )
+                    self._transforms[transform_key] = transform
+                    if transform.timeseries_id in tsids_used:
+                        if self._logger:
+                            self._logger.warning(
+                                f"Tranform for time seires {transform.timeseries_id} specified in group(s) "
+                                f"{','.join(tsids_used[transform.timeseries_id])} is/are overriden by transform specified in group {shef_group_id}"
+                            )
+                    self._export_groups[shef_group_id]["timeseries"].append(
+                        transform.timeseries_id
+                    )
+                    tsids_used.setdefault(transform.timeseries_id, []).append(
+                        shef_group_id
+                    )
+                    self._transforms[transform.timeseries_id] = (
+                        transform  # to be able to retrieve by time series ID
+                    )
                 except Exception as e:
                     if self._logger:
                         self._logger.warning(
-                            f"{str(e)} occurred while processing SHEF criteria for {time_series['timeseries-id']}"
+                            f"{str(e)} occurred while processing SHEF criteria for {time_series.get('timeseries-id')}"
                         )
+            self._loaded_export_group_ids.add(shef_group_id)
+        if group_id is None:
+            self._loaded_all_export_groups = True
 
     def unload(self) -> None:
         """
