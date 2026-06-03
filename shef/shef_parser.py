@@ -5230,34 +5230,56 @@ def run_export(
     loglevel,
 ):
     """Export timeseries/group from CWMS via CDA and write to SHEF file or stdout."""
-    from hec import HecTime, hectime
+    _relative_pattern = re.compile(
+        r"^\s*T\s*([+-])\s*(\d+)\s*([SMHDY])\s*$", re.IGNORECASE
+    )
+    _relative_units = {
+        "S": "seconds",
+        "M": "minutes",
+        "H": "hours",
+        "D": "days",
+        "Y": "years",
+    }
 
-    def parse_dt(s: Optional[str]):
+    def parse_dt(s: Optional[str], now: Optional[datetime] = None) -> Optional[datetime]:
+        """Parse an ISO 8601 datetime or a HEC-style relative time (T, T-1D, T+2H, ...)."""
         if not s:
             return None
+        s = s.strip()
+        ref = now if now is not None else datetime.utcnow()
+        if s.upper() == "T":
+            return ref
+        m = _relative_pattern.match(s)
+        if m:
+            sign = 1 if m.group(1) == "+" else -1
+            qty = int(m.group(2)) * sign
+            unit = m.group(3).upper()
+            if unit == "Y":
+                return ref.replace(year=ref.year + qty)
+            return ref + timedelta(**{_relative_units[unit]: qty})
         try:
-            return datetime.fromisoformat(s).strftime("%m/%d/%Y %H:%M:%S")
-        except Exception:
+            return datetime.fromisoformat(s)
+        except ValueError:
             try:
-                return datetime.fromisoformat(s + "T00:00:00").strftime(
-                    "%m/%d/%Y %H:%M:%S"
+                return datetime.fromisoformat(s + "T00:00:00")
+            except ValueError:
+                raise click.BadParameter(
+                    f"Could not parse time [{s}]; expected ISO 8601 (e.g. 2024-01-15T06:00) or relative (e.g. T, T-1D, T+2H)"
                 )
-            except Exception:
-                return s
 
     if timeseries_ids is not None:
         ts_ids = timeseries_ids.replace(" ", "").split(",")
     else:
         ts_ids = None
 
-    start = HecTime()
-    end = HecTime()
-    st = parse_dt(start_time)
-    et = parse_dt(end_time)
-    window = st + ", " + et
-    if hectime.get_time_window(window, start, end) == -1:
-        click.BadParameter(
-            f"Invalid time window check start and end times entered: {window}"
+    now = datetime.utcnow()
+    start_dt = parse_dt(start_time, now=now)
+    end_dt = parse_dt(end_time, now=now)
+    if start_dt is None or end_dt is None:
+        raise click.BadParameter("Both --start-time and --end-time are required")
+    if end_dt < start_dt:
+        raise click.BadParameter(
+            f"Invalid time window: end [{end_dt}] is before start [{start_dt}]"
         )
 
     # configure logging for the export command to match parse() behavior
@@ -5276,8 +5298,8 @@ def run_export(
             export_file=export_file,
             timeseries_group=timeseries_group,
             timeseries_ids=ts_ids,
-            start_time=start.datetime(),
-            end_time=end.datetime(),
+            start_time=start_dt,
+            end_time=end_dt,
         )
     except ValueError as e:
         # convert validation errors to Click exceptions so CLI shows a friendly message

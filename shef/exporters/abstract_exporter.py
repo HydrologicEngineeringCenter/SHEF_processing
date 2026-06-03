@@ -5,8 +5,6 @@ from datetime import datetime
 from io import BufferedRandom, StringIO
 from typing import Optional, TextIO, Union
 
-import cwms  # type: ignore
-
 from shef.loaders import abstract_loader, shared
 
 

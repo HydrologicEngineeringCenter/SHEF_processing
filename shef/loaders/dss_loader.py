@@ -6,7 +6,14 @@ from io import BufferedRandom, StringIO, TextIOWrapper
 from logging import Logger
 from typing import Any, Optional, TextIO, Union, cast
 
-from hecdss import HecDss, IrregularTimeSeries, RegularTimeSeries  # type: ignore
+try:
+    from hecdss import HecDss, IrregularTimeSeries, RegularTimeSeries  # type: ignore
+    HECDSS_AVAILABLE = True
+except ImportError:
+    HECDSS_AVAILABLE = False
+    HecDss = None
+    IrregularTimeSeries = None
+    RegularTimeSeries = None
 
 from shef.constants import PE_CONVERSIONS
 from shef.loaders import abstract_loader, shared
@@ -68,6 +75,8 @@ class DssLoader(abstract_loader.AbstractLoader):
         """
         Set the sensor and parameter file names
         """
+        if not HECDSS_AVAILABLE:
+            raise ImportError("The 'hecdss' library is required but not installed. Please install it to use DSS functionality.")
         if not options_str:
             raise shared.LoaderException(
                 f"Empty options on {self.loader_name}.set_options()"
@@ -617,6 +626,8 @@ class DssLoader(abstract_loader.AbstractLoader):
         """
         Store the time series to HEC-DSS file
         """
+        if not HECDSS_AVAILABLE:
+            raise ImportError("The 'hecdss' library is required but not installed. Please install it to use DSS functionality.")
         if self._shef_value and self._time_series:
             if self._dss_file is None:
                 self._dss_file = HecDss(self._dss_file_name)

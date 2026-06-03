@@ -35,7 +35,6 @@ class CdaExporter(AbstractExporter):
         self._office = office
         self._cda_loader = loaders.cda_loader.CdaLoader(self.logger, sys.stdout)
         self._cda_loader.set_options(f"[{cda_url}][][{office}]")
-        self._cda_loader.make_export_transforms()
 
     def export(self, timeseries_or_group: str) -> None:
         """
@@ -45,35 +44,50 @@ class CdaExporter(AbstractExporter):
             timeseries_or_group (str): If a time series ID, export that time series; If a time series group ID, export each time series in that group
         """
         if len(timeseries_or_group.split(".")) == 6:
+            self._cda_loader.make_export_transforms()
             timeseries_ids = [timeseries_or_group]
-        elif timeseries_or_group in self._cda_loader._export_groups:
+        else:
+            self._cda_loader.make_export_transforms(group_id=timeseries_or_group)
+            if timeseries_or_group not in self._cda_loader._export_groups:
+                raise shared.LoaderException(
+                    f"Time series group [{timeseries_or_group}] not found under the SHEF Export category for office [{self._office}]"
+                )
             timeseries_ids = self._cda_loader._export_groups[timeseries_or_group][
                 "timeseries"
             ]
         total_value_count: int = 0
-        first = True
-        data = StringIO()
-        data.write("[")
+        ts_payloads: list[Any] = []
         for tsid in timeseries_ids:
-            unit = self._cda_loader._transforms[tsid].units
-            ts = cwms.get_timeseries(
-                ts_id=tsid,
-                office_id=self._cda_loader._office_id,
-                unit=unit,
-                begin=self._start_time,
-                end=self._end_time,
-            )
-            value_count = len(ts.json["values"])
-            if value_count > 0:
-                if not first:
-                    data.write(",")
-                data.write(json.dumps(ts.json))
-                total_value_count += value_count
-                first = False
-        data.write("]")
-        to_unload = data.getvalue()
-        data.close()
-        if (total_value_count) > 0:
+            try:
+                unit = self._cda_loader._transforms[tsid].units
+                ts = cwms.get_timeseries(
+                    ts_id=tsid,
+                    office_id=self._cda_loader._office_id,
+                    unit=unit,
+                    begin=self._start_time,
+                    end=self._end_time,
+                )
+            except Exception as e:
+                self.logger.warning(
+                    f"Skipping time series [{tsid}]: error fetching from CDA: {e}"
+                )
+                continue
+            ts_json = ts.json if ts is not None else None
+            if not isinstance(ts_json, dict):
+                self.logger.warning(
+                    f"Skipping time series [{tsid}]: CDA response is not a JSON object"
+                )
+                continue
+            values = ts_json.get("values") or []
+            if not values:
+                self.logger.info(
+                    f"Skipping time series [{tsid}]: no values in window {self._start_time} to {self._end_time}"
+                )
+                continue
+            ts_payloads.append(ts_json)
+            total_value_count += len(values)
+        to_unload = json.dumps(ts_payloads)
+        if total_value_count > 0:
             try:
                 old_output = self._cda_loader._output
                 self._cda_loader._output = self._output
@@ -90,6 +104,7 @@ class CdaExporter(AbstractExporter):
         Returns:
             dict[str, str]: A dictionary of time series group descriptions keyed by time series group IDs
         """
+        self._cda_loader.make_export_transforms()
         return {
             group: self._cda_loader._export_groups[group]["description"]
             for group in self._cda_loader._export_groups
@@ -105,6 +120,7 @@ class CdaExporter(AbstractExporter):
         Returns:
             list[str]: The assigned time series IDs
         """
+        self._cda_loader.make_export_transforms(group_id=group)
         return [ts for ts in self._cda_loader._export_groups[group]["timeseries"]]
 
     def get_unit(self, tsid: str) -> Optional[str]:
@@ -117,6 +133,8 @@ class CdaExporter(AbstractExporter):
         Returns:
             Optional[str]: The unit as specified in the time series alias
         """
+        if tsid not in self._cda_loader._transforms:
+            self._cda_loader.make_export_transforms()
         return self._cda_loader._transforms[tsid].units
 
 
