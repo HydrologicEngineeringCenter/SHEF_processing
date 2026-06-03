@@ -115,8 +115,7 @@ def configure_logging(
         )
         return log_target
     else:
-        logging.basicConfig(stream=log_target, format=fmt,
-                            datefmt=datefmt, level=level)
+        logging.basicConfig(stream=log_target, format=fmt, datefmt=datefmt, level=level)
         return log_target.name
 
 
@@ -899,8 +898,7 @@ class ShefParser:
                 dt = obstime
                 if relativetime:
                     dt = (
-                        dt.astimezone(
-                            "Z" if parser.shefit_times else ShefParser.UTC)
+                        dt.astimezone("Z" if parser.shefit_times else ShefParser.UTC)
                         + relativetime
                     )
                 self._createtime = parser.get_creation_time(dt, createtime_str)
@@ -1013,8 +1011,7 @@ class ShefParser:
                 if obst.hour < 7:
                     obst += timedelta(
                         days=-1
-                        # dont use "obst -1 timedelta(days=1)" - it causes mypy to complain
-                    )
+                    )  # dont use "obst -1 timedelta(days=1)" - it causes mypy to complain
                 obst = obst.replace(hour=7, minute=0, second=0)
             elif shift:
                 if isinstance(shift, MonthsDelta):
@@ -1030,8 +1027,7 @@ class ShefParser:
                     obst += timedelta(days=days)
             # 2 - convert to UTC, but keep timezone for later use
             zi = obst.tzinfo
-            obst = obst.astimezone(
-                "Z" if parser.shefit_times else ShefParser.UTC)
+            obst = obst.astimezone("Z" if parser.shefit_times else ShefParser.UTC)
             # 3 - adjust to shift hour, minutes, and seconds
             if shift is not None and isinstance(shift, timedelta):
                 # DON'T use shift.seconds!!! If shift is negative it will be incorrect as shown below.
@@ -1053,11 +1049,9 @@ class ShefParser:
             else:
                 creat = self.createtime
             if creat:
-                creat = creat.astimezone(
-                    "Z" if parser.shefit_times else ShefParser.UTC)
+                creat = creat.astimezone("Z" if parser.shefit_times else ShefParser.UTC)
             if units_override == "SI":
-                value = parser.get_english_unit_value(
-                    value, self._parameter_code)
+                value = parser.get_english_unit_value(value, self._parameter_code)
 
             return ShefParser.OutputRecord(
                 parser,
@@ -1128,15 +1122,13 @@ class ShefParser:
                     f"Location [{location}] must be 3 to 8 characters in length"
                 )
             if not parameter_code:
-                raise ShefParser.OutputException(
-                    "Parameter code must not be empty")
+                raise ShefParser.OutputException("Parameter code must not be empty")
             if len(parameter_code) != 7:
                 raise ShefParser.OutputException(
                     f"Parameter code [{parameter_code}] must be 7 characters in length"
                 )
             if not obstime:
-                raise ShefParser.OutputException(
-                    "Observed time must not be empty")
+                raise ShefParser.OutputException("Observed time must not be empty")
 
             self._parser = parser
             self._location = location
@@ -1154,8 +1146,7 @@ class ShefParser:
 
             self._creation_time: Union[None, ShefParser.DateTime] = None
             if create_time and isinstance(create_time, str):
-                self._creation_time = parser.get_creation_time(
-                    obstime, create_time)
+                self._creation_time = parser.get_creation_time(obstime, create_time)
             elif isinstance(create_time, ShefParser.DateTime):
                 self._creation_time = create_time
             self._observation_time = self._observation_time.astimezone(
@@ -1243,8 +1234,7 @@ class ShefParser:
                 buf.write(f"{self.time_series_code:2d}")
                 buf.write("  ")
                 buf.write(
-                    self.message_source.ljust(
-                        8) if self.message_source else "        "
+                    self.message_source.ljust(8) if self.message_source else "        "
                 )
                 buf.write("  ")
                 if self.comment:
@@ -1286,8 +1276,7 @@ class ShefParser:
                 buf.write(f"{self.revised:2d}")
                 buf.write(" ")
                 buf.write(
-                    self.message_source.ljust(
-                        8) if self.message_source else "        "
+                    self.message_source.ljust(8) if self.message_source else "        "
                 )
                 buf.write(f"{self.time_series_code}")
                 if self.comment:
@@ -1295,8 +1284,7 @@ class ShefParser:
                 rec = buf.getvalue()
                 buf.close()
             else:
-                raise ShefParser.OutputException(
-                    f'Invalid output format: "[{fmt}]"')
+                raise ShefParser.OutputException(f'Invalid output format: "[{fmt}]"')
             return rec
 
         @property
@@ -1621,7 +1609,7 @@ class ShefParser:
             # 2 = date-time
             # 6 = time zone
             #                 1           23       4
-            r"^\.[AEB]R?\s+(\w{3,8})\s+((\d{2})?(\d{2})?\d{4})"  # 5   6
+            r"^\.[AEB]R?\s+(\w{3,8})\s+((\d{2})?(\d{2})?\d{4})"  #    5   6
             r"(\s+([NAECMPYLHB][DS]?|[JZ]))?\s+?",
             re.I | re.M,
         )
@@ -1663,8 +1651,7 @@ class ShefParser:
         self._create_time_pattern = re.compile(r"DC\d+", re.I)
         self._unit_system_pattern = re.compile(r"DU[ES]", re.I)
         self._data_qualifier_pattern = re.compile(r"DQ.", re.I)
-        self._duration_code_pattern = re.compile(
-            r"(DV[SNHDMY]\d{1,2}|DVZ)", re.I)
+        self._duration_code_pattern = re.compile(r"(DV[SNHDMY]\d{1,2}|DVZ)", re.I)
         self._parameter_code_pattern = re.compile(
             r"^[A-CE-IL-NP-Y][A-Z](([A-Z]([A-Z0-9]{2})?[A-Z]{1,2})?)?", re.I
         )
@@ -1683,8 +1670,7 @@ class ShefParser:
         self._replacement_strip_pattern = re.compile(
             "^[" + chr(0) + chr(9) + "]+|[" + chr(0) + chr(9) + "]+$"
         )
-        self._replacement_split_pattern = re.compile(
-            "[" + chr(0) + chr(9) + "]")
+        self._replacement_split_pattern = re.compile("[" + chr(0) + chr(9) + "]")
 
         if self._shefparm_pathname:
             self.read_shefparm(self._shefparm_pathname)
@@ -1924,8 +1910,7 @@ class ShefParser:
         """
         Update Send codes from SHEFPARM line
         """
-        key, value = line[0:2], (line[3:10], len(line)
-                                 > 12 and line[12] == "1")
+        key, value = line[0:2], (line[3:10], len(line) > 12 and line[12] == "1")
         if key not in self._send_codes:
             self.info(
                 f"{self._shefparm_pathname}: Adding non-standard send code [{key}] with parmameter [{value[0]}] and use-prev-0700 = [{value[1]}]"
@@ -1944,8 +1929,7 @@ class ShefParser:
         """
         key = line[0]
         if len(key) != 1 or not key.isalpha() or key != key.upper() or key in ("IO"):
-            self.critical(
-                f"{self._shefparm_pathname}: Invalid ata qualifier [{key}]")
+            self.critical(f"{self._shefparm_pathname}: Invalid ata qualifier [{key}]")
         if key not in self._qualifier_codes:
             self.info(
                 f"{self._shefparm_pathname}: Adding non-standard data qualifier code [{key}]"
@@ -2262,8 +2246,7 @@ class ShefParser:
         if self._output:
             self.close_output()
         elif isinstance(output_object, str):
-            self._output = open(
-                output_object, "a" if append else "w", encoding="utf-8")
+            self._output = open(output_object, "a" if append else "w", encoding="utf-8")
             self._output_name = output_object
         else:
             # IO typing is wonky -- see https://github.com/python/typeshed/issues/6077
@@ -2353,8 +2336,7 @@ class ShefParser:
                             y = int(line[10:14])
                             m, d, h, n, s = list(
                                 map(
-                                    int, [line[i: i + 2]
-                                          for i in (15, 18, 21, 24, 27)]
+                                    int, [line[i : i + 2] for i in (15, 18, 21, 24, 27)]
                                 )
                             )
                             obstime = ShefParser.DateTime(
@@ -2364,7 +2346,7 @@ class ShefParser:
                             parse_portion = "creation time"
                             _y = line[31:35].strip()
                             _m, _d, _h, _n, _s = [
-                                line[i: i + 2].strip() for i in (36, 39, 42, 45, 48)
+                                line[i : i + 2].strip() for i in (36, 39, 42, 45, 48)
                             ]
                             if all([_y, _m, _d, _h, _n, _s]):
                                 y, m, d, h, n, s = list(
@@ -2372,8 +2354,7 @@ class ShefParser:
                                 )
                                 if all([y, m, d, h, n, s]):
                                     create_time = ShefParser.DateTime(
-                                        y, m, d, h, n, s, tzinfo=ZoneInfo(
-                                            "UTC")
+                                        y, m, d, h, n, s, tzinfo=ZoneInfo("UTC")
                                     )
                                 else:
                                     assert not any([y, m, d, h, n, s])
@@ -2427,8 +2408,7 @@ class ShefParser:
                             y = int(line[8:12])
                             m, d, h, n, s = list(
                                 map(
-                                    int, [line[i: i + 2]
-                                          for i in (12, 14, 16, 18, 20)]
+                                    int, [line[i : i + 2] for i in (12, 14, 16, 18, 20)]
                                 )
                             )
                             obstime = ShefParser.DateTime(
@@ -2438,7 +2418,7 @@ class ShefParser:
                             parse_portion = "creation time"
                             _y = line[23:27].strip()
                             _m, _d, _h, _n, _s = [
-                                line[i: i + 2].strip() for i in (27, 29, 31, 33, 35)
+                                line[i : i + 2].strip() for i in (27, 29, 31, 33, 35)
                             ]
                             if all([_y, _m, _d, _h, _n, _s]):
                                 y, m, d, h, n, s = list(
@@ -2446,8 +2426,7 @@ class ShefParser:
                                 )
                                 if all([y, m, d, h, n, s]):
                                     create_time = ShefParser.DateTime(
-                                        y, m, d, h, n, s, tzinfo=ZoneInfo(
-                                            "UTC")
+                                        y, m, d, h, n, s, tzinfo=ZoneInfo("UTC")
                                     )
                                 else:
                                     assert not any([y, m, d, h, n, s])
@@ -2458,10 +2437,8 @@ class ShefParser:
                             pe_code = line[38:40]
                             ts_code = line[41:43]
                             extremum_code = line[43]
-                            probability_code = self._probability_ids[float(
-                                line[56:62])]
-                            duration_code = self._duration_ids[int(
-                                line[62:67])]
+                            probability_code = self._probability_ids[float(line[56:62])]
+                            duration_code = self._duration_ids[int(line[62:67])]
                             parameter_code = f"{pe_code}{duration_code}{ts_code}{extremum_code}{probability_code}"
                             assert parameter_code.isascii()
 
@@ -2492,8 +2469,7 @@ class ShefParser:
                             f"Error parsing {parse_portion} for pre-processed input: {line}"
                         )
                     else:
-                        self.error(
-                            f"Unrecognized line for pre-processed input: {line}")
+                        self.error(f"Unrecognized line for pre-processed input: {line}")
                 else:
                     output_rec = ShefParser.OutputRecord(
                         self,
@@ -2563,8 +2539,7 @@ class ShefParser:
                 self._line_number += 1
                 self.debug(f"Removed line from input queue [{line}]")
                 message_line = (
-                    self.remove_comment_fields(line).rstrip(
-                        "=").rstrip("&").rstrip("=")
+                    self.remove_comment_fields(line).rstrip("=").rstrip("&").rstrip("=")
                 )
                 if not message_line:
                     continue
@@ -2608,19 +2583,16 @@ class ShefParser:
                                     continue
                                 self._line_number -= 1
                                 self._input_lines.appendleft(line)
-                                self.debug(
-                                    f"Restored line to input queue  [{line}]")
+                                self.debug(f"Restored line to input queue  [{line}]")
                                 message_lines.pop()
                                 raw_message_lines.pop()
                                 self._message_location = (
-                                    self._line_number -
-                                    len(raw_message_lines) + 1
+                                    self._line_number - len(raw_message_lines) + 1
                                 )
                                 self._message = "\n".join(
                                     list(message_lines) + [".END"]
                                 )
-                                self._raw_message = "\n".join(
-                                    raw_message_lines)
+                                self._raw_message = "\n".join(raw_message_lines)
                                 self.error(
                                     '.B message not finished before next message - missing ".END" appended'
                                 )
@@ -2639,8 +2611,7 @@ class ShefParser:
                         else:
                             self._line_number -= 1
                             self._input_lines.appendleft(line)
-                            self.debug(
-                                f"Restored line to input queue  [{line}]")
+                            self.debug(f"Restored line to input queue  [{line}]")
                             message_type = ""
                             break
             if message_lines and not message_type:
@@ -2750,11 +2721,9 @@ class ShefParser:
                         y -= 1
                     elif month_diff == 6 and cd > d:
                         y += 1
-                    dateval = ShefParser.DateTime(
-                        y, m, d, 0, 0, 0, tzinfo=time_zone)
+                    dateval = ShefParser.DateTime(y, m, d, 0, 0, 0, tzinfo=time_zone)
                 else:
-                    dateval = ShefParser.DateTime(
-                        y, m, d, 0, 0, 0, tzinfo=time_zone)
+                    dateval = ShefParser.DateTime(y, m, d, 0, 0, 0, tzinfo=time_zone)
                     prev_year = dateval - MonthsDelta(12)
                     cur_diff = dateval - cur_date
                     prev_diff = cur_date - prev_year
@@ -2771,8 +2740,7 @@ class ShefParser:
                             )
                         dateval = prev_year
             else:
-                dateval = ShefParser.DateTime(
-                    y, m, d, 0, 0, 0, tzinfo=time_zone)
+                dateval = ShefParser.DateTime(y, m, d, 0, 0, 0, tzinfo=time_zone)
             return dateval, century_specified
         except:
             raise ShefParser.ParseException(f"Bad date string: [{datestr}]")
@@ -3054,8 +3022,7 @@ class ShefParser:
                         if century_specified:
                             y = bt.year - bt.year % 100 + int(v[0:2])
                         else:
-                            y = cur_time.year - \
-                                cur_time.year % 100 + int(v[0:2])
+                            y = cur_time.year - cur_time.year % 100 + int(v[0:2])
                         if y - cur_time.year > 10:
                             y -= 100
                     else:
@@ -3249,8 +3216,7 @@ class ShefParser:
                     v = subtoken[3:]
                     val = int(v)
                     if abs(val) > 99:
-                        raise ShefParser.ParseException(
-                            "Invalid relative time value")
+                        raise ShefParser.ParseException("Invalid relative time value")
                     if subtoken[2] == "S":
                         if dot_b:
                             relativetime = timedelta(seconds=val)
@@ -3293,8 +3259,7 @@ class ShefParser:
             except ShefParser.Exc:
                 raise
             except:
-                raise ShefParser.ParseException(
-                    f"Bad observation time: [{subtoken}]")
+                raise ShefParser.ParseException(f"Bad observation time: [{subtoken}]")
         return obstime, relativetime, century_specified
 
     def get_creation_time(
@@ -3305,8 +3270,7 @@ class ShefParser:
         """
         if not token:
             return None
-        curtime = ShefParser.DateTime.now(
-            "Z" if self.shefit_times else ShefParser.UTC)
+        curtime = ShefParser.DateTime.now("Z" if self.shefit_times else ShefParser.UTC)
         threshold = ShefParser.DateTime(
             obstime.year, obstime.month, obstime.day, 0, 0, 0, tzinfo=obstime.tzinfo
         ) + MonthsDelta(120)
@@ -3321,14 +3285,11 @@ class ShefParser:
                     int(s[8:10]),
                     int(s[10:12]),
                 )
-                dt = ShefParser.DateTime(
-                    y, m, d, h, n, 0, tzinfo=obstime.tzinfo)
+                dt = ShefParser.DateTime(y, m, d, h, n, 0, tzinfo=obstime.tzinfo)
             elif length == 10:  # yymmddhhnn
                 y = curtime.year - curtime.year % 100 + int(s[0:2])
-                m, d, h, n = int(s[2:4]), int(
-                    s[4:6]), int(s[6:8]), int(s[8:10])
-                dt = ShefParser.DateTime(
-                    y, m, d, h, n, 0, tzinfo=obstime.tzinfo)
+                m, d, h, n = int(s[2:4]), int(s[4:6]), int(s[6:8]), int(s[8:10])
+                dt = ShefParser.DateTime(y, m, d, h, n, 0, tzinfo=obstime.tzinfo)
                 while dt > threshold:
                     dt2 = dt - MonthsDelta(1200)
                     if not isinstance(dt2, ShefParser.DateTime):
@@ -3344,8 +3305,7 @@ class ShefParser:
                     int(s[4:6]),
                     int(s[6:8]),
                 )
-                dt = ShefParser.DateTime(
-                    y, m, d, h, n, 0, tzinfo=obstime.tzinfo)
+                dt = ShefParser.DateTime(y, m, d, h, n, 0, tzinfo=obstime.tzinfo)
                 while dt > threshold:
                     dt2 = dt - MonthsDelta(1200)
                     if not isinstance(dt2, ShefParser.DateTime):
@@ -3354,10 +3314,8 @@ class ShefParser:
                         )
                     dt = dt2
             elif length == 6:  # mmddhh
-                y, m, d, h, n = obstime.year, int(
-                    s[0:2]), int(s[2:4]), int(s[4:6]), 0
-                dt = ShefParser.DateTime(
-                    y, m, d, h, n, 0, tzinfo=obstime.tzinfo)
+                y, m, d, h, n = obstime.year, int(s[0:2]), int(s[2:4]), int(s[4:6]), 0
+                dt = ShefParser.DateTime(y, m, d, h, n, 0, tzinfo=obstime.tzinfo)
                 while dt > threshold:
                     dt2 = dt - MonthsDelta(1200)
                     if not isinstance(dt2, ShefParser.DateTime):
@@ -3368,8 +3326,7 @@ class ShefParser:
             elif length == 4:  # mmdd
                 hour = 12 if obstime.tzinfo in ("Z", ShefParser.UTC) else 24
                 y, m, d, h, n = obstime.year, int(s[0:2]), int(s[2:4]), hour, 0
-                dt = ShefParser.DateTime(
-                    y, m, d, h, n, 0, tzinfo=obstime.tzinfo)
+                dt = ShefParser.DateTime(y, m, d, h, n, 0, tzinfo=obstime.tzinfo)
                 while dt > threshold:
                     dt2 = dt - MonthsDelta(1200)
                     if not isinstance(dt2, ShefParser.DateTime):
@@ -3378,8 +3335,7 @@ class ShefParser:
                         )
                     dt = dt2
             else:
-                raise ShefParser.ParseException(
-                    f"Bad creation time: [{token}]")
+                raise ShefParser.ParseException(f"Bad creation time: [{token}]")
             return dt
         except:
             raise ShefParser.ParseException(f"Bad creation time: [{token}]")
@@ -3446,8 +3402,7 @@ class ShefParser:
         # 4 = missing valule
         # 5 = value qualifier
         matched_groups = "".join(
-            map(lambda x: "T" if bool(x) else "F",
-                [m.group(i) for i in (2, 3, 4)])
+            map(lambda x: "T" if bool(x) else "F", [m.group(i) for i in (2, 3, 4)])
         )
         qualifier = None
         if matched_groups == "TFF":
@@ -3558,8 +3513,7 @@ class ShefParser:
                     ):
                         if i < len(tokens) - 1:
                             if (
-                                self._parameter_code_pattern.match(
-                                    tokens[i + 1][0])
+                                self._parameter_code_pattern.match(tokens[i + 1][0])
                                 and tokens[i + 1][0][0] != "D"
                             ):
                                 new_tokens.append(tokens[i] + [chr(0)])
@@ -3694,8 +3648,7 @@ class ShefParser:
                     # -------------------------------------------------#
                     default_qualifier = token[2].upper()
                     if default_qualifier not in self._qualifier_codes:
-                        self.error(
-                            f"Bad data qualifier: [{default_qualifier}]")
+                        self.error(f"Bad data qualifier: [{default_qualifier}]")
                         return [] if self._reject_problematic else outrecs
                 elif self._duration_code_pattern.match(token):
                     # ----------------------------------------------------------------#
@@ -3724,8 +3677,7 @@ class ShefParser:
                 # ------------#
                 code = tokens[i][0].upper()
                 if len(code) < 2:
-                    self.error(
-                        f"Invalid PE code: [{code[:min(2, len(code))]}]")
+                    self.error(f"Invalid PE code: [{code[:min(2, len(code))]}]")
                     return []
                 elif (
                     code not in self._send_codes
@@ -3736,8 +3688,7 @@ class ShefParser:
                         f"Unknown PE code: [{code[:min(2, len(code))]}], value(s) will be untransformed"
                     )
                 try:
-                    parameter_code, use_prev_7am = self.get_parameter_code(
-                        code)
+                    parameter_code, use_prev_7am = self.get_parameter_code(code)
                     orig_parameter_code = code
                 except ShefParser.Exc as spe:
                     self.error(str(spe))
@@ -3838,8 +3789,7 @@ class ShefParser:
                     comment = tokens[i][2]
                     if comment:
                         if comment[0] not in "'\"":
-                            self.error(
-                                f"Invalid retained comment [{tokens[i][2]}]")
+                            self.error(f"Invalid retained comment [{tokens[i][2]}]")
                             comment = None
 
                 if parameter_code[3] == "F" and not createtime_str:
@@ -4105,8 +4055,7 @@ class ShefParser:
                     else:
                         duration_id = self._duration_ids[duration_code]
                 except KeyError:
-                    self.error(
-                        f"No valid duration code for time interval [{token}]")
+                    self.error(f"No valid duration code for time interval [{token}]")
                     return [] if self._reject_problematic else outrecs
                 parameter_code = (
                     f"{parameter_code[:2]}{duration_id}{parameter_code[3:]}"
@@ -4120,8 +4069,7 @@ class ShefParser:
                     return [] if self._reject_problematic else outrecs
                 code = token.upper()
                 if len(code) < 2:
-                    self.error(
-                        f"Invalid PE code: [{code[:min(2, len(code))]}]")
+                    self.error(f"Invalid PE code: [{code[:min(2, len(code))]}]")
                     return [] if self._reject_problematic else outrecs
                 elif (
                     code not in self._send_codes
@@ -4169,16 +4117,14 @@ class ShefParser:
                     comment = tokens[i][1]
                     if comment:
                         if comment[0] not in "'\"":
-                            self.error(
-                                f"Invalid retained comment [{tokens[i][2]}]")
+                            self.error(f"Invalid retained comment [{tokens[i][2]}]")
                             comment = None
             elif not token:
                 # ------------------------------------#
                 # missing value if in list of values #
                 # ------------------------------------#
                 if not (parameter_code and interval):
-                    raise ShefParser.ParseException(
-                        "Null field in data definition")
+                    raise ShefParser.ParseException("Null field in data definition")
                 obstime += interval
                 time_series_code = 2
             elif token[0] in "\"'":
@@ -4202,8 +4148,7 @@ class ShefParser:
                         "Value encountered before parameter code"
                     )
                 if not interval:
-                    raise ShefParser.ParseException(
-                        "Value encountered before interval")
+                    raise ShefParser.ParseException("Value encountered before interval")
 
                 if parameter_code[3] == "F" and not createtime_str:
                     self.warning(
@@ -4257,8 +4202,7 @@ class ShefParser:
                     else:
                         new_tokens.append(temp_tokens[j])
             for i in range(len(new_tokens)):
-                new_tokens[i] = ShefParser.unhide_quoted_whitespace(
-                    new_tokens[i])
+                new_tokens[i] = ShefParser.unhide_quoted_whitespace(new_tokens[i])
             return new_tokens
 
         # ------------------------------------------------------------------------------------#
@@ -4270,12 +4214,12 @@ class ShefParser:
         lines = m.group(0).strip().split("\n")
         lines[0] = lines[0].strip()
         for i in range(1, len(lines)):
-            lines[i] = lines[i][len(lines[i].split()[0]):].strip()
+            lines[i] = lines[i][len(lines[i].split()[0]) :].strip()
             if lines[i] and lines[0][-1] != "/" and lines[i][0] != "/":
                 lines[0] += "/"
             lines[0] += lines[i]
         header = lines[0]
-        body = "\n".join(message[m.end():].strip().split("\n")[:-1]).strip()
+        body = "\n".join(message[m.end() :].strip().split("\n")[:-1]).strip()
         # ------------------------------------#
         # parse the header positional fields #
         # ------------------------------------#
@@ -4338,10 +4282,9 @@ class ShefParser:
         # --------------------------------------#
         # process the parameter control fields #
         # --------------------------------------#
-        param_str = header[m.end():].strip()
+        param_str = header[m.end() :].strip()
         while self._multiple_obs_time_pattern.search(param_str):
-            param_str = self._multiple_obs_time_pattern.sub(
-                r"\1@\6\7", param_str)
+            param_str = self._multiple_obs_time_pattern.sub(r"\1@\6\7", param_str)
         param_tokens = list(
             map(lambda s: s.strip().strip("@"), param_str.strip("/").split("/"))
         )
@@ -4357,8 +4300,7 @@ class ShefParser:
                     while True:
                         m = self._obs_time_pattern2.search(token[pos:])
                         if not m:
-                            self.error(
-                                f"Unexpected data string item: [{token[pos:]}]")
+                            self.error(f"Unexpected data string item: [{token[pos:]}]")
                             return []
                         try:
                             obstime, relativetime, century_specified = (
@@ -4431,8 +4373,7 @@ class ShefParser:
                         self.warning(
                             f"Unknown PE code: [{code[:min(2, len(code))]}], value(s) will be untransformed"
                         )
-                    parameter_code, use_prev_7am = self.get_parameter_code(
-                        code)
+                    parameter_code, use_prev_7am = self.get_parameter_code(code)
                     orig_parameter_code = code
                     if obstime_error:
                         raise ShefParser.ParseException(obstime_error)
@@ -4528,7 +4469,7 @@ class ShefParser:
             bodytokens = list(
                 map(
                     lambda s: s.strip(),
-                    bodylines[i][len(location):].strip().split("/"),
+                    bodylines[i][len(location) :].strip().split("/"),
                 )
             )
             bodytokens = retokenize(bodytokens)
@@ -4585,8 +4526,7 @@ class ShefParser:
                         # ----------------#
                         # units override #
                         # ----------------#
-                        units_override = "EN" if token[2].upper(
-                        ) == "E" else "SI"
+                        units_override = "EN" if token[2].upper() == "E" else "SI"
                     elif self._data_qualifier_pattern.match(token):
                         # ----------------------------#
                         # default qualifier override #
@@ -4744,16 +4684,14 @@ def parse(
     # -------------------------------------------------------#
     # assign input and output streams if no filenames given #
     # -------------------------------------------------------#
-    input: Union[TextIO, str,
-                 StringIO] = input_stream or input_name or sys.stdin
+    input: Union[TextIO, str, StringIO] = input_stream or input_name or sys.stdin
     output: Union[TextIO, str] = sys.stdout if not output_name else output_name
     log: Union[TextIO, str] = sys.stderr if not log_name else log_name
     # -----------------------------------------------------------------#
     # get default SHEFPARM file if exists and --default not specified #
     # -----------------------------------------------------------------#
     if not shefparm and not use_defaults:
-        p = Path.joinpath(
-            Path(os.getenv("rfs_sys_dir", Path.cwd())), Path("SHEFPARM"))
+        p = Path.joinpath(Path(os.getenv("rfs_sys_dir", Path.cwd())), Path("SHEFPARM"))
         if p.exists() and not p.is_dir():
             shefparm = str(p)
     elif use_defaults:
@@ -4761,8 +4699,7 @@ def parse(
     # -------------------#
     # set up the logger #
     # -------------------#
-    logfile_name = configure_logging(
-        log, log_level, log_timestamps, append_log)
+    logfile_name = configure_logging(log, log_level, log_timestamps, append_log)
     logger = logging.getLogger(progname)
     # ------------------#
     # log startup info #
@@ -4788,14 +4725,12 @@ def parse(
     logger.info(
         "----------------------------------------------------------------------"
     )
-    logger.debug(
-        f"Input file set to {infile_name} (pre-processed={processed})")
+    logger.debug(f"Input file set to {infile_name} (pre-processed={processed})")
     logger.debug(f"Output file set to {outfile_name}")
     logger.debug(f"Log file set to {logfile_name}")
     logger.debug(f"Log level set to {log_level}")
     if shefparm and not use_defaults:
-        logger.debug(
-            f"Will modify program defaults with content of file {shefparm}")
+        logger.debug(f"Will modify program defaults with content of file {shefparm}")
     else:
         logger.debug(f"Will use program defaults")
     if unload and not loader_spec:
@@ -4821,8 +4756,7 @@ def parse(
                 loader_name = loader_spec[:pos]
                 loader_args = loader_spec[pos:]
             if loader_name in ["abstract", "abstract_loader"]:
-                raise ShefParser.ParseException(
-                    "Cannot directly use the base loader")
+                raise ShefParser.ParseException("Cannot directly use the base loader")
             if loader_name in available_loaders:
                 loader_info = available_loaders[loader_name]
             elif f"{loader_name}_loader" in available_loaders:
@@ -4862,8 +4796,7 @@ def parse(
         parser.set_output(output, append_output)
         if loader:
             parser.set_additional_pe_codes(
-                loader.get_additional_pe_codes(
-                    parser.get_recognized_pe_codes())
+                loader.get_additional_pe_codes(parser.get_recognized_pe_codes())
             )
         else:
             if (
@@ -4893,8 +4826,7 @@ def parse(
                     break
                 value_count += 1
                 if loader:
-                    format_1_str = outrec.format(
-                        ShefParser.OutputRecord.SHEFIT_TEXT_V1)
+                    format_1_str = outrec.format(ShefParser.OutputRecord.SHEFIT_TEXT_V1)
                     loader.set_shef_value(format_1_str)
                 else:
                     parser.output(outrec)
@@ -4935,19 +4867,16 @@ def parse(
             logger.info(f"Program    = {progname} version {version}")
             logger.info(f"SHEFPARM   = {shefparm}")
             logger.info(f"Start Time = {str(start_time)[:-7]}")
-            logger.info(
-                f"Run Time   = {str(datetime.now() - start_time)[:-3]}")
+            logger.info(f"Run Time   = {str(datetime.now() - start_time)[:-3]}")
             logger.info(
                 f"{parser._line_number:6d} lines read from {parser._input_name}"
             )
             if not parser.processed:
                 logger.info(f"{message_count:6d} messages processed")
             if loader:
-                logger.info(
-                    f"{value_count:6d} values passed to {loader.loader_name}")
+                logger.info(f"{value_count:6d} values passed to {loader.loader_name}")
             else:
-                logger.info(
-                    f"{value_count:6d} values output to {parser._output_name}")
+                logger.info(f"{value_count:6d} values output to {parser._output_name}")
             logger.info(
                 f"{parser._warning_count:6d} warnings in {parser._messages_with_warning_count} messages"
             )
@@ -4969,8 +4898,7 @@ def export(
 
     # Require either a timeseries_group (group id) or timeseries_ids (list of ids)
     if not timeseries_group and not timeseries_ids:
-        raise ValueError(
-            "Either timeseries_group or timeseries_ids must be provided")
+        raise ValueError("Either timeseries_group or timeseries_ids must be provided")
     if not office:
         raise ValueError("Office must be provided")
 
@@ -5165,8 +5093,7 @@ def run_parse(
                 "\nArgument --make-shefparm may not be used with any other argument except -o/--out\n"
             )
             raise SystemExit(-1)
-        ShefParser.write_shefparm_data(
-            output_arg if output_arg else sys.stdout)
+        ShefParser.write_shefparm_data(output_arg if output_arg else sys.stdout)
         raise SystemExit(0)
 
     if show_version:
@@ -5195,8 +5122,7 @@ def run_parse(
                 import tomli as tomllib
             else:
                 import tomllib
-            pyproject_path = Path(__file__).resolve(
-            ).parent.parent / "pyproject.toml"
+            pyproject_path = Path(__file__).resolve().parent.parent / "pyproject.toml"
             with pyproject_path.open("rb") as f:
                 pyproject = tomllib.load(f)
             date_str = str(
