@@ -1,5 +1,6 @@
 import asyncio
 import json
+import ast
 import math
 import re
 import time
@@ -99,6 +100,8 @@ class CdaLoader(abstract_loader.AbstractLoader):
         self._input: Optional[Union[BufferedRandom, TextIOWrapper]] = None
         self._message_count: int = 0
         self._office_id: str = ""
+        # may be single office or list of offices for transform discovery
+        self._office_ids: list[str] = []
         self._parsed_payloads: list[TimeseriesPayload] = []
         self._payloads: list[TimeseriesPayload] = []
         self._time_series_error_count: int = 0
@@ -108,6 +111,7 @@ class CdaLoader(abstract_loader.AbstractLoader):
         self._configured_pe_codes = set()
         self._loaded_export_group_ids: set[str] = set()
         self._loaded_all_export_groups: bool = False
+        self._office_load_stats: dict[str, dict[str, int]] = {}
 
     def make_shef_transform(self, crit: dict[str, Any]) -> ShefTransform:
         """
@@ -164,7 +168,36 @@ class CdaLoader(abstract_loader.AbstractLoader):
 
         options = self.get_options(options_str)
         if len(options) > 2:
-            self._office_id = options[2]
+            office_opt = options[2]
+            # accept JSON array, Python-style list, bracketed comma lists, or a single office.
+            # Common CLI forms include: [LRN,LRL], [[LRN,LRL]], ["MVP","LRL"], and plain LRL.
+            parsed_offices: list[str] = []
+            text = (office_opt or "").strip()
+            while text.startswith("[") and text.endswith("]"):
+                text = text[1:-1].strip()
+            if text:
+                if text.startswith(("'", '"')) and text.endswith(("'", '"')):
+                    text = text[1:-1].strip()
+                try:
+                    parsed = json.loads(text)
+                except Exception:
+                    try:
+                        parsed = ast.literal_eval(text)
+                    except Exception:
+                        parsed = None
+                if isinstance(parsed, (list, tuple)):
+                    parsed_offices = [str(x).strip().strip("'\"") for x in parsed if str(x).strip()]
+                elif "," in text:
+                    parsed_offices = [
+                        x.strip().strip("'\"[]")
+                        for x in text.split(",")
+                        if x.strip()
+                    ]
+                else:
+                    parsed_offices = [text.strip().strip("'\"[]")]
+
+            self._office_ids = [office for office in parsed_offices if office]
+            self._office_id = self._office_ids[0] if self._office_ids else ""
         if len(options) > 1:
             self._cda_url = options[0]
             cda_api_key = options[1]
@@ -180,44 +213,147 @@ class CdaLoader(abstract_loader.AbstractLoader):
                 api_root=self._cda_url, api_key=None
             )  # don't need api key if unloading
 
+    @staticmethod
+    def make_transform_key(
+        office: Optional[str], location: str, parameter_code: str
+    ) -> str:
+        """Create the dictionary key used to index SHEF transforms.
+
+        The office is part of the key when present, so the same location/parameter
+        in different offices does not overwrite one another. The transform value
+        itself still holds the office for downstream logic.
+        """
+        if office:
+            return f"{office}.{location}.{parameter_code}"
+        return f"{location}.{parameter_code}"
+
+    def get_matching_transforms(
+        self, shef_value: Optional[shared.ShefValue]
+    ) -> list[ShefTransform]:
+        """Return all matching office-scoped transforms for a SHEF value."""
+        if shef_value is None:
+            return []
+
+        parameter_code = shef_value.parameter_code[:-1]
+        if not self._office_ids and not self._office_id:
+            return [
+                transform
+                for transform in self._transforms.values()
+                if transform.location == shef_value.location
+                and transform.parameter_code == parameter_code
+            ]
+
+        candidate_keys = []
+        office_candidates: list[str] = []
+        if self._office_ids:
+            office_candidates.extend(self._office_ids)
+        if self._office_id and self._office_id not in office_candidates:
+            office_candidates.append(self._office_id)
+        for office in office_candidates:
+            candidate_keys.append(
+                self.make_transform_key(office, shef_value.location, parameter_code)
+            )
+        candidate_keys.append(
+            self.make_transform_key(None, shef_value.location, parameter_code)
+        )
+
+        matches: list[ShefTransform] = []
+        seen: set[str] = set()
+        for key in candidate_keys:
+            if key in self._transforms and key not in seen:
+                matches.append(self._transforms[key])
+                seen.add(key)
+        return matches
+
     @property
     def transform_key(self) -> str:
         """
-        The transform key for the current SHEF value
+        The transform key for the current SHEF value.
         """
         self.assert_value_is_set()
         sv = cast(shared.ShefValue, self._shef_value)
-        return f"{sv.location}.{sv.parameter_code[:-1]}"
+        matches = self.get_matching_transforms(sv)
+        if matches:
+            return self.make_transform_key(
+                matches[0].office,
+                sv.location,
+                sv.parameter_code[:-1],
+            )
+        raise KeyError(f"No transform found for {sv.location}.{sv.parameter_code[:-1]}")
 
     @property
     def transform(self) -> ShefTransform:
         """
         The ShefTransform object for the current SHEF value
         """
-        return self._transforms[self.transform_key]
+        matches = self.get_matching_transforms(self._shef_value)
+        if not matches:
+            raise KeyError(f"No transform found for {self._shef_value.location}.{self._shef_value.parameter_code[:-1]}")
+        return matches[0]
 
-    def make_transforms(self) -> None:
+    def make_transforms(
+        self, office: Optional[Union[str, list[str]]] = None
+    ) -> None:
         """
-        Makes the loading transforms
+        Makes the loading transforms.
+
+        When a single office is requested, query only that office. When multiple or
+        no offices are requested, fetch the full assignment set in one call and then
+        filter down to the requested office IDs locally.
         """
-        shef_group = cwms.get_timeseries_group(
-            group_office_id="CWMS",
-            category_office_id="CWMS",
-            group_id="SHEF Data Acquisition",
-            category_id="Data Acquisition",
-        ).json
-        for assigned_ts in shef_group["assigned-time-series"]:
-            if "timeseries-id" in assigned_ts and "alias-id" in assigned_ts:
+        requested_offices: list[str] = []
+        if office is None:
+            requested_offices = self._office_ids if self._office_ids else []
+        elif isinstance(office, str):
+            requested_offices = [office] if office else []
+        else:
+            requested_offices = [str(o) for o in office if str(o).strip()]
+
+        group_kwargs: dict[str, Any] = {
+            "group_office_id": "CWMS",
+            "category_office_id": "CWMS",
+            "group_id": "SHEF Data Acquisition",
+            "category_id": "Data Acquisition",
+        }
+        if len(requested_offices) == 1:
+            group_kwargs["office_id"] = requested_offices[0]
+        office_filter = set(requested_offices) if len(requested_offices) > 1 else None
+
+        shef_group = cwms.get_timeseries_group(**group_kwargs).json
+        assigned_ts = shef_group.get("assigned-time-series", [])
+        if office_filter is not None:
+            assigned_ts = [
+                item for item in assigned_ts if item.get("office-id") in office_filter
+            ]
+        for assigned_item in assigned_ts:
+            if "timeseries-id" in assigned_item and "alias-id" in assigned_item:
                 try:
-                    transform = self.make_shef_transform(assigned_ts)
-                    transform_key = f"{transform.location}.{transform.parameter_code}"
+                    transform = self.make_shef_transform(assigned_item)
+                    transform_key = self.make_transform_key(
+                        transform.office,
+                        transform.location,
+                        transform.parameter_code,
+                    )
+                    if transform_key in self._transforms:
+                        if self._logger:
+                            self._logger.warning(
+                                "Duplicate transform for office [%s], location [%s], parameter [%s]; overwriting prior mapping",
+                                transform.office,
+                                transform.location,
+                                transform.parameter_code,
+                            )
                     self._transforms[transform_key] = transform
                 except Exception as e:
                     if self._logger:
                         self._logger.warning(
-                            f"{str(e)} occurred while processing SHEF criteria for {assigned_ts['timeseries-id']}"
+                            f"{str(e)} occurred while processing SHEF criteria for {assigned_item['timeseries-id']}"
                         )
-
+        if self._logger:
+            self._logger.debug(f"transforms: {list(self._transforms.keys())}")
+            self._logger.debug(f"assigned_ts: {assigned_ts}")
+            self._logger.debug(f"office_filter: {office_filter}")
+            self._logger.debug(f"requested_offices: {requested_offices}")
+            self._logger.debug(f"kw: {group_kwargs}")
     def get_additional_pe_codes(self, parser_recognized_pe_codes: set[str]) -> set[str]:
         """
         Return any PE codes recognized by this loader that aren't otherwised recognized by the parser
@@ -228,14 +364,19 @@ class CdaLoader(abstract_loader.AbstractLoader):
 
     def get_time_series_name(self, shef_value: Optional[shared.ShefValue]) -> str:
         """
-        Get the time series ID for the current SHEF value
+        Get the time series ID for the current SHEF value.
+
+        When multiple office-specific transforms match the same SHEF value,
+        the first office in the requested list wins for this single-value API.
         """
         if shef_value is None:
             raise shared.LoaderException("Empty SHEF value in get_time_series_name()")
         if not self._transforms:
             self.make_transforms()
-        transform_key = f"{shef_value.location}.{shef_value.parameter_code[:-1]}"
-        return self._transforms[transform_key].timeseries_id
+        matches = self.get_matching_transforms(shef_value)
+        if matches:
+            return matches[0].timeseries_id
+        raise KeyError(f"No transform found for {shef_value.location}.{shef_value.parameter_code[:-1]}")
 
     @staticmethod
     def get_unix_timestamp(timestamp: str) -> int:
@@ -251,6 +392,12 @@ class CdaLoader(abstract_loader.AbstractLoader):
     def get_python_datetime(unix_time: int) -> datetime:
         return datetime.fromtimestamp(unix_time / 1000, tz=timezone.utc)
 
+    @staticmethod
+    def normalize_office_id(office_id: Optional[str]) -> str:
+        """Normalize blank office IDs to a display label for logs and summaries."""
+        office = (office_id or "").strip()
+        return office if office else "DEFAULT"
+
     def load_time_series(self) -> None:
         """
         Store SHEF values as CDA POST payloads grouped by time series ID
@@ -258,8 +405,9 @@ class CdaLoader(abstract_loader.AbstractLoader):
 
         if self._shef_value and self._time_series:
             sv = self._shef_value
+            transforms = self.get_matching_transforms(sv)
             if self._logger:
-                self._logger.debug(f"ts_name: {self.get_time_series_name(sv)}")
+                self._logger.debug(f"ts_names: {[t.timeseries_id for t in transforms]}")
                 self._logger.debug(f"shef_value: {sv}")
                 self._logger.debug(f"time_series: {self._time_series}")
             if self._time_series:
@@ -267,18 +415,31 @@ class CdaLoader(abstract_loader.AbstractLoader):
                 for ts in self._time_series:
                     time = self.get_unix_timestamp(ts[0])
                     time_series.append(CdaValue(time, float(ts[1]), 0))
-                post_data: TimeseriesPayload = {
-                    "name": self.get_time_series_name(sv),
-                    "office-id": self.transform.office,
-                    "units": self.transform.units,
-                    "values": time_series,
-                }
-                match_index = self.find_matching_payload_index(post_data)
-                if not match_index:
-                    self._payloads.append(post_data)
-                else:
-                    match_payload = self._payloads[match_index]
-                    match_payload["values"].extend(time_series)
+                for transform in transforms:
+                    office_id = self.normalize_office_id(transform.office or self._office_id)
+                    post_data: TimeseriesPayload = {
+                        "name": transform.timeseries_id,
+                        "office-id": office_id,
+                        "units": transform.units,
+                        "values": time_series,
+                    }
+                    match_index = self.find_matching_payload_index(post_data)
+                    if match_index is None:
+                        self._payloads.append(post_data)
+                        office_stats = self._office_load_stats.setdefault(
+                            office_id,
+                            {"time_series": 0, "value_count": 0},
+                        )
+                        office_stats["time_series"] += 1
+                        office_stats["value_count"] += len(time_series)
+                    else:
+                        match_payload = self._payloads[match_index]
+                        match_payload["values"].extend(time_series)
+                        office_stats = self._office_load_stats.setdefault(
+                            office_id,
+                            {"time_series": 0, "value_count": 0},
+                        )
+                        office_stats["value_count"] += len(time_series)
             self._time_series = []
 
     def create_write_task(
@@ -323,12 +484,16 @@ class CdaLoader(abstract_loader.AbstractLoader):
                 self._value_count += value_count
                 self._time_series_count += 1
                 if self._logger:
-                    self._logger.info(f"Stored {value_count} values in {tsid}")
+                    office_id = payload.get("office-id", "DEFAULT")
+                    self._logger.info(
+                        f"Stored {value_count} values in {tsid} [{office_id}]"
+                    )
         process_time = time.time() - start_time
         if self._logger:
             self._logger.info(
                 f"CWMS-Data-API POST tasks complete ({process_time:.2f} seconds)"
             )
+            self._logger.info(f"Loaded by office: {self.get_office_summary()}")
 
     def find_matching_payload_index(
         self, payload: TimeseriesPayload
@@ -441,9 +606,7 @@ class CdaLoader(abstract_loader.AbstractLoader):
             self._logger.info(
                 "--[Summary]-----------------------------------------------------------"
             )
-            self._logger.info(
-                f"{self._value_count} values posted in {self._time_series_count} time series"
-            )
+            self._logger.info(f"Loaded by office: {self.get_office_summary()}")
             if self._value_error_count > 0:
                 self._logger.info(
                     f"Errors occurred for {self._value_error_count} values in {self._time_series_error_count} time series"
@@ -463,6 +626,30 @@ class CdaLoader(abstract_loader.AbstractLoader):
             raise shared.LoaderException(
                 f"Expected TextIOWrapper or str object, got [{input_object.__class__.__name__}]"
             )
+
+    def get_office_summary(self) -> str:
+        """Return a human-readable breakdown of loaded series and values by office."""
+        if not self._office_load_stats:
+            return "No office data loaded"
+
+        summary_parts = []
+        for office, stats in sorted(self._office_load_stats.items()):
+            office_label = self.normalize_office_id(office)
+            time_series = stats.get("time_series", 0)
+            value_count = stats.get("value_count", 0)
+            summary_parts.append(
+                f"{office_label}: {time_series} time series, {value_count} values"
+            )
+        return "; ".join(summary_parts)
+
+    def _track_office_load(self, office_id: str, value_count: int = 0) -> None:
+        """Track the number of time series and values loaded for a given office."""
+        office_key = self.normalize_office_id(office_id)
+        office_stats = self._office_load_stats.setdefault(
+            office_key,
+            {"time_series": 0, "value_count": 0},
+        )
+        office_stats["value_count"] += value_count
 
     def make_export_transforms(self, group_id: Optional[str] = None) -> None:
         if not self._office_id:
@@ -503,8 +690,10 @@ class CdaLoader(abstract_loader.AbstractLoader):
                     continue
                 try:
                     transform = self.make_shef_transform(time_series)
-                    transform_key = (
-                        f"{transform.location}.{transform.parameter_code}"
+                    transform_key = self.make_transform_key(
+                        self._office_id or transform.office,
+                        transform.location,
+                        transform.parameter_code,
                     )
                     self._transforms[transform_key] = transform
                     if transform.timeseries_id in tsids_used:
@@ -709,9 +898,10 @@ class CdaLoader(abstract_loader.AbstractLoader):
 
 
 loader_options = (
-    "--loader cda[cda_url][cda_api_key]\n"
+    "--loader cda[cda_url][cda_api_key][office]\n"
     "* cda_url = the url of the CDA instance to be used, e.g. https://cwms-data.usace.army.mil/cwms-data/\n"
     "* cda_api_key = the api_key to use for CDA POST requests\n"
+    "* office = optional office code or list of office codes used to scope SHEF Data Acquisition transforms. Examples: MVP, ['MVP','LRL','SWG']\n"
 )
 loader_description = (
     "Used to import and export SHEF data through cwms-data-api.\n"
