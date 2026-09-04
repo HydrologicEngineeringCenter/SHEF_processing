@@ -288,7 +288,7 @@ def test_make_transforms_processes_each_office_in_list(monkeypatch):
 
 
 def test_make_transforms_without_office_uses_default_unscoped_lookup(monkeypatch):
-    """When no office is supplied, make_transforms should fall back to the default unscoped query."""
+    """When no office is supplied, make_transforms should omit the office filter and use the default unscoped query."""
     calls = []
 
     def fake_get_group(**kwargs):
@@ -312,11 +312,47 @@ def test_make_transforms_without_office_uses_default_unscoped_lookup(monkeypatch
     loader.make_transforms()
 
     assert len(calls) == 1
-    assert calls[0]["office_id"] == ""
+    assert "office_id" not in calls[0]
     assert any(
         t.timeseries_id == "DEFAULT.Test.Flow.Inst.1Hour.0.Raw"
         for t in loader._transforms.values()
     )
+
+
+def test_get_matching_transforms_without_office_returns_all_office_matches():
+    """Unscoped lookups should include all office-specific transforms for the same location and parameter."""
+    loader = cda_loader.CdaLoader(logger=None)
+    loader._office_ids = []
+    loader._office_id = ""
+    loader._transforms = {
+        "LRL.ALCT1.HGIRZZ": cda_loader.ShefTransform(
+            office="LRL",
+            location="ALCT1",
+            parameter_code="HGIRZZ",
+            timeseries_id="LRL.ALCT1.Flow.Inst.1Hour.0.Raw",
+            units="ft",
+            timezone=None,
+            dl_time=None,
+        ),
+        "LRN.ALCT1.HGIRZZ": cda_loader.ShefTransform(
+            office="LRN",
+            location="ALCT1",
+            parameter_code="HGIRZZ",
+            timeseries_id="LRN.ALCT1.Flow.Inst.1Hour.0.Raw",
+            units="ft",
+            timezone=None,
+            dl_time=None,
+        ),
+    }
+
+    loader._shef_value = types.SimpleNamespace(location="ALCT1", parameter_code="HGIRZZQ")
+    matches = loader.get_matching_transforms(loader._shef_value)
+
+    assert {m.office for m in matches} == {"LRL", "LRN"}
+    assert {m.timeseries_id for m in matches} == {
+        "LRL.ALCT1.Flow.Inst.1Hour.0.Raw",
+        "LRN.ALCT1.Flow.Inst.1Hour.0.Raw",
+    }
 
 
 def test_make_transforms_keeps_unique_entries_when_same_alias_appears_in_multiple_offices(
@@ -360,6 +396,42 @@ def test_make_transforms_keeps_unique_entries_when_same_alias_appears_in_multipl
         t.timeseries_id == "LRL.SameAlias.Flow.Inst.1Hour.0.Raw"
         for t in loader._transforms.values()
     )
+
+
+def test_load_time_series_processes_all_matching_office_transforms(monkeypatch):
+    """A single location+parameter should process every office-specific transform that matches."""
+    loader = cda_loader.CdaLoader(logger=None)
+    loader._office_ids = ["LRL", "LRN"]
+    loader._office_id = "LRL"
+    loader._transforms = {
+        "LRL.ALCT1.HGIRZZ": cda_loader.ShefTransform(
+            office="LRL",
+            location="ALCT1",
+            parameter_code="HGIRZZ",
+            timeseries_id="LRL.ALCT1.Flow.Inst.1Hour.0.Raw",
+            units="ft",
+            timezone=None,
+            dl_time=None,
+        ),
+        "LRN.ALCT1.HGIRZZ": cda_loader.ShefTransform(
+            office="LRN",
+            location="ALCT1",
+            parameter_code="HGIRZZ",
+            timeseries_id="LRN.ALCT1.Flow.Inst.1Hour.0.Raw",
+            units="ft",
+            timezone=None,
+            dl_time=None,
+        ),
+    }
+    loader._shef_value = types.SimpleNamespace(location="ALCT1", parameter_code="HGIRZZQ")
+    loader._time_series = [["2024-01-01 00:00:00", "15.0"]]
+
+    loader.load_time_series()
+
+    assert {payload["name"] for payload in loader._payloads} == {
+        "LRL.ALCT1.Flow.Inst.1Hour.0.Raw",
+        "LRN.ALCT1.Flow.Inst.1Hour.0.Raw",
+    }
 
 
 def test_make_export_transforms_scopes_fetch_to_requested_group(monkeypatch):
@@ -406,6 +478,33 @@ def test_get_office_summary_reports_time_series_and_values_by_office():
     assert loader.get_office_summary() == (
         "LRL: 1 time series, 3 values; MVP: 2 time series, 5 values"
     )
+
+
+def test_load_time_series_tracks_blank_office_as_default():
+    """A missing office should still report a valid office bucket instead of an empty label."""
+    loader = cda_loader.CdaLoader(logger=None)
+    loader._shef_value = types.SimpleNamespace(
+        location="ALCT1",
+        parameter_code="HGIRZZQ",
+    )
+    loader._time_series = [["2024-01-01 00:00:00", "15.0"]]
+    loader._transforms = {
+        "ALCT1.HGIRZZ": cda_loader.ShefTransform(
+            office="",
+            location="ALCT1",
+            parameter_code="HGIRZZ",
+            timeseries_id="ALCT1.Flow.Inst.1Hour.0.Raw",
+            units="ft",
+            timezone=None,
+            dl_time=None,
+        )
+    }
+    loader._office_id = ""
+
+    loader.load_time_series()
+
+    assert loader.get_office_summary() == "DEFAULT: 1 time series, 1 values"
+    assert loader._payloads[0]["office-id"] == "DEFAULT"
 
 
 def test_make_export_transforms_skips_malformed_alias_and_keeps_others(monkeypatch):

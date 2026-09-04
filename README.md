@@ -18,11 +18,11 @@ pip install shef-parser
 
 ## Loading via command line
 ```sh
-#CWMS CDA loader
+#CWMS CDA loader will load for all offices
 shefParser -i input_filename --loader cda[$API_ROOT][$API_KEY]
 # optional office scoping for transform lookup
-shefParser -i input_filename --loader 'cda[$API_ROOT][$API_KEY][MVP]'
-shefParser -i input_filename --loader 'cda[$API_ROOT][$API_KEY]["MVP","LRL","SWG"]'
+shefParser -i input_filename --loader cda[$API_ROOT][$API_KEY][MVP]
+shefParser -i input_filename --loader cda[$API_ROOT][$API_KEY][MVP,LRL,SWG]
 ```
 
 ```sh
