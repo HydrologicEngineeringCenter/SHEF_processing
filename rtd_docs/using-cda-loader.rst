@@ -13,14 +13,15 @@ This page does not cover unloading with the ``--unload`` command line option, wh
 Command Line
 ------------
 
-To use the :py:`CdaLoader` class, specify ``--loader cda[<cda_url_root>][<cda_api_key>]`` on the command line, where
+To use the :py:`CdaLoader` class, specify ``--loader cda[<cda_url_root>][<cda_api_key>][<office>]`` on the command line, where
 
 * ``<cda_url_root>`` is the URL to the Cwms Data API (e.g., ``https://cwms-data-test.cwbi.us/cwms-data/`` for the CWBI test database)
 * ``<cda_api_key>`` is your personal authentication key for the database referenced by the URL
+* ``<office>`` is optional and can be a single office code (for example, ``MVP``) or a list of offices (for example, ``['MVP','LRL','SWG']`` or ``["MVP","LRL","SWG"]``)
 
 It is recommended to use environment variables to hold the URL root and API key so that your command line would look 
-something like ``run_shef_parser  --loader cda[%CDA_URL_ROOT%][%CDA_API_KEY%]`` on Windows or ``run_shef_parser --loader cda[$CDA_URL_ROOT][$CDA_API_KEY]``
-on Linux
+something like ``run_shef_parser --loader cda[%CDA_URL_ROOT%][%CDA_API_KEY%][MVP]`` on Windows or ``run_shef_parser --loader cda[$CDA_URL_ROOT][$CDA_API_KEY][MVP]``
+on Linux. For multiple offices, use ``run_shef_parser --loader 'cda[$CDA_URL_ROOT][$CDA_API_KEY]["MVP","LRL","SWG"]'``.
 
 Loading Configuration
 ----------------------

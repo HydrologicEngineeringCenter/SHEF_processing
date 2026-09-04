@@ -18,6 +18,7 @@ def _fake_groups_response(assigned):
 def _make_loader():
     loader = cda_loader.CdaLoader(logger=None)
     loader._office_id = "OFF"
+    loader._office_ids = ["OFF"]
     return loader
 
 
@@ -74,6 +75,293 @@ def test_make_export_transforms_skips_empty_alias_and_keeps_others(monkeypatch):
     ]
 
 
+def test_make_transforms_passes_office_filter_to_cwms(monkeypatch):
+    """make_transforms() should pass the office filter through to cwms.get_timeseries_group."""
+    calls = []
+
+    def fake_get_group(**kwargs):
+        calls.append(kwargs)
+        return types.SimpleNamespace(
+            json={
+                "assigned-time-series": [
+                    {
+                        "timeseries-id": "MVP.Test.Flow.Inst.1Hour.0.Raw",
+                        "office-id": "MVP",
+                        "alias-id": "TEST.HG.RZ.1",
+                    }
+                ]
+            }
+        )
+
+    monkeypatch.setattr(cda_loader.cwms, "get_timeseries_group", fake_get_group)
+
+    loader = cda_loader.CdaLoader(logger=None)
+    loader.make_transforms(office="MVP")
+
+    assert len(calls) == 1
+    assert calls[0]["office_id"] == "MVP"
+    assert any(
+        t.timeseries_id == "MVP.Test.Flow.Inst.1Hour.0.Raw"
+        for t in loader._transforms.values()
+    )
+
+
+def test_transform_key_checks_all_requested_offices():
+    """Multi-office lookups should not be biased to the first office in the list."""
+    loader = cda_loader.CdaLoader(logger=None)
+    loader._office_ids = ["LRL", "LRN"]
+    loader._office_id = "LRL"
+    loader._transforms = {
+        "LRN.ALCT1.HGIRZZ": cda_loader.ShefTransform(
+            office="LRN",
+            location="ALCT1",
+            parameter_code="HGIRZZ",
+            timeseries_id="LRN.ALCT1.Flow.Inst.1Hour.0.Raw",
+            units="ft",
+            timezone=None,
+            dl_time=None,
+        )
+    }
+
+    loader._shef_value = types.SimpleNamespace(
+        location="ALCT1",
+        parameter_code="HGIRZZQ",
+    )
+    value = loader._shef_value
+    assert loader.transform_key == "LRN.ALCT1.HGIRZZ"
+    assert loader.get_time_series_name(value) == "LRN.ALCT1.Flow.Inst.1Hour.0.Raw"
+
+
+def test_make_transforms_accepts_multiple_offices(monkeypatch):
+    """make_transforms() should use a single unscoped API call and filter the response to the requested offices."""
+    calls = []
+
+    def fake_get_group(**kwargs):
+        calls.append(kwargs)
+        return types.SimpleNamespace(
+            json={
+                "assigned-time-series": [
+                    {
+                        "timeseries-id": "MVP.Multi.Flow.Inst.1Hour.0.Raw",
+                        "office-id": "MVP",
+                        "alias-id": "MULTIMVP.HG.RZ.1",
+                    },
+                    {
+                        "timeseries-id": "LRL.Multi.Flow.Inst.1Hour.0.Raw",
+                        "office-id": "LRL",
+                        "alias-id": "MULTILRL.HG.RZ.1",
+                    },
+                    {
+                        "timeseries-id": "SWG.Multi.Flow.Inst.1Hour.0.Raw",
+                        "office-id": "SWG",
+                        "alias-id": "MULTISWG.HG.RZ.1",
+                    },
+                ]
+            }
+        )
+
+    monkeypatch.setattr(cda_loader.cwms, "get_timeseries_group", fake_get_group)
+
+    loader = cda_loader.CdaLoader(logger=None)
+    loader.make_transforms(office=["MVP", "LRL"])
+
+    assert len(calls) == 1
+    assert "office_id" not in calls[0]
+    assert any(
+        t.timeseries_id == "MVP.Multi.Flow.Inst.1Hour.0.Raw"
+        for t in loader._transforms.values()
+    )
+    assert any(
+        t.timeseries_id == "LRL.Multi.Flow.Inst.1Hour.0.Raw"
+        for t in loader._transforms.values()
+    )
+    assert all(
+        t.timeseries_id != "SWG.Multi.Flow.Inst.1Hour.0.Raw"
+        for t in loader._transforms.values()
+    )
+
+
+def test_set_options_parses_multi_office_cli_string():
+    """The command-line office option should parse into a list of office IDs."""
+    loader = cda_loader.CdaLoader(logger=None)
+    loader.set_options("[https://example.test/cwms-data/][abc123][\"MVP\",\"LRL\",\"SWG\"]")
+
+    assert loader._cda_url == "https://example.test/cwms-data/"
+    assert loader._office_ids == ["MVP", "LRL", "SWG"]
+    assert loader._office_id == "MVP"
+
+
+def test_set_options_parses_bracketed_multi_office_cli_string():
+    """Bracketed comma-delimited office options should flatten into a clean office list."""
+    loader = cda_loader.CdaLoader(logger=None)
+    loader.set_options("[https://example.test/cwms-data/][abc123][[LRN,LRL]]")
+
+    assert loader._cda_url == "https://example.test/cwms-data/"
+    assert loader._office_ids == ["LRN", "LRL"]
+    assert loader._office_id == "LRN"
+
+    loader = cda_loader.CdaLoader(logger=None)
+    loader.set_options("[https://example.test/cwms-data/][abc123][LRL,LRN]")
+    assert loader._office_ids == ["LRL", "LRN"]
+    assert loader._office_id == "LRL"
+
+
+def test_make_transforms_filters_duplicate_alias_by_office(monkeypatch):
+    """A duplicate alias in another office should not be processed when office scoping is active."""
+    calls = []
+
+    def fake_get_group(**kwargs):
+        calls.append(kwargs)
+        office = kwargs.get("office_id")
+        assigned = [
+            {
+                "timeseries-id": f"{office}.Test.Flow.Inst.1Hour.0.Raw",
+                "office-id": office,
+                "alias-id": "TEST.HG.RZ.1",
+            }
+        ]
+        if office == "LRL":
+            assigned.append(
+                {
+                    "timeseries-id": "LRL.Other.Flow.Inst.1Hour.0.Raw",
+                    "office-id": "LRL",
+                    "alias-id": "TEST.HG.RZ.1",
+                }
+            )
+        return types.SimpleNamespace(json={"assigned-time-series": assigned})
+
+    monkeypatch.setattr(cda_loader.cwms, "get_timeseries_group", fake_get_group)
+
+    loader = cda_loader.CdaLoader(logger=None)
+    loader.make_transforms(office="MVP")
+
+    assert len(calls) == 1
+    assert calls[0]["office_id"] == "MVP"
+    assert any(
+        t.timeseries_id == "MVP.Test.Flow.Inst.1Hour.0.Raw"
+        for t in loader._transforms.values()
+    )
+    assert all(
+        t.timeseries_id != "LRL.Other.Flow.Inst.1Hour.0.Raw"
+        for t in loader._transforms.values()
+    )
+
+
+def test_make_transforms_processes_each_office_in_list(monkeypatch):
+    """When multiple offices are supplied, they should be filtered from one unscoped response."""
+    calls = []
+
+    def fake_get_group(**kwargs):
+        calls.append(kwargs)
+        return types.SimpleNamespace(
+            json={
+                "assigned-time-series": [
+                    {
+                        "timeseries-id": "MVP.List.Flow.Inst.1Hour.0.Raw",
+                        "office-id": "MVP",
+                        "alias-id": "LISTMVP.HG.RZ.1",
+                    },
+                    {
+                        "timeseries-id": "LRL.List.Flow.Inst.1Hour.0.Raw",
+                        "office-id": "LRL",
+                        "alias-id": "LISTLRL.HG.RZ.1",
+                    },
+                ]
+            }
+        )
+
+    monkeypatch.setattr(cda_loader.cwms, "get_timeseries_group", fake_get_group)
+
+    loader = cda_loader.CdaLoader(logger=None)
+    loader.make_transforms(office=["MVP", "LRL"])
+
+    assert len(calls) == 1
+    assert "office_id" not in calls[0]
+    assert any(
+        t.timeseries_id == "MVP.List.Flow.Inst.1Hour.0.Raw"
+        for t in loader._transforms.values()
+    )
+    assert any(
+        t.timeseries_id == "LRL.List.Flow.Inst.1Hour.0.Raw"
+        for t in loader._transforms.values()
+    )
+
+
+def test_make_transforms_without_office_uses_default_unscoped_lookup(monkeypatch):
+    """When no office is supplied, make_transforms should fall back to the default unscoped query."""
+    calls = []
+
+    def fake_get_group(**kwargs):
+        calls.append(kwargs)
+        return types.SimpleNamespace(
+            json={
+                "assigned-time-series": [
+                    {
+                        "timeseries-id": "DEFAULT.Test.Flow.Inst.1Hour.0.Raw",
+                        "office-id": "MVP",
+                        "alias-id": "TEST.HG.RZ.1",
+                    }
+                ]
+            }
+        )
+
+    monkeypatch.setattr(cda_loader.cwms, "get_timeseries_group", fake_get_group)
+
+    loader = cda_loader.CdaLoader(logger=None)
+    loader._office_ids = []
+    loader.make_transforms()
+
+    assert len(calls) == 1
+    assert calls[0]["office_id"] == ""
+    assert any(
+        t.timeseries_id == "DEFAULT.Test.Flow.Inst.1Hour.0.Raw"
+        for t in loader._transforms.values()
+    )
+
+
+def test_make_transforms_keeps_unique_entries_when_same_alias_appears_in_multiple_offices(
+    monkeypatch,
+):
+    """The transform map should keep separate office-specific entries from a single unscoped response."""
+    calls = []
+
+    def fake_get_group(**kwargs):
+        calls.append(kwargs)
+        return types.SimpleNamespace(
+            json={
+                "assigned-time-series": [
+                    {
+                        "timeseries-id": "MVP.SameAlias.Flow.Inst.1Hour.0.Raw",
+                        "office-id": "MVP",
+                        "alias-id": "SAME.HG.RZ.1",
+                    },
+                    {
+                        "timeseries-id": "LRL.SameAlias.Flow.Inst.1Hour.0.Raw",
+                        "office-id": "LRL",
+                        "alias-id": "SAME.HG.RZ.1",
+                    },
+                ]
+            }
+        )
+
+    monkeypatch.setattr(cda_loader.cwms, "get_timeseries_group", fake_get_group)
+
+    loader = cda_loader.CdaLoader(logger=None)
+    loader.make_transforms(office=["MVP", "LRL"])
+
+    assert len(calls) == 1
+    assert "office_id" not in calls[0]
+    assert set(loader._transforms) == {"MVP.SAME.HGURZ", "LRL.SAME.HGURZ"}
+    assert any(
+        t.timeseries_id == "MVP.SameAlias.Flow.Inst.1Hour.0.Raw"
+        for t in loader._transforms.values()
+    )
+    assert any(
+        t.timeseries_id == "LRL.SameAlias.Flow.Inst.1Hour.0.Raw"
+        for t in loader._transforms.values()
+    )
+
+
 def test_make_export_transforms_scopes_fetch_to_requested_group(monkeypatch):
     """When a group_id is given, only that group should be fetched from cwms (no warnings about other groups)."""
     calls = []
@@ -105,6 +393,19 @@ def test_make_export_transforms_scopes_fetch_to_requested_group(monkeypatch):
     # second call for same group is a no-op (no extra fetch)
     loader.make_export_transforms(group_id="GROUP_A")
     assert len(calls) == 1
+
+
+def test_get_office_summary_reports_time_series_and_values_by_office():
+    """The loader summary should break totals down by office for the loaded payloads."""
+    loader = cda_loader.CdaLoader(logger=None)
+    loader._office_load_stats = {
+        "MVP": {"time_series": 2, "value_count": 5},
+        "LRL": {"time_series": 1, "value_count": 3},
+    }
+
+    assert loader.get_office_summary() == (
+        "LRL: 1 time series, 3 values; MVP: 2 time series, 5 values"
+    )
 
 
 def test_make_export_transforms_skips_malformed_alias_and_keeps_others(monkeypatch):
