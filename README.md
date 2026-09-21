@@ -119,3 +119,8 @@ with open("/path/to/output_file", "w") as f:
     for (pathname in pathnames):
         exporter.export(pathname)
 ```
+
+## Contributing and releases
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development checks, PR title conventions,
+and the Release Please publishing workflow.
