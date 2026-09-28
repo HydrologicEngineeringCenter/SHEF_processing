@@ -2276,15 +2276,25 @@ class ShefParser:
 
     def remove_comment_fields(self, line: str) -> str:
         """
-        Remove colon-delimited comments from a message line
+        Remove colon-delimited comments, preserving quoted retained comments.
         """
         in_comment_field = False
+        quote = None
         chars = []
         for c in line:
-            if c == ":":
-                in_comment_field = not in_comment_field
-            elif not in_comment_field:
+            if in_comment_field:
+                if c == ":":
+                    in_comment_field = False
+            elif quote is not None:
                 chars.append(c)
+                if c == quote:
+                    quote = None
+            elif c == ":":
+                in_comment_field = True
+            else:
+                chars.append(c)
+                if c in "\"'":
+                    quote = c
         message_line = "".join(chars)
         return message_line
 
